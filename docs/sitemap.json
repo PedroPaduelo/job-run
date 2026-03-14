@@ -9,6 +9,7 @@
     { "title": "Arquitetura Overview", "path": "/guides/arquitetura-overview.html", "file": "arquitetura-overview.html" },
     { "title": "Fluxo de Dados", "path": "/guides/dados-fluxo.html", "file": "dados-fluxo.html" },
     { "title": "Modelo de Dados", "path": "/guides/modelo-dados.html", "file": "modelo-dados.html" },
+    { "title": "Schema Prisma", "path": "/guides/schema-prisma.html", "file": "schema-prisma.html" },
     { "title": "Sistema de Filas", "path": "/guides/sistema-filas.html", "file": "sistema-filas.html" },
     { "title": "Webhooks & Callbacks", "path": "/guides/webhooks-callbacks.html", "file": "webhooks-callbacks.html" },
 

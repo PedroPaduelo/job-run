@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schema de Dados - Prisma ORM - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <span class="sep">/</span>
+        <span>Schema de Dados</span>
+      </div>
+      <span class="badge arch">Database</span>
+      <h1>Schema de Dados - Prisma ORM</h1>
+      <p class="subtitle">Modelo completo de dados: entidades, relações, multi-tenancy e constraints</p>
+    </div>
+
+    <section id="er-diagram" class="section">
+      <h2>Diagrama de Relacionamentos (ER)</h2>
+      <p>O modelo de dados do JobSync é baseado em multi-tenancy via <code>organizationId</code>. Cada organização (tenant) tem seus dados isolados logicamente no mesmo banco.</p>
+
+      <div class="flow-diagram">
+┌───────────────────────────────────────────────────────────────────────┐
+│                        DIAGRAMA DE RELACIONAMENTOS                     │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│   ┌──────────┐                                                       │
+│   │   User   │                                                       │
+│   └─────┬────┘                                                       │
+│         │  (member)                                                  │
+│         ▼                                                            │
+│   ┌──────────────────┐                                              │
+│   │ OrganizationMember│                                              │
+│   └───────┬──────────┘                                              │
+│           │ (member)                                                │
+│           ▼                                                         │
+│   ┌──────────────┐                                                 │
+│   │ Organization │◄──────────────────────────────────────────────┐ │
+│   └──────┬───────┘                                              │ │
+│          │ (owns)                                               │ │
+│    ┌─────┴─────────────┬──────────────┬──────────────┬─────────┘ │
+│    ▼                   ▼              ▼              ▼             │
+│ ┌──────┐           ┌────────┐    ┌────────┐    ┌──────────┐       │
+│ │ApiKey│           │ Queue  │    │  Job   │    │ AuditLog │       │
+│ └──────┘           └───┬────┘    └───┬────┘    └─────┬────┘       │
+│                        │              │               │            │
+│                        ▼              ▼               │            │
+│                    ┌─────────┐  ┌─────────┐          │            │
+│                    │   Job   │  │ JobLog  │          │            │
+│                    └────┬────┘  └────┬────┘          │            │
+│                         │             │                │            │
+│                         └─────────────┼────────────────┘            │
+│                                       │                             │
+│                                   (userId nullable)                  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+      </div>
+
+      <div class="info-box">
+        <strong>Legenda:</strong>
+        <ul>
+          <li><code>(1)</code> — Relação um-para-muitos</li>
+          <li><code>OrganizationMember</code> — Tabela de junção User ↔ Organization</li>
+          <li><code>userId</code> pode ser <code>NULL</code> em Job e AuditLog (criado por API key)</li>
+          <li>Todas as entidades "tenant-scoped" possuem <code>organizationId</code></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="models-overview" class="section">
+      <h2>Visão Geral dos Modelos</h2>
+      <p>Tabelas principais, propósito e relacionamentos.</p>
+
+      <div class="models-grid">
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">👤</span>
+            <h3>User</h3>
+            <code>users</code>
+          </div>
+          <p>Usuários humanos do sistema. Autenticação via OAuth PKCE. Pode pertencer a múltiplas organizações através de OrganizationMember.</p>
+          <div class="model-rel">
+            <strong>Relações:</strong> OrganizationMember (1:N), Job (1:N), AuditLog (1:N)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">🏢</span>
+            <h3>Organization</h3>
+            <code>organizations</code>
+          </div>
+          <p>Tenant do sistema. Isola todos os dados por organização. Usa <code>slug</code> único como identificador público.</p>
+          <div class="model-rel">
+            <strong>Relações:</strong> OrganizationMember (1:N), ApiKey (1:N), Queue (1:N), Job (1:N), AuditLog (1:N)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">🔗</span>
+            <h3>OrganizationMember</h3>
+            <code>organization_members</code>
+          </div>
+          <p>Tabela de junção many-to-many entre User e Organization. Armazena <code>role</code> e <code>permissions</code> por tenant.</p>
+          <div class="model-rel">
+            <strong>Unique:</strong> <code>[userId, organizationId]</code>
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">🔑</span>
+            <h3>ApiKey</h3>
+            <code>api_keys</code>
+          </div>
+          <p>Chaves de autenticação M2M. Permitem acesso machine-to-machine sem usuário. Controlam permissões, domínios, IPs e rate limit.</p>
+          <div class="model-rel">
+            <strong>Relação:</strong> Organization (N:1)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">📋</span>
+            <h3>Queue</h3>
+            <code>queues</code>
+          </div>
+          <p>Filas de processamento BullMQ. Configuram concurrency, retry, timeout, rate limit. Nome único por organização.</p>
+          <div class="model-rel">
+            <strong>Relações:</strong> Organization (N:1), Job (1:N)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">📦</span>
+            <h3>Job</h3>
+            <code>jobs</code>
+          </div>
+          <p>Unidade de trabalho assíncrono. Armazena payload, webhook URL, status, tentativas. Processado por workers BullMQ.</p>
+          <div class="model-rel">
+            <strong>Relações:</strong> Organization (N:1), Queue (N:1), User (N:1 nullable), JobLog (1:N)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">📝</span>
+            <h3>JobLog</h3>
+            <code>job_logs</code>
+          </div>
+          <p>Log de auditoria de cada job. Registra transições de estado, mensagens, duração de processamento.</p>
+          <div class="model-rel">
+            <strong>Relação:</strong> Job (N:1)
+          </div>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <span class="model-icon">🔍</span>
+            <h3>AuditLog</h3>
+            <code>audit_logs</code>
+          </div>
+          <p>Log geral de ações no sistema. Rastreia quem fez o quê, quando, com metadata. Isolado por organização.</p>
+          <div class="model-rel">
+            <strong>Relações:</strong> Organization (N:1 nullable), User (N:1 nullable)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="enums" class="section">
+      <h2>Enums</h2>
+      <p>Valores enumerados usados nos modelos.</p>
+
+      <div class="code-block">
+        <h4>UserStatus</h4>
+        <pre><code>enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <h4>MemberRole</h4>
+        <pre><code>enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <h4>JobStatus</h4>
+        <pre><code>enum JobStatus {
+  PENDING
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  DEAD
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <h4>AuditStatus</h4>
+        <pre><code>enum AuditStatus {
+  SUCCESS
+  FAILURE
+  DENIED
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="fields-detailed" class="section">
+      <h2>Campos Detalhados por Modelo</h2>
+
+      <div class="model-detail">
+        <h3>User (users)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>Identificador único</td></tr>
+            <tr><td><code>email</code></td><td>String</td><td>unique, required</td><td>Email de login (OAuth)</td></tr>
+            <tr><td><code>firstName</code></td><td>String?</td><td>@map("first_name")</td><td>Nome próprio</td></tr>
+            <tr><td><code>lastName</code></td><td>String?</td><td>@map("last_name")</td><td>Sobrenome</td></tr>
+            <tr><td><code>displayName</code></td><td>String?</td><td>@map("display_name")</td><td>Nome exibido (calculado ou personalizado)</td></tr>
+            <tr><td><code>avatarUrl</code></td><td>String?</td><td>@map("avatar_url")</td><td>URL do avatar (Gravatar/upload)</td></tr>
+            <tr><td><code>status</code></td><td>UserStatus</td><td>default ACTIVE</td><td>Estado da conta</td></tr>
+            <tr><td><code>lastSyncAt</code></td><td>DateTime</td><td>default now()</td><td>Última sincronização com auth provider</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Data de criação</td></tr>
+            <tr><td><code>updatedAt</code></td><td>DateTime</td><td>@updatedAt</td><td>Última atualização</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([email])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>Organization (organizations)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK</td><td>UUID da organização</td></tr>
+            <tr><td><code>slug</code></td><td>String</td><td>unique, required</td><td>Identificador público (kebab-case)</td></tr>
+            <tr><td><code>name</code></td><td>String</td><td>required</td><td>Nome exibido</td></tr>
+            <tr><td><code>logoUrl</code></td><td>String?</td><td>@map("logo_url")</td><td>URL do logo</td></tr>
+            <tr><td><code>settings</code></td><td>Json?</td><td>—</td><td>Configurações customizadas por tenant</td></tr>
+            <tr><td><code>isActive</code></td><td>Boolean</td><td>default true</td><td>Organização ativa (pode desativar)</td></tr>
+            <tr><td><code>lastSyncAt</code></td><td>DateTime</td><td>default now()</td><td>Última sincronização com auth provider</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Data de criação</td></tr>
+            <tr><td><code>updatedAt</code></td><td>DateTime</td><td>@updatedAt</td><td>Última atualização</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([slug])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>OrganizationMember (organization_members)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>ID da associação</td></tr>
+            <tr><td><code>userId</code></td><td>String</td><td>FK → User.id, Cascade</td><td>Usuário membro</td></tr>
+            <tr><td><code>organizationId</code></td><td>String</td><td>FK → Organization.id, Cascade</td><td>Organização</td></tr>
+            <tr><td><code>role</code></td><td>MemberRole</td><td>default MEMBER</td><td>Papel na organização</td></tr>
+            <tr><td><code>permissions</code></td><td>String[]</td><td>required</td><td>Lista de permissões específicas</td></tr>
+            <tr><td><code>joinedAt</code></td><td>DateTime</td><td>default now()</td><td>Data de entrada</td></tr>
+            <tr><td><code>lastSyncAt</code></td><td>DateTime</td><td>default now()</td><td>Última sincronização de permissões</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Unique:</strong> <code>@@unique([userId, organizationId])</code></p>
+        <p><strong>Índices:</strong> <code>@@index([userId])</code>, <code>@@index([organizationId])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>ApiKey (api_keys)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>ID da chave</td></tr>
+            <tr><td><code>key</code></td><td>String</td><td>unique, required</td><td>Token da API key (hash ou plaintext inicial)</td></tr>
+            <tr><td><code>name</code></td><td>String</td><td>required</td><td>Nome descritivo</td></tr>
+            <tr><td><code>description</code></td><td>String?</td><td>—</td><td>Descrição do uso</td></tr>
+            <tr><td><code>organizationId</code></td><td>String</td><td>FK → Organization.id</td><td>Organização dona</td></tr>
+            <tr><td><code>createdById</code></td><td>String?</td><td>@map("created_by_id")</td><td>Quem criou a key (User.id)</td></tr>
+            <tr><td><code>permissions</code></td><td>String[]</td><td>required</td><td>Permissões concedidas</td></tr>
+            <tr><td><code>allowedDomains</code></td><td>String[]</td><td>required</td><td>Domínios permitidos (CORS)</td></tr>
+            <tr><td><code>allowedIps</code></td><td>String[]</td><td>required</td><td>IPs permitidos</td></tr>
+            <tr><td><code>rateLimit</code></td><td>Int?</td><td>—</td><td>Rate limit customizado (req/min)</td></tr>
+            <tr><td><code>isActive</code></td><td>Boolean</td><td>default true</td><td>Chave habilitada</td></tr>
+            <tr><td><code>expiresAt</code></td><td>DateTime?</td><td>@map("expires_at")</td><td>Data de expiração (null = infinita)</td></tr>
+            <tr><td><code>lastUsedAt</code></td><td>DateTime?</td><td>@map("last_used_at")</td><td>Último uso</td></tr>
+            <tr><td><code>usageCount</code></td><td>Int</td><td>default 0</td><td>Contador de uso</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Data de criação</td></tr>
+            <tr><td><code>updatedAt</code></td><td>DateTime</td><td>@updatedAt</td><td>Última atualização</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([key])</code>, <code>@@index([organizationId])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>Queue (queues)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>UUID da fila</td></tr>
+            <tr><td><code>name</code></td><td>String</td><td>required</td><td>Nome lógico da fila</td></tr>
+            <tr><td><code>description</code></td><td>String?</td><td>—</td><td>Descrição do propósito</td></tr>
+            <tr><td><code>organizationId</code></td><td>String</td><td>FK → Organization.id</td><td>Organização dona</td></tr>
+            <tr><td><code>concurrency</code></td><td>Int</td><td>default 5, max 100</td><td>Jobs simultâneos por worker</td></tr>
+            <tr><td><code>maxRetries</code></td><td>Int</td><td>default 3, max 10</td><td>Tentativas antes de DEAD</td></tr>
+            <tr><td><code>retryDelay</code></td><td>Int</td><td>default 5000 (ms)</td><td>Delay base para backoff exponencial</td></tr>
+            <tr><td><code>timeout</code></td><td>Int</td><td>default 300000 (5min)</td><td>Timeout por job em ms</td></tr>
+            <tr><td><code>rateLimit</code></td><td>Int?</td><td>—</td><td>Máximo de jobs/minuto</td></tr>
+            <tr><td><code>isActive</code></td><td>Boolean</td><td>default true</td><td>Fila ativa para workers</td></tr>
+            <tr><td><code>isPaused</code></td><td>Boolean</td><td>default false</td><td>Fila pausada (BullMQ)</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Data de criação</td></tr>
+            <tr><td><code>updatedAt</code></td><td>DateTime</td><td>@updatedAt</td><td>Última atualização</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Unique:</strong> <code>@@unique([organizationId, name])</code></p>
+        <p><strong>Índices:</strong> <code>@@index([organizationId])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>Job (jobs)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>UUID do job (usado como jobId no BullMQ)</td></tr>
+            <tr><td><code>externalId</code></td><td>String?</td><td>@map("external_id")</td><td>ID externo fornecido pelo cliente</td></tr>
+            <tr><td><code>organizationId</code></td><td>String</td><td>FK → Organization.id</td><td>Tenant</td></tr>
+            <tr><td><code>queueId</code></td><td>String</td><td>FK → Queue.id</td><td>Fila de processamento</td></tr>
+            <tr><td><code>userId</code></td><td>String?</td><td>FK → User.id, SetNull</td><td>Usuário criador (null se API key)</td></tr>
+            <tr><td><code>webhookUrl</code></td><td>String</td><td>required</td><td>URL do endpoint a chamar</td></tr>
+            <tr><td><code>webhookMethod</code></td><td>String</td><td>default POST</td><td>Método HTTP (GET, POST, PUT, DELETE)</td></tr>
+            <tr><td><code>callbackUrl</code></td><td>String?</td><td>@map("callback_url")</td><td>URL para callback após processamento</td></tr>
+            <tr><td><code>payload</code></td><td>Json</td><td>required</td><td>Dados a enviar no webhook</td></tr>
+            <tr><td><code>result</code></td><td>Json?</td><td>—</td><td>Resultado retornado pelo webhook</td></tr>
+            <tr><td><code>error</code></td><td>String?</td><td>—</td><td>Mensagem de erro se falhou</td></tr>
+            <tr><td><code>status</code></td><td>JobStatus</td><td>default PENDING</td><td>Estado atual (ver state machine)</td></tr>
+            <tr><td><code>priority</code></td><td>Int</td><td>default 0</td><td>Prioridade (maior = mais urgente)</td></tr>
+            <tr><td><code>attempts</code></td><td>Int</td><td>default 0</td><td>Tentativas já executadas</td></tr>
+            <tr><td><code>maxAttempts</code></td><td>Int</td><td>default 3</td><td>Tentativas máximas</td></tr>
+            <tr><td><code>scheduledAt</code></td><td>DateTime?</td><td>@map("scheduled_at")</td><td>Agendamento (delay job)</td></tr>
+            <tr><td><code>startedAt</code></td><td>DateTime?</td><td>@map("started_at")</td><td>Quando começou a processar</td></tr>
+            <tr><td><code>completedAt</code></td><td>DateTime?</td><td>@map("completed_at")</td><td>Quando terminou</td></tr>
+            <tr><td><code>metadata</code></td><td>Json?</td><td>—</td><td>Metadados customizados (tags, headers custom)</td></tr>
+            <tr><td><code>tags</code></td><td>String[]</td><td>default []</td><td>Tags para filtros e categorização</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Data de criação</td></tr>
+            <tr><td><code>updatedAt</code></td><td>DateTime</td><td>@updatedAt</td><td>Última atualização</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([organizationId])</code>, <code>@@index([queueId])</code>, <code>@@index([userId])</code>, <code>@@index([status])</code>, <code>@@index([scheduledAt])</code>, <code>@@index([createdAt])</code>, <code>@@index([externalId])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>JobLog (job_logs)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>ID do log</td></tr>
+            <tr><td><code>jobId</code></td><td>String</td><td>FK → Job.id, Cascade</td><td>Job relacionado</td></tr>
+            <tr><td><code>attempt</code></td><td>Int</td><td>required</td><td>Número da tentativa</td></tr>
+            <tr><td><code>status</code></td><td>String</td><td>required</td><td>Estado do job (PENDING, PROCESSING...)</td></tr>
+            <tr><td><code>message</code></td><td>String?</td><td>—</td><td>Mensagem descritiva do evento</td></tr>
+            <tr><td><code>duration</code></td><td>Int?</td><td>ms</td><td>Duração do processamento se completou/falhou</td></tr>
+            <tr><td><code>metadata</code></td><td>Json?</td><td>—</td><td>Metadados extras (response headers, etc)</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Timestamp do log</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([jobId])</code>, <code>@@index([createdAt])</code></p>
+      </div>
+
+      <div class="model-detail">
+        <h3>AuditLog (audit_logs)</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Restrições</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>String</td><td>PK, default cuid()</td><td>ID do log de auditoria</td></tr>
+            <tr><td><code>userId</code></td><td>String?</td><td>FK → User.id, SetNull</td><td>Usuário que realizou ação</td></tr>
+            <tr><td><code>organizationId</code></td><td>String?</td><td>FK → Organization.id, SetNull</td><td>Organização afetada</td></tr>
+            <tr><td><code>action</code></td><td>String</td><td>required</td><td>Ação realizada (CREATE_QUEUE, DELETE_JOB...)</td></tr>
+            <tr><td><code>entityType</code></td><td>String?</td><td>@map("entity_type")</td><td>Tipo de entidade (Queue, Job...)</td></tr>
+            <tr><td><code>entityId</code></td><td>String?</td><td>@map("entity_id")</td><td>ID da entidade afetada</td></tr>
+            <tr><td><code>metadata</code></td><td>Json?</td><td>—</td><td>Detalhes da ação (before/after, diff)</td></tr>
+            <tr><td><code>ipAddress</code></td><td>String?</td><td>@map("ip_address")</td><td>IP de origem da requisição</td></tr>
+            <tr><td><code>userAgent</code></td><td>String?</td><td>@map("user_agent")</td><td>User-Agent do cliente</td></tr>
+            <tr><td><code>status</code></td><td>AuditStatus</td><td>default SUCCESS</td><td>SECCESS, FAILURE ou DENIED</td></tr>
+            <tr><td><code>createdAt</code></td><td>DateTime</td><td>default now()</td><td>Timestamp da ação</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Índices:</strong> <code>@@index([userId])</code>, <code>@@index([organizationId])</code>, <code>@@index([action])</code>, <code>@@index([entityType, entityId])</code>, <code>@@index([createdAt])</code></p>
+      </div>
+    </section>
+
+    <section id="multi-tenancy" class="section">
+      <h2>Multi-Tenancy</h2>
+      <p>A camada de multi-tenancy é implementada por <strong>tenant-scoping</strong>: todas as tabelas de dados operacionais (<code>Queue</code>, <code>Job</code>, <code>ApiKey</code>, <code>AuditLog</code>) possuem <code>organizationId</code> e são filtradas por esse campo em todas as queries.</p>
+
+      <h3>Isolamento por OrganizationId</h3>
+      <div class="card">
+        <div class="card-icon red">🔒</div>
+        <h4>Como funciona</h4>
+        <ul>
+          <li>Cada requisição autenticada traz <code>organizationId</code> (via JWT ou API key).</li>
+          <li>Todos os serviços incluem <code>where: { organizationId }</code> nas queries.</li>
+          <li><code>Queue</code> tem unique constraint <code>(organizationId, name)</code> garantindo nomes isolados.</li>
+          <li><code>Organization.isActive</code> permite desativar um tenant (soft blocking).</li>
+        </ul>
+      </div>
+
+      <h3>Roles e Permissões</h3>
+      <p><code>OrganizationMember</code> armazena o papel (<code>role</code>) e permissões细cased por usuário na organização. Validação de autorização verifica:</p>
+      <ul>
+        <li><code>role</code> (OWNER, ADMIN, MEMBER, VIEWER)</li>
+        <li><code>permissions[]</code> (ex: <code>["queue:read", "job:write"]</code>)</li>
+      </ul>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Importante</strong>
+          <p>Não existe row-level security nativa no PostgreSQL. O isolamento é garantido pela aplicação. Sempre incluir <code>organizationId</code> em cada query Prisma.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="api-key-auth" class="section">
+      <h2>ApiKey como Autenticação M2M</h2>
+      <p><code>ApiKey</code> permite que serviços externos acessem a API sem um usuário humano. Funciona como "service account":</p>
+
+      <h3>Funcionamento</h3>
+      <ol>
+        <li>Cliente envia <code>X-API-Key: {key}</code> no cabeçalho.</li>
+        <li>Middleware consulta <code>ApiKey</code> por <code>key</code>.</li>
+        <li>Valida: <code>isActive=true</code>, <code>expiresAt &gt; now</code>, <code>allowedDomains</code>, <code>allowedIps</code>.</li>
+        <li>Extrai <code>organizationId</code> da key.</li>
+        <li>Contexto de request passa a conter: <code>{ organizationId, apiKey }</code>.</li>
+        <li>Jobs criados por API key podem ter <code>userId = null</code>.</li>
+      </ol>
+
+      <h3>Permissões</h3>
+      <p><code>ApiKey.permissions</code> é um array de strings no formato <code>"{resource}:{action}"</code>:</p>
+      <ul>
+        <li><code>"queue:read"</code> — listar/configurar filas</li>
+        <li><code>"job:write"</code> — criar jobs</li>
+        <li><code>"job:read"</code> — consultar jobs</li>
+      </ul>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Rastreabilidade</strong>
+          <p><code>AuditLog</code> registra ações feitas por API key com <code>userId = null</code> mas <code>organizationId</code> válido. <code>ApiKey.createdById</code> rastreia qual usuário criou a chave.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="constraints-indexes" class="section">
+      <h2>Constraints e Índices</h2>
+      <p>Constraints garantem integridade referencial e unicidade. Índices otimizam queries frequentes.</p>
+
+      <h3>Unique Constraints</h3>
+      <ul>
+        <li><code>User.email</code> único</li>
+        <li><code>Organization.slug</code> único</li>
+        <li><code>ApiKey.key</code> único</li>
+        <li><code>OrganizationMember(userId, organizationId)</code> único</li>
+        <li><code>Queue(organizationId, name)</code> único</li>
+      </ul>
+
+      <h3>Foreign Keys com Cascade</h3>
+      <ul>
+        <li><code>OrganizationMember.userId → User.id</code> (Cascade Delete)</li>
+        <li><code>OrganizationMember.organizationId → Organization.id</code> (Cascade Delete)</li>
+        <li><code>ApiKey.organizationId → Organization.id</code> (Cascade Delete)</li>
+        <li><code>Queue.organizationId → Organization.id</code> (Cascade Delete)</li>
+        <li><code>Job.organizationId → Organization.id</code> (Cascade Delete)</li>
+        <li><code>Job.queueId → Queue.id</code> (Cascade Delete)</li>
+        <li><code>JobLog.jobId → Job.id</code> (Cascade Delete)</li>
+      </ul>
+
+      <h3>Foreign Keys com SetNull</h3>
+      <ul>
+        <li><code>Job.userId → User.id</code> (SetNull ao deletar usuário)</li>
+        <li><code>AuditLog.userId → User.id</code> (SetNull)</li>
+        <li><code>AuditLog.organizationId → Organization.id</code> (SetNull)</li>
+      </ul>
+
+      <h3>Índices para Performance</h3>
+      <table>
+        <thead><tr><th>Tabela</th><th>Índices</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td><code>jobs</code></td><td><code>organizationId</code>, <code>queueId</code>, <code>userId</code>, <code>status</code>, <code>scheduledAt</code>, <code>createdAt</code></td><td>Filtros por tenant, fila, usuário, status</td></tr>
+          <tr><td><code>queues</code></td><td><code>organizationId</code></td><td>Listagem por organização</td></tr>
+          <tr><td><code>api_keys</code></td><td><code>key</code>, <code>organizationId</code></td><td>Lookup por chave, listagem por org</td></tr>
+          <tr><td><code>audit_logs</code></td><td><code>userId</code>, <code>organizationId</code>, <code>action</code>, <code>(entityType, entityId)</code>, <code>createdAt</code></td><td>Auditoria, queries de histórico</td></tr>
+          <tr><td><code>job_logs</code></td><td><code>jobId</code>, <code>createdAt</code></td><td>Buscar logs de um job (ordenado cronológico)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="migrations" class="section">
+      <h2>Migrations</h2>
+      <p>O schema é gerenciado pelo Prisma Migrate. Comandos para gerenciar:</p>
+
+      <div class="code-block">
+        <pre><code># Criar nova migration
+npx prisma migrate dev --name nome_da_migration
+
+# Aplicar migrations em produção
+npx prisma migrate deploy
+
+# Gerar client após alterar schema
+npx prisma generate
+
+# Resetar banco (DESENVOLVIMENTO ONLY)
+npx prisma migrate reset</code></pre>
+      </div>
+
+      <div class="alert danger">
+        <span class="alert-icon">🔴</span>
+        <div class="alert-content">
+          <strong>Nunca modifique banco produtivo diretamente</strong>
+          <p>Toda alteração de schema deve passar por migration do Prisma. Sempre versionar <code>prisma/migrations/</code> e testar em staging antes de deploy.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="queries-examples" class="section">
+      <h2>Exemplos de Queries Comuns</h2>
+
+      <h3>1. Listar filas de uma organização</h3>
+      <pre><code>const queues = await prisma.queue.findMany({
+  where: { organizationId },
+  include: { jobs: { take: 5, orderBy: { createdAt: 'desc' } } },
+  orderBy: { createdAt: 'desc' },
+});</code></pre>
+
+      <h3>2. Buscar job com logs</h3>
+      <pre><code>const job = await prisma.job.findUnique({
+  where: { id: jobId },
+  include: {
+    logs: { orderBy: { createdAt: 'asc' } },
+    queue: true,
+    user: true,
+  },
+});</code></pre>
+
+      <h3>3. Estatísticas de uma fila (contadores por status)</h3>
+      <pre><code>const stats = await prisma.job.groupBy({
+  by: ['status'],
+  where: { queueId },
+  _count: { status: true },
+});</code></pre>
+
+      <h3>4. Criar job via API key (userId null)</h3>
+      <pre><code>const job = await prisma.job.create({
+  data: {
+    organizationId,
+    queueId,
+    userId: null,  // criado por API key
+    webhookUrl,
+    webhookMethod: 'POST',
+    payload,
+    status: 'PENDING',
+    tags: ['api-created'],
+  },
+});</code></pre>
+
+      <h3>5. Registrar log de auditoria</h3>
+      <pre><code>await prisma.auditLog.create({
+  data: {
+    userId: user?.id,
+    organizationId,
+    action: 'CREATE_JOB',
+    entityType: 'Job',
+    entityId: job.id,
+    metadata: { before: null, after: job },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    status: 'SUCCESS',
+  },
+});</code></pre>
+    </section>
+
+    <section id="diagrams" class="section">
+      <h2>Diagramas Comparativos</h2>
+
+      <h3>User vs ApiKey</h3>
+      <div class="comparison-table">
+        <table>
+          <thead><tr><th>Aspecto</th><th>Usuário (User)</th><th>API Key</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Tipo</strong></td><td>Humano (OAuth PKCE)</td><td>Machine-to-Machine</td></tr>
+            <tr><td><strong>Auth Header</strong></td><td><code>Authorization: Bearer {jwt}</code></td><td><code>X-API-Key: {key}</code></td></tr>
+            <tr><td><strong>userId em Job</strong></td><td>preenchido</td><td>null</td></tr>
+            <tr><td><strong>Rate limit</strong></td><td>global por usuário</td><td>por key (campo opcional)</td></tr>
+            <tr><td><strong>Domínios/IPs</strong></td><td>não aplica</td><td><code>allowedDomains</code>, <code>allowedIps</code></td></tr>
+            <tr><td><strong>Expiração</strong></td><td>jwt expira (refresh)</td><td><code>expiresAt</code> opcional</td></tr>
+            <tr><td><strong>Revogação</strong></td><td>desativar usuário</td><td><code>isActive = false</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Job Status Transitions</h3>
+      <div class="state-diagram">
+        <pre><code>PENDING ──(worker picks)──> PROCESSING ──(success)──> COMPLETED
+    │                              │
+    │                              └─(failure, retry remaining)──> FAILED ──(retry backoff)──> PENDING
+    │                                                                                   │
+    └─(cancel)───────────────────────────────────────────────────────────────────────────┘
+                                                                                         │
+                                                                                         └─(max retries)──> DEAD
+
+Outros:
+  SCHEDULED ──(time reached)──> PENDING
+  PROCESSING/CANCELLED/DEAD são estados finais ou transitórios controlados.</code></pre>
+      </div>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Schema de Dados Prisma</p>
+      <p>Consulte também: <a href="arquitetura-overview.html">Arquitetura Geral</a> | <a href="sistema-filas.html">Sistema de Filas</a> | <a href="api-reference.html">API Reference</a></p>
+    </div>
+  </div>
+</body>
+</html>
