@@ -144,7 +144,9 @@
       "backup-restore-procedures.html",
       "zero-downtime-deployments.html",
       "capacity-planning.html",
-      "troubleshooting-runbook.html"
+      "troubleshooting-runbook.html",
+      "observabilidade.html",
+      "trilha-auditoria.html"
     ],
     "api": [
       "api-reference.html"
