@@ -18,6 +18,7 @@
     { "title": "API Keys & M2M", "path": "/guides/apikeys.html", "file": "apikeys.html" },
     { "title": "Permissões (RBAC)", "path": "/guides/permissions.html", "file": "permissions.html" },
     { "title": "Multi-Tenancy", "path": "/guides/multitenancy.html", "file": "multitenancy.html" },
+    { "title": "Multi-Tenancy Analysis", "path": "/guides/multitenancy-analysis.html", "file": "multitenancy-analysis.html" },
     { "title": "Rate Limiting", "path": "/guides/rate-limiting.html", "file": "rate-limiting.html" },
 
     <!-- Integration (existing + deep dive) -->
@@ -114,6 +115,7 @@
       "apikeys.html",
       "permissions.html",
       "multitenancy.html",
+      "multitenancy-analysis.html",
       "rate-limiting.html",
       "owasp-top10-coverage.html",
       "jwt-security-best-practices.html",
