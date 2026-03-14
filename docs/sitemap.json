@@ -108,6 +108,7 @@
     ],
     "security": [
       "auth-flow.html",
+      "autenticacao-api-keys.html",
       "apikeys.html",
       "permissions.html",
       "multitenancy.html",
