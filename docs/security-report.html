@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Segurança - Job Async Backend</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; padding: 2rem; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #38bdf8; margin-bottom: 0.5rem; }
+    h2 { color: #34d399; margin: 2rem 0 1rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+    h3 { color: #fbbf24; margin: 1.5rem 0 0.5rem; }
+    .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+    .card { background: #1e293b; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; border: 1px solid #334155; }
+    .diagram { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin: 2rem 0; }
+    .layer { background: linear-gradient(135deg, #1e293b, #334155); padding: 1.5rem; border-radius: 12px; text-align: center; min-width: 180px; border: 2px solid; }
+    .layer-1 { border-color: #ef4444; }
+    .layer-2 { border-color: #f97316; }
+    .layer-3 { border-color: #eab308; }
+    .layer-4 { border-color: #22c55e; }
+    .layer-5 { border-color: #06b6d4; }
+    .layer-6 { border-color: #8b5cf6; }
+    .layer-7 { border-color: #ec4899; }
+    .layer-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .layer-desc { font-size: 0.85rem; color: #94a3b8; }
+    .arrow { align-self: center; color: #64748b; font-size: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #334155; }
+    th { background: #1e293b; color: #38bdf8; }
+    tr:hover { background: #1e293b; }
+    .check-ok { color: #22c55e; }
+    .check-warn { color: #f97316; }
+    .check-fail { color: #ef4444; }
+    .check-na { color: #64748b; }
+    .recommendation { background: #1e293b; border-left: 4px solid #38bdf8; padding: 1rem; margin: 0.5rem 0; }
+    .recommendation.high { border-left-color: #ef4444; }
+    .recommendation.medium { border-left-color: #f97316; }
+    code { background: #334155; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+    .code-block { background: #0f172a; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    .badge-ok { background: #22c55e20; color: #22c55e; }
+    .badge-warn { background: #f9731620; color: #f97316; }
+    .badge-fail { background: #ef444420; color: #ef4444; }
+    .risk-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .risk-card { background: #1e293b; padding: 1rem; border-radius: 8px; border: 1px solid #334155; }
+    .risk-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .risk-title { font-weight: bold; }
+    .toc { background: #1e293b; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+    .toc ul { list-style: none; }
+    .toc li { margin: 0.5rem 0; }
+    .toc a { color: #38bdf8; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Relatório de Análise de Segurança</h1>
+    <p class="subtitle">Backend Job Async - Análise Completa das Camadas de Segurança</p>
+
+    <div class="toc">
+      <h3>Índice</h3>
+      <ul>
+        <li><a href="#diagram">1. Diagrama de Camadas</a></li>
+        <li><a href="#cors">2. CORS</a></li>
+        <li><a href="#rate-limit">3. Rate Limiting</a></li>
+        <li><a href="#apikeys">4. API Keys</a></li>
+        <li><a href="#jwt">5. JWT Authentication</a></li>
+        <li><a href="#authz">6. Autorização</a></li>
+        <li><a href="#sql">7. SQL Injection</a></li>
+        <li><a href="#validation">8. Input Validation</a></li>
+        <li><a href="#riscos">9. Riscos Identificados</a></li>
+        <li><a href="#tabela">10. Tabela de Rate Limits</a></li>
+        <li><a href="#checklist">11. Checklist de Segurança</a></li>
+        <li><a href="#recomendacoes">12. Recomendações</a></li>
+      </ul>
+    </div>
+
+    <h2 id="diagram">1. Diagrama de Camadas de Segurança</h2>
+    <div class="diagram">
+      <div class="layer layer-1">
+        <div class="layer-title">CORS</div>
+        <div class="layer-desc">Allowed Origins<br>Credentials</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-2">
+        <div class="layer-title">Rate Limit</div>
+        <div class="layer-desc">@fastify/rate-limit<br>1000 req/min</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-3">
+        <div class="layer-title">Auth</div>
+        <div class="layer-desc">API Key / JWT<br>Verificação</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-4">
+        <div class="layer-title">Permissions</div>
+        <div class="layer-desc">requirePermission<br>hasPermission</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-5">
+        <div class="layer-title">Validation</div>
+        <div class="layer-desc">Zod Schemas<br>Type Safety</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-6">
+        <div class="layer-title">Database</div>
+        <div class="layer-desc">Prisma ORM<br>Parameterized</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="layer layer-7">
+        <div class="layer-title">Audit</div>
+        <div class="layer-desc">Audit Logs<br>Sentry</div>
+      </div>
+    </div>
+
+    <h2 id="cors">2. CORS - Cross-Origin Resource Sharing</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Origens permitidas</td><td><code>ALLOWED_ORIGINS</code> (env var)</td></tr>
+        <tr><td>Credentials</td><td><span class="badge badge-ok">HABILITADO</span></td></tr>
+        <tr><td>Modo de validação</td><td>Whitelist (origens explícitas)</td></tr>
+        <tr><td>Arquivo</td><td><code>src/server.ts:30-41</code></td></tr>
+      </table>
+      <h3>Configuração</h3>
+      <div class="code-block"><pre>const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',');
+
+// CORS com callback de validação
+origin: (origin, callback) => {
+  if (!origin) return callback(null, true); // Same-origin
+  if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    return callback(null, true);
+  }
+  callback(new Error('Not allowed by CORS'), false);
+}</pre></div>
+    </div>
+
+    <h2 id="rate-limit">3. Rate Limiting</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Biblioteca</td><td><code>@fastify/rate-limit</code></td></tr>
+        <tr><td>Limite padrão</td><td>1000 req/minuto</td></tr>
+        <tr><td>Key Generator</td><td><code>request.organizationId || request.ip</code></td></tr>
+        <tr><td>Scope</td><td>Global (por organização)</td></tr>
+        <tr><td>Por API Key</td><td><span class="badge badge-warn">NÃO IMPLEMENTADO</span></td></tr>
+      </table>
+      <h3>Configuração</h3>
+      <div class="code-block"><pre>await fastify.register(rateLimit, {
+  max: 1000,
+  timeWindow: '1 minute',
+  keyGenerator: (request) => request.organizationId || request.ip,
+});</pre></div>
+    </div>
+
+    <h2 id="apikeys">4. API Keys</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Geração</td><td><code>crypto.randomBytes(32)</code> (64 hex chars)</td></tr>
+        <tr><td>Prefixo</td><td><code>jsk_</code></td></tr>
+        <tr><td>Armazenamento</td><td><span class="badge badge-warn">PLAIN TEXT</span> (não hash!)</td></tr>
+        <tr><td>Exposição</td><td>Apenas na criação</td></tr>
+        <tr><td>Permissions</td><td><span class="badge badge-ok">IMPLEMENTADO</span></td></tr>
+        <tr><td>allowedDomains</td><td><span class="badge badge-warn">ARMAZENADO MAS NÃO VALIDADO</span></td></tr>
+        <tr><td>allowedIps</td><td><span class="badge badge-ok">IMPLEMENTADO</span></td></tr>
+        <tr><td>Rate Limit</td><td><span class="badge badge-warn">CAMPO EXISTE, NÃO IMPLEMENTADO</span></td></tr>
+        <tr><td>expiresAt</td><td><span class="badge badge-ok">IMPLEMENTADO</span></td></tr>
+        <tr><td>isActive</td><td><span class="badge badge-ok">IMPLEMENTADO</span></td></tr>
+      </table>
+      <h3>Modelo de Dados (Prisma)</h3>
+      <div class="code-block"><pre>model ApiKey {
+  id              String   @id @default(cuid())
+  key             String   @unique  // Plain text - RISCO!
+  name            String
+  permissions     String[] // ["jobs:create", "jobs:read"]
+  allowedDomains String[] // Não validado em callbacks
+  allowedIps      String[] // Validado na autenticação
+  rateLimit       Int?     // Não implementado
+  isActive        Boolean  @default(true)
+  expiresAt       DateTime?
+  usageCount     Int      @default(0)
+  lastUsedAt     DateTime?
+}</pre></div>
+      <h3>Validação na Autenticação</h3>
+      <div class="code-block"><pre>// server.ts:84-101
+if (apiKey) {
+  // 1. Verifica se está ativa
+  if (!apiKey.isActive) return 401;
+
+  // 2. Verifica expiração
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return 401;
+
+  // 3. Verifica IP whitelist
+  if (apiKey.allowedIps.length > 0 && !apiKey.allowedIps.includes(request.ip)) return 401;
+
+  // Atualiza métricas
+  await prisma.apiKey.update({ data: { lastUsedAt: new Date(), usageCount: { increment: 1 } } });
+}</pre></div>
+    </div>
+
+    <h2 id="jwt">5. JWT Authentication</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Biblioteca</td><td><code>jose</code> (RFC 7519)</td></tr>
+        <tr><td>JWKS URL</td><td><code>AUTH_SERVER_URL/.well-known/jwks.json</code></td></tr>
+        <tr><td>Cache JWKS</td><td>5 minutos</td></tr>
+        <tr><td>Issuer</td><td>Múltiplos aceitos (flexibilidade)</td></tr>
+        <tr><td>Algorithm</td><td>RS256 (via JWKS)</td></tr>
+        <tr><td>Expiração</td><td>Verificada automaticamente</td></tr>
+      </table>
+      <h3>Verificação JWT</h3>
+      <div class="code-block"><pre>// auth.ts:130-152
+export async function verifyJWT(token: string): Promise<JWTPayload> {
+  const jwks = await getJWKS();
+  const JWKS = jose.createLocalJWKSet(jwks);
+
+  const validIssuers = [
+    baseUrl, baseUrl + '/',
+    baseUrl.replace('https://', 'http://'),
+    baseUrl.replace('http://', 'https://'),
+    'https://auth.service.api.nommand.com',
+    'http://auth.service.api.nommand.com',
+    'https://auth.service.nommand.com',
+    'http://localhost:3000',
+  ];
+
+  const { payload } = await jose.jwtVerify(token, JWKS, {
+    issuer: validIssuers,
+  });
+  return payload as JWTPayload;
+}</pre></div>
+    </div>
+
+    <h2 id="authz">6. Autorização</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Middleware</td><td><code>requirePermission()</code></td></tr>
+        <tr><td>Função de checagem</td><td><code>hasPermission()</code></td></tr>
+        <tr><td>Wildcard support</td><td><span class="badge badge-ok">SIM</span> (ex: <code>jobs:*</code>)</td></tr>
+        <tr><td>Admin permission</td><td><code>*</code> ou <code>admin:*</code></td></tr>
+      </table>
+      <h3>Função hasPermission</h3>
+      <div class="code-block"><pre>// auth.ts:385-398
+export function hasPermission(
+  userPermissions: string[],
+  requiredPermission: string
+): boolean {
+  // Admin tem tudo
+  if (userPermissions.includes('*')) return true;
+
+  // Wildcard (ex: jobs:* inclui jobs:create)
+  const [resource, action] = requiredPermission.split(':');
+  if (userPermissions.includes(`${resource}:*`)) return true;
+
+  // Permissão exata
+  return userPermissions.includes(requiredPermission);
+}</pre></div>
+      <h3>Uso no Middleware</h3>
+      <div class="code-block"><pre>// server.ts:135-143
+export function requirePermission(permission: string) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const userPermissions = request.permissions || [];
+    if (!hasPermission(userPermissions, permission)) {
+      await logAudit({ /* ... */ status: 'DENIED' });
+      return reply.status(403).send({ error: 'Forbidden', message: `Missing permission: ${permission}` });
+    }
+  };
+}</pre></div>
+    </div>
+
+    <h2 id="sql">7. SQL Injection</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>ORM</td><td><code>Prisma</code></td></tr>
+        <tr><td>Proteção</td><td><span class="badge badge-ok">Automática</span></td></tr>
+        <tr><td>Raw SQL</td><td><span class="badge badge-ok">Nenhum encontrado</span></td></tr>
+      </table>
+      <p>Prisma usa queries parametrizadas automaticamente, prevenindo SQL injection. O schema usa <code>prisma.$queryRaw</code> apenas para health checks.</p>
+    </div>
+
+    <h2 id="validation">8. Input Validation</h2>
+    <div class="card">
+      <table>
+        <tr><th>Propriedade</th><th>Valor</th></tr>
+        <tr><td>Biblioteca</td><td><code>Zod</code></td></tr>
+        <tr><td>Schemas</td><td>Todos os inputs validados</td></tr>
+      </table>
+      <h3>Exemplo: Job Creation</h3>
+      <div class="code-block"><pre>// types/index.ts
+export const createJobSchema = z.object({
+  queue: z.string().min(1),
+  webhookUrl: z.string().url(),
+  webhookMethod: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('POST'),
+  callbackUrl: z.string().url().optional(),
+  payload: z.record(z.unknown()),
+  userId: z.string().optional(),
+  priority: z.number().int().min(0).max(100).default(0),
+  scheduledAt: z.string().datetime().optional(),
+});
+
+export const createBulkJobsSchema = z.object({
+  queue: z.string().min(1),
+  jobs: z.array(/* ... */).min(1).max(1000),  // Limite de 1000 jobs
+});</pre></div>
+    </div>
+
+    <h2 id="riscos">9. Riscos Identificados</h2>
+    <div class="risk-section">
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">IP Spoofing</span>
+          <span class="badge badge-warn">MÉDIO</span>
+        </div>
+        <p><code>request.ip</code> pode ser spoofado via header <code>X-Forwarded-For</code> ou <code>X-Real-IP</code>.</p>
+        <p><strong>Impacto:</strong> Bypass de IP whitelist em API Keys.</p>
+      </div>
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">API Key em Plaintext</span>
+          <span class="badge badge-fail">ALTO</span>
+        </div>
+        <p>API Keys são armazenadas sem hash. Vazamento do banco expõe todas as chaves.</p>
+        <p><strong>Impacto:</strong> Comprometimento total se o banco for vazado.</p>
+      </div>
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">allowedDomains não validado</span>
+          <span class="badge badge-warn">MÉDIO</span>
+        </div>
+        <p>Campo existe no modelo mas não é usado para validar callbacks.</p>
+        <p><strong>Impacto:</strong> Callbacks podem ir para domínios não autorizados.</p>
+      </div>
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">Rate limit por API Key</span>
+          <span class="badge badge-warn">MÉDIO</span>
+        </div>
+        <p>Campo <code>rateLimit</code> existe no modelo mas não é aplicado.</p>
+        <p><strong>Impacto:</strong> Uma API Key pode consumir todo o rate limit da organização.</p>
+      </div>
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">Rate limit fallback para IP</span>
+          <span class="badge badge-warn">MÉDIO</span>
+        </div>
+        <p>Se <code>organizationId</code> não existir, usa IP como key, permitindo bypass.</p>
+        <p><strong>Impacto:</strong> Ataque de rate limit por spoofing de IP.</p>
+      </div>
+      <div class="risk-card">
+        <div class="risk-header">
+          <span class="risk-title">Múltiplos Issuers JWT</span>
+          <span class="badge badge-ok">BAIXO</span>
+        </div>
+        <p>Múltiplos issuers aceitos para flexibilidade, mas é uma superfície de ataque pequena.</p>
+        <p><strong>Recomendação:</strong> Restringir em produção.</p>
+      </div>
+    </div>
+
+    <h2 id="tabela">10. Tabela de Rate Limits</h2>
+    <div class="card">
+      <table>
+        <tr><th>Recurso</th><th>Tipo</th><th>Limite</th><th>Implementado</th></tr>
+        <tr><td>Global (default)</td><td>Organization/IP</td><td>1000 req/min</td><td class="check-ok">✓</td></tr>
+        <tr><td>API Key</td><td>Por key</td><td>Configurável</td><td class="check-warn">✗ Campo existe</td></tr>
+        <tr><td>Bulk Jobs</td><td>Por request</td><td>1000 jobs</td><td class="check-ok">✓</td></tr>
+        <tr><td>List Jobs</td><td>Por request</td><td>100 items</td><td class="check-ok">✓</td></tr>
+        <tr><td>Queue rateLimit</td><td>Jobs/min</td><td>Configurável</td><td class="check-na">N/A (queue config)</td></tr>
+      </table>
+    </div>
+
+    <h2 id="checklist">11. Checklist de Segurança</h2>
+    <div class="card">
+      <table>
+        <tr><th>Item</th><th>Status</th><th>Observação</th></tr>
+        <tr><td>CORS configurado</td><td class="check-ok">✓</td><td>Whitelist de origens</td></tr>
+        <tr><td>Rate limiting</td><td class="check-ok">✓</td><td>Global, 1000 req/min</td></tr>
+        <tr><td>API Key authentication</td><td class="check-ok">✓</td><td>Suporta permissions, IPs, expiração</td></tr>
+        <tr><td>JWT authentication</td><td class="check-ok">✓</td><td>JWKS com cache</td></tr>
+        <tr><td>Authorization middleware</td><td class="check-ok">✓</td><td>requirePermission</td></tr>
+        <tr><td>Input validation</td><td class="check-ok">✓</td><td>Zod em todas rotas</td></tr>
+        <tr><td>SQL injection protection</td><td class="check-ok">✓</td><td>Prisma ORM</td></tr>
+        <tr><td>Audit logging</td><td class="check-ok">✓</td><td>Log de ações, erros, negações</td></tr>
+        <tr><td>Error handling</td><td class="check-ok">✓</td><td>Sentry integrado</td></tr>
+        <tr><td>HTTPS</td><td class="check-na">N/A</td><td>Responsabilidade do EasyPanel/infra</td></tr>
+        <tr><td>API Key hashing</td><td class="check-fail">✗</td><td>Armazenada em plaintext</td></tr>
+        <tr><td>Rate limit por API Key</td><td class="check-fail">✗</td><td>Não implementado</td></tr>
+        <tr><td>allowedDomains validation</td><td class="check-fail">✗</td><td>Campo não utilizado</td></tr>
+        <tr><td>IP spoofing protection</td><td class="check-fail">✗</td><td>Confia em X-Forwarded-For</td></tr>
+      </table>
+    </div>
+
+    <h2 id="recomendacoes">12. Recomendações</h2>
+
+    <div class="recommendation high">
+      <h3>1. Hash de API Keys</h3>
+      <p>Armazenar API Keys com hash (bcrypt ou Argon2) ao invés de plaintext.</p>
+      <div class="code-block"><pre>// Usar: await bcrypt.hash(key, 10)
+// Na verificação: await bcrypt.compare(inputKey, storedHash)
+// E armazenar apenas o hash!</pre></div>
+    </div>
+
+    <div class="recommendation high">
+      <h3>2. Rate Limit por API Key</h3>
+      <p>Implementar rate limiting individual para cada API Key, não apenas global.</p>
+      <div class="code-block"><pre>// Verificar apiKey.rateLimit antes de processar
+if (apiKey.rateLimit) {
+  const key = `ratelimit:apikey:${apiKey.id}`;
+  const current = await redis.incr(key);
+  if (current === 1) await redis.expire(key, 60);
+  if (current > apiKey.rateLimit) return 429;
+}</pre></div>
+    </div>
+
+    <div class="recommendation high">
+      <h3>3. Validar allowedDomains em Callbacks</h3>
+      <p>Usar o campo <code>allowedDomains</code> para validar URLs de callback antes de executar webhooks.</p>
+    </div>
+
+    <div class="recommendation medium">
+      <h3>4. Configurar Trusted Proxy</h3>
+      <p>Configurar Fastify para confiar apenas em proxies confiáveis para evitar IP spoofing.</p>
+      <div class="code-block"><pre>import fastify from 'fastify';
+const app = fastify({
+  trustProxy: '127.0.0.1', // ou array de IPs confiáveis
+});</pre></div>
+    </div>
+
+    <div class="recommendation medium">
+      <h3>5. Rotação de API Keys</h3>
+      <p>Implementar rotação automática de API Keys com expiração e alerta de renovação.</p>
+    </div>
+
+    <div class="recommendation medium">
+      <h3>6. Audit Logs Estruturados</h3>
+      <p>Adicionar mais contexto aos logs: геолокация, device info, duração da requisição.</p>
+    </div>
+
+    <div class="recommendation">
+      <h3>7. HTTPS</h3>
+      <p>Configurar HTTPS via EasyPanel ou nginx. Verificar que <code>NODE_ENV=production</code>.</p>
+    </div>
+
+    <div class="recommendation">
+      <h3>8. Limitar Issuers JWT</h3>
+      <p>Em produção, restringir os issuers JWT aceitos apenas ao Auth Service real.</p>
+    </div>
+
+    <div style="margin-top: 3rem; padding: 1rem; background: #1e293b; border-radius: 8px; text-align: center; color: #94a3b8;">
+      <p>Relatório gerado em: 2026-03-14</p>
+      <p>Backend: job-assync v2.0.0</p>
+      <p>Arquivos analisados: src/server.ts, src/lib/auth.ts, src/services/apikey.service.ts, prisma/schema.prisma, src/types/index.ts</p>
+    </div>
+  </div>
+</body>
+</html>

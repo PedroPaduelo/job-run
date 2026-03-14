@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Keys e Autenticação M2M - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+        <a href="apikeys.html" class="active">API Keys</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Guides</a>
+        <span class="sep">/</span>
+        <span>API Keys</span>
+      </div>
+      <span class="badge">Security</span>
+      <h1>API Keys e Autenticação M2M</h1>
+      <p class="subtitle">Sistema completo de autenticação máquina-a-máquina para integrações server-to-server</p>
+    </div>
+
+    <section class="section">
+      <h2>Visão Geral</h2>
+      <p>O JobSync suporta dois modos de autenticação:</p>
+      <ul>
+        <li><strong>OAuth 2.0 (Usuários):</strong> Para acesso via frontend ou apps interativos</li>
+        <li><strong>API Keys (M2M):</strong> Para integrações automatizadas entre serviços</li>
+      </ul>
+      <p>Esta documentação cobre o sistema de <strong>API Keys</strong>, ideal para:</p>
+      <ul>
+        <li>CI/CD pipelines que disparam jobs</li>
+        <li>Webhooks de outros sistemas</li>
+        <li>Scripts de automação</li>
+        <li>Integrações backend-backend</li>
+      </ul>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <h4>Pré-requisitos</h4>
+        <ul>
+          <li>Um <code>organizationId</code> válido ao qual a API Key será vinculada</li>
+          <li>Escopo de permissões adequado aos casos de uso</li>
+          <li>Configuração de domínio/IP se aplicável</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. Formato da Chave</h2>
+      <p>As API Keys seguem um formato específico para facilitar identificação e validação:</p>
+
+      <div class="flow-diagram">
+Formato: jsk_ + 64 hex chars
+
+Exemplo:
+jsk_a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef
+
+├─ Prefixo: "jsk_" (4 caracteres)
+├─ Entropia: 32 bytes aleatórios
+└─ Codificação: hex (64 caracteres)
+    └─ Total: 68 caracteres
+
+Geração (Node.js):
+crypto.randomBytes(32).toString('hex')
+      </div>
+
+      <h3>Exemplo de Geração</h3>
+      <pre><code>const crypto = require('crypto');
+
+function generateApiKey() {
+  const randomBytes = crypto.randomBytes(32);
+  const hex = randomBytes.toString('hex');
+  return `jsk_${hex}`;
+}
+
+// Resultado: jsk_3f7a8b2c1d9e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9</code></pre>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Prefixos Suportados</strong>
+          <p>O sistema aceita apenas chaves começando com <code>jsk_</code>. Isso permite validação rápida antes da consulta ao banco.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. Ciclo de Vida da Chave</h2>
+      <p>Toda API Key passa por um ciclo de vida gerenciado:</p>
+
+      <div class="flow-diagram">
+          Ciclo de Vida (Lifecycle)
+          =========================
+
+         [CREATE]
+            │
+            │ 1. POST /api/apikeys
+            │    Retorna full_key UNA VEZ
+            ▼
+         [ACTIVE] ───────────────────┐
+            │                       │
+            │ 2. Uso_normal        │
+            │   ✓ ✓ ✓             │
+            │                       │
+            │ 3. POST /:id/revoke  │
+            ▼                       │
+      [REVOKED] ◄──────────────────┘
+            │
+            │ isActive: false
+            │
+            │ 4. DELETE /:id
+            ▼
+         [DELETED]
+            │
+            │ Removida permanentemente
+            │ Não é mais válida
+
+      Estados:
+      • CREATE  – Chave recém-criada, key Disponível
+      • ACTIVE  – Em uso, pode ser revogada
+      • REVOKED – Desativada (soft delete), isActive=false
+      • DELETED – Removida permanentemente (hard delete)
+      </div>
+
+      <h3>Importante</h3>
+      <ul>
+        <li><strong>Chave completa é retornada APENAS na criação (POST).</strong> Após isso, só é possível ver a chave mascarada.</li>
+        <li><strong>Revoke é reversível</strong> — você pode reativar uma chave (PATCH isActive=true)</li>
+        <li><strong>Delete é permanente</strong> — não há como recuperar após DELETE</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>3. Controles de Segurança</h2>
+      <p>Cada API Key pode ter múltiplas camadas de restrição de segurança:</p>
+
+      <div class="entity">
+        <div class="entity-name">🔐 ApiKey Schema</div>
+        <div class="entity-fields">
+          <div class="entity-field"><span class="field-name">id</span><span class="field-type">UUID</span></div>
+          <div class="entity-field"><span class="field-name">organizationId</span><span class="field-type">UUID</span></div>
+          <div class="entity-field"><span class="field-name">name</span><span class="field-type">string</span></div>
+          <div class="entity-field"><span class="field-name">key</span><span class="field-type">string (hashed)</span></div>
+          <div class="entity-field"><span class="field-name">permissions</span><span class="field-type">string[]</span></div>
+          <div class="entity-field"><span class="field-name">allowedDomains</span><span class="field-type">string[] (nullable)</span></div>
+          <div class="entity-field"><span class="field-name">allowedIps</span><span class="field-type">string[]</span></div>
+          <div class="entity-field"><span class="field-name">rateLimit</span><span class="field-type">number (nullable)</span></div>
+          <div class="entity-field"><span class="field-name">expiresAt</span><span class="field-type">DateTime (nullable)</span></div>
+          <div class="entity-field"><span class="field-name">isActive</span><span class="field-type">boolean</span></div>
+          <div class="entity-field"><span class="field-name">usageCount</span><span class="field-type">number</span></div>
+          <div class="entity-field"><span class="field-name">lastUsedAt</span><span class="field-type">DateTime (nullable)</span></div>
+          <div class="entity-field"><span class="field-name">createdBy</span><span class="field-type">UUID</span></div>
+          <div class="entity-field"><span class="field-name">createdAt</span><span class="field-type">DateTime</span></div>
+          <div class="entity-field"><span class="field-name">updatedAt</span><span class="field-type">DateTime</span></div>
+        </div>
+      </div>
+
+      <h3>3.1 Permissões (Permissions)</h3>
+      <p>Array de strings que definem o que a chave pode fazer. Valores possíveis:</p>
+
+      <table>
+        <thead>
+          <tr><th>Permissão</th><th>Descrição</th><th>Escopo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>jobs:create</code></td><td>Criar novos jobs</td><td>Job</td></tr>
+          <tr><td><code>jobs:read</code></td><td>Listar e ver detalhes de jobs</td><td>Job</td></tr>
+          <tr><td><code>jobs:update</code></td><td>Atualizar jobs (metadata)</td><td>Job</td></tr>
+          <tr><td><code>jobs:delete</code></td><td>Remover jobs</td><td>Job</td></tr>
+          <tr><td><code>jobs:retry</code></td><td>Retry de jobs falhos</td><td>Job</td></tr>
+          <tr><td><code>jobs:cancel</code></td><td>Cancelar jobs pendentes</td><td>Job</td></tr>
+          <tr><td><code>queues:read</code></td><td>Ver filas e estatísticas</td><td>Queue</td></tr>
+          <tr><td><code>queues:create</code></td><td>Criar novas filas</td><td>Queue</td></tr>
+          <tr><td><code>queues:update</code></td><td>Modificar configurações</td><td>Queue</td></tr>
+          <tr><td><code>queues:delete</code></td><td>Remover filas</td><td>Queue</td></tr>
+          <tr><td><code>apikeys:create</code></td><td>Criar novas API keys</td><td>ApiKey</td></tr>
+          <tr><td><code>apikeys:read</code></td><td>Listar API keys</td><td>ApiKey</td></tr>
+          <tr><td><code>apikeys:delete</code></td><td>Deletar API keys</td><td>ApiKey</td></tr>
+        </tbody>
+      </table>
+
+      <div class="alert info" style="margin-top: 1rem;">
+        <span class="alert-icon">📝</span>
+        <div class="alert-content">
+          <strong>Permissões Padrão</strong>
+          <p>Ao criar uma API Key sem especificar permissões, as seguintes são atribuídas por padrão: <code>['jobs:create', 'jobs:read', 'queues:read']</code></p>
+        </div>
+      </div>
+
+      <h3>3.2 Restrição de Domínio ( allowedDomains )</h3>
+      <pre><code>{
+  allowedDomains: ['https://meuapp.com', 'https://api.meuapp.com']
+}</code></pre>
+      <p>Lista de origens (domínios completos) autorizados a usar esta chave. Use <code>[]</code> ou <code>null</code> para permitir qualquer origem. A validação compara com o header <code>Origin</code> ou <code>Referer</code> da requisição.</p>
+
+      <h3>3.3 Restrição de IP ( allowedIps )</h3>
+      <pre><code>{
+  allowedIps: ['192.168.1.0/24', '10.0.0.5', '2001:db8::/32']
+}</code></pre>
+      <p>IPs ou CIDR blocks autorizados. Suporta IPv4 e IPv6. Lista vazia significa "any IP".</p>
+
+      <h3>3.4 Rate Limit por Chave</h3>
+      <pre><code>{
+  rateLimit: 120  // requisições por minuto (null = usar global)
+}</code></pre>
+      <p>O rate limit é aplicado por <code>organizationId</code>. Se a chave tem <code>rateLimit</code> definido, usa esse valor; caso contrário, usa o limite global da organização.</p>
+
+      <h3>3.5 Expiração ( expiresAt )</h3>
+      <pre><code>{
+  expiresAt: '2025-12-31T23:59:59Z'
+}</code></pre>
+      <p>Data ISO 8601 opcional. Após essa data, a chave é considerada expirada e não pode mais ser usada, mesmo se <code>isActive</code> for <code>true</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2>4. Rastreamento de Uso</h2>
+      <p>O sistema automaticamente atualiza dois campos por requisição autenticada:</p>
+
+      <div class="entity">
+        <div class="entity-name">📊 Uso Automático</div>
+        <div class="entity-fields">
+          <div class="entity-field"><span class="field-name">usageCount</span><span class="field-type">number</span></div>
+          <div class="entity-field"><span class="field-name">lastUsedAt</span><span class="field-type">DateTime</span></div>
+        </div>
+      </div>
+
+      <pre><code>// Backend: middleware de tracking
+await prisma.apiKey.update({
+  where: { id: apiKeyId },
+  data: {
+    usageCount: { increment: 1 },
+    lastUsedAt: new Date()
+  }
+});</code></pre>
+
+      <h3>Metadados de Uso no Frontend</h3>
+      <p>Na página <strong>Settings > API Keys</strong>, cada chave mostra:</p>
+      <ul>
+        <li><strong>Último uso:</strong> Data relativa (ex: "2 horas atrás")</li>
+        <li><strong>Total de requisições:</strong> Contador acumulado desde a criação</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>5. Endpoints da API</h2>
+      <p>Todas as rotas de API Keys requerem autenticação (JWT ou API Key válida) e permissão específica.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/apikeys</span>
+          <span class="endpoint-desc">Lista todas as API Keys da organização</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>GET /api/apikeys
+Authorization: Bearer {api_key}
+X-Organization-Id: {org_id}
+
+Resposta:
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "CI/CD Deploy",
+      "key": "jsk_***abcd...",  // SÓ PRIMEIROS/ÚLTIMOS 4 CHARS
+      "permissions": ["jobs:create", "jobs:read"],
+      "isActive": true,
+      "allowedDomains": null,
+      "allowedIps": [],
+      "rateLimit": 120,
+      "expiresAt": null,
+      "usageCount": 1547,
+      "lastUsedAt": "2025-03-14T10:30:00Z",
+      "createdAt": "2025-01-15T08:00:00Z"
+    }
+  ],
+  "pagination": { "total": 3, "page": 1, "pageSize": 20 }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Busca uma API Key específica</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>GET /api/apikeys/c12a4b56-7890-def1-2345-67890abcdef1
+Authorization: Bearer {jwt_or_api_key}
+X-Organization-Id: {org_id}</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/apikeys</span>
+          <span class="endpoint-desc">Cria uma nova API Key</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>POST /api/apikeys
+Authorization: Bearer {jwt}  // Requer JWT, não API Key
+Content-Type: application/json
+X-Organization-Id: {org_id}
+
+{
+  "name": "CI/CD Pipeline",
+  "permissions": ["jobs:create", "jobs:read", "queues:read"],
+  "allowedDomains": ["https://github.com"],
+  "allowedIps": [],
+  "rateLimit": 1000,
+  "expiresAt": "2026-01-01T00:00:00Z"
+}
+
+Resposta (SUCESSO - 201):
+{
+  "data": {
+    "id": "uuid-nova",
+    "name": "CI/CD Pipeline",
+    "permissions": [...],
+    "isActive": true,
+    "createdAt": "2025-03-14T12:00:00Z",
+    "full_key": "jsk_abc123...xyz789"  // ⚠️ EXIBIDA APENAS UMA VEZ!
+  }
+}
+
+Se a chave for perdida, revogue e crie uma nova.</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Atualiza metadados da chave</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>PATCH /api/apikeys/:id
+Authorization: Bearer {jwt_or_api_key}
+Content-Type: application/json
+
+{
+  "name": "Novo Nome",
+  "permissions": ["queues:read"],  // substitui completamente
+  "allowedDomains": ["https://novo-dominio.com"],
+  "rateLimit": 500,
+  "isActive": true/false  // ativa ou desativa
+}
+
+// Nota: não é possível atualizar a chave em si (key field)</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/apikeys/:id/revoke</span>
+          <span class="endpoint-desc">Desativa a chave (soft delete)</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>POST /api/apikeys/c12a4b56-7890-def1-2345-67890abcdef1/revoke
+Authorization: Bearer {jwt}
+X-Organization-Id: {org_id}
+
+Respota:
+{
+  "data": {
+    "id": "...",
+    "isActive": false,
+    "revokedAt": "2025-03-14T14:30:00Z"
+  }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Remove permanentemente</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>DELETE /api/apikeys/:id
+Authorization: Bearer {jwt}
+X-Organization-Id: {org_id}
+
+Resposta:
+{ "message": "API Key deletada permanentemente" }</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>6. Frontend Integration</h2>
+      <p>A página de <strong>Settings > API Keys</strong> oferece interface completa para gerenciamento:</p>
+
+      <div class="flow-diagram">
+Frontend (Settings Page)
+───────────────────────────────────
+
+┌─────────────────────────────────────────────┐
+│  API Keys                                  │
+│  ┌─────────────────────────────────────┐  │
+│  │ [ + Nova API Key ]                  │  │
+│  └─────────────────────────────────────┘  │
+│                                              │
+│  ┌─────────────────────────────────────┐  │
+│  │ CI/CD Pipeline                     │  │
+│  │ jsk_abc1...xyz9   [ Copiar ]       │  │
+│  │ Permissões: jobs:create, queues:read│  │
+│  │ ✓ Ativo   [Revogar]   [Excluir]   │  │
+│  │ Último uso: 2h atrás • 1,547 reqs  │  │
+│  └─────────────────────────────────────┘  │
+│                                              │
+│  ┌─────────────────────────────────────┐  │
+│  │ Webhook Externo                    │  │
+│  │ jsk_def2...uvw0   [ Revogada ]     │  │
+│  │ Permissões: jobs:create            │  │
+│  │ ✗ Inativo   [Excluir]             │  │
+│  └─────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+
+Componentes:
+• useApiKeys hook (src/hooks/useApiKeys.ts)
+• Novo Key Dialog (formulário com checkboxes de permissão)
+• Permission badges (component reutilizável)
+• Copy-to-clipboard (para chaves recém-criadas)
+• Confirm dialogs (revoke/delete)
+      </div>
+
+      <h3>Hook useApiKeys</h3>
+      <pre><code>// src/hooks/useApiKeys.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+export function useApiKeys(organizationId: string) {
+  return {
+    data: useQuery({
+      queryKey: ['apikeys', organizationId],
+      queryFn: () => fetch('/api/apikeys').then(r => r.json()),
+    }),
+    create: useMutation({
+      mutationFn: (payload: CreateKeyPayload) =>
+        fetch('/api/apikeys', { method: 'POST', body: JSON.stringify(payload) })
+          .then(r => r.json()),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['apikeys'] }),
+    }),
+    revoke: useMutation({
+      mutationFn: (id: string) =>
+        fetch(`/api/apikeys/${id}/revoke`, { method: 'POST' }),
+    }),
+    delete: useMutation({
+      mutationFn: (id: string) =>
+        fetch(`/api/apikeys/${id}`, { method: 'DELETE' }),
+    }),
+  };
+}</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>7. Exemplos de Uso</h2>
+      <p>Como usar as API Keys em requisições reais:</p>
+
+      <h3>7.1 Criar um Job</h3>
+      <pre><code>curl -X POST https://api.jobsync.com/api/jobs \
+  -H "Authorization: Bearer jsk_a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef" \
+  -H "X-Organization-Id: org_abc123def456" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "queueName": "email-sender",
+    "data": {
+      "to": "user@example.com",
+      "subject": "Welcome!",
+      "template": "welcome-email"
+    }
+  }'</code></pre>
+
+      <h3>7.2 Listar Filas</h3>
+      <pre><code>curl -X GET https://api.jobsync.com/api/queues \
+  -H "Authorization: Bearer jsk_a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef" \
+  -H "X-Organization-Id: org_abc123def456"</code></pre>
+
+      <h3>7.3 Verificar Status de um Job</h3>
+      <pre><code>curl -X GET https://api.jobsync.com/api/jobs/job_xyz789 \
+  -H "Authorization: Bearer jsk_a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef" \
+  -H "X-Organization-Id: org_abc123def456"</code></pre>
+
+      <h3>7.4 Script Node.js</h3>
+      <pre><code>const API_KEY = process.env.JOBSYNC_API_KEY;
+const ORG_ID = process.env.JOBSYNC_ORG_ID;
+
+async function enqueueJob(data) {
+  const response = await fetch('https://api.jobsync.com/api/jobs', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'X-Organization-Id': ORG_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      queueName: 'data-processing',
+      data,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Job failed: ${response.status} ${await response.text()}`);
+  }
+
+  return response.json();
+}
+
+// Uso
+enqueueJob({ file: 'report.csv', type: 'generate' })
+  .then(result => console.log('Job criado:', result.job.id))
+  .catch(err => console.error('Erro:', err.message));</code></pre>
+
+      <h3>7.5 Python</h3>
+      <pre><code>import requests
+import os
+
+API_KEY = os.getenv('JOBSYNC_API_KEY')
+ORG_ID = os.getenv('JOBSYNC_ORG_ID')
+
+def enqueue_job(queue_name, payload):
+    url = 'https://api.jobsync.com/api/jobs'
+    headers = {
+        'Authorization': f'Bearer {API_KEY}',
+        'X-Organization-Id': ORG_ID,
+        'Content-Type': 'application/json',
+    }
+    data = {
+        'queueName': queue_name,
+        'data': payload
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+# Uso
+result = enqueue_job('image-processing', {'url': 'https://example.com/image.jpg'})
+print(f"Job ID: {result['job']['id']}")</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>8. Matriz de Riscos</h2>
+      <p>Avaliação dos riscos inerentes ao sistema atual:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Risco</th>
+            <th>Probabilidade</th>
+            <th>Impacto</th>
+            <th>Mitigação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Vazamento da API Key</strong><br>Chave exposta em logs, repositórios, cliente-side</td>
+            <td><span class="status danger">Alta</span></td>
+            <td><span class="status danger">Crítico</span></td>
+            <td>• Nunca exponha no frontend<br>• Use secrets managers<br>• Revogue imediatamente se suspeitar</td>
+          </tr>
+          <tr>
+            <td><strong>Sem rotação automática</strong><br>Chaves nunca expiram a menos que configurado manualmente</td>
+            <td><span class="status warning">Média</span></td>
+            <td><span class="status warning">Moderado</span></td>
+            <td>• Configure <code>expiresAt</code> nas chaves<br>• Processo manual de rotação périodica<br>• Auditoria de uso para identificar chaves antigas</td>
+          </tr>
+          <tr>
+            <td><strong>IP Whitelist bypass</strong><br>Proxies/fowards podem alterar o IP real</td>
+            <td><span class="status warning">Média</span></td>
+            <td><span class="status warning">Moderado</span></td>
+            <td>• Configure <code>X-Forwarded-For</code> corretamente<br>• Considere assinatura de requests (HMAC)</td>
+          </tr>
+          <tr>
+            <td><strong>Permissões excessivas</strong><br>Chaves com permissões além do necessário</td>
+            <td><span class="status warning">Média</span></td>
+            <td><span class="status warning">Moderado</span></td>
+            <td>• Princípio do menor privilégio<br>• Auditar permissões periodicamente<br>• Templates de perfil por caso de uso</td>
+          </tr>
+          <tr>
+            <td><strong>Race condition no rate limit</strong><br>Limite pode ser contornado com requests concorrentes</td>
+            <td><span class="status info">Baixa</span></td>
+            <td><span class="status info">Baixo</span></td>
+            <td>• Implementar leaky bucket com Redis atomics<br>• Considerar rate limit por IP + chave combinados</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert danger">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-content">
+          <strong>Melhorias Recomendadas</strong>
+          <p>Considere implementar: (1) expiração automática padrão (ex: 90 dias), (2) notificação de chaves próximas ao vencimento, (3) versionamento de permissões com histórico, (4) webhook de eventos de segurança.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>9. Boas Práticas</h2>
+      <ul>
+        <li><strong>Não commite API Keys:</strong> Use <code>.gitignore</code> e variáveis de ambiente</li>
+        <li><strong>Valide allowedDomains:</strong> Configure domínios específicos sempre que possível</li>
+        <li><strong>Use permissões mínimas:</strong> Apenas o que a integração realmente precisa</li>
+        <li><strong>Monitore usageCount:</strong> Picos de uso podem indicar vazamento</li>
+        <li><strong>Revogue chaves inativas:</strong> Identifique e limpe chaves não usadas há meses</li>
+        <li><strong>Crie chaves específicas:</strong> Uma chave por integração (não compartilhe)</li>
+        <li><strong>Teste em staging:</strong> Crie chaves de teste com permissões restritas</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>10. Troubleshooting</h2>
+
+      <h3>Chave retorna 401 Unauthorized</h3>
+      <ul>
+        <li>Verifique se o prefixo é <code>jsk_</code></li>
+        <li>Confirme que a chave não foi revogada (<code>isActive</code>)</li>
+        <li>Verifique se não expirou (<code>expiresAt</code>)</li>
+        <li>Confirme se o <code>organizationId</code> do header está correto</li>
+      </ul>
+
+      <h3>Chave retorna 403 Forbidden</h3>
+      <ul>
+        <li>Permissão insuficiente para o endpoint/operação</li>
+        <li>IP não autorizado (conferir <code>allowedIps</code>)</li>
+        <li>Domínio não autorizado (conferir <code>allowedDomains</code> e header Origin)</li>
+      </ul>
+
+      <h3>Chave retorna 429 Too Many Requests</h3>
+      <ul>
+        <li>Rate limit excedido — aguarde ou aumente o limite</li>
+        <li>Verifique se há múltiplas requisições concorrentes</li>
+      </ul>
+
+      <h3>Não consigo recuperar a chave após criá-la</h3>
+      <ul>
+        <li>Comportamento esperado — a chave completa só é mostrada na criação</li>
+        <li>Revogue a chave antiga e crie uma nova</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Built for clarity and operational excellence</p>
+      <p>Próximo: <a href="api-reference.html">API Reference</a> | <a href="arquitetura-overview.html">Arquitetura</a></p>
+    </div>
+  </div>
+</body>
+</html>

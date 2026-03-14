@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redis Connection Exhaustion - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Redis Connection Exhaustion</span></div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>Redis Connection Exhaustion</h1>
+      <p class="subtitle">Vazamento de conexões Redis em alta carga</p>
+    </div>
+
+    <div class="section">
+      <h2>🔥 O Problema</h2>
+      <p>O sistema usa <code>ioredis</code> para BullMQ. Se connections não são liberadas corretamente, o pool do Redis pode esgotar, causando.timeout e falhas em filas.</p>
+
+      <div class="alert danger">
+        <div class="alert-icon">💥</div>
+        <div class="alert-content">
+          <strong>Connection Leak</strong>
+          <p>Cada worker abre conexão com Redis. Se <code>worker.close()</code> não for chamado no shutdown, conexões ficam órfãs.</p>
+        </div>
+      </div>
+
+      <h2>📊 Como Acontece</h2>
+      <ul>
+        <li><code>src/lib/redis.ts</code> — singleton <code>redis</code> com <code>maxRetriesPerRequest</code></li>
+        <li>BullMQ Workers: <code>new Worker(queueName, processJob, { connection: redis })</code></li>
+        <li>Redis default: <code>DEFAULT_MAX_POOL_SIZE = 10</code> por instância</li>
+        <li>Se 100 queues × 10 workers = 1000 conexões</li>
+        <li>Redis por padrão: <code>maxclients 10000</code> — OK, mas...</li>
+      </ul>
+
+      <h2>💥 Impacto</h2>
+      <ul>
+        <li>BullMQ não consegue enfileirar jobs (<code>EMAXCONNECTIONS</code>)</li>
+        <li>Workers novos não conectam</li>
+        <li>Jobs pendentes nunca processam</li>
+        <li>Cascata de timeouts</li>
+      </ul>
+
+      <h2>🔍 Código Vulnerável</h2>
+      <pre><code>// src/worker.ts — startWorkers() cria múltiplos workers
+const worker = new Worker(queueName, processJob, {
+  connection: redis,  // ← Todos compartilham a mesma instância?
+  concurrency: queue.concurrency || CONCURRENCY,
+});</code></pre>
+
+      <p>BullMQ <strong>reusa</strong> a conexão Redis, então connection pool não é por worker. Porém:</p>
+      <ul>
+        <li>Se um worker <code>.close()</code>, a conexão pode não ser liberada imediatamente</li>
+        <li>Se <code>setInterval</code> de watch (30s) cria workers novos repeatedly sem close dos antigos</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Singleton Redis</strong> — Já é, bom. Não criar múltiplas instâncias.</li>
+        <li><strong>Graceful shutdown</strong> — Em <code>shutdown()</code>, <code>await worker.close()</code> executa antes de <code>process.exit()</code></li>
+        <li><strong>Monitorar conexões</strong> — <code>redis.client.listClients('normal')</code> count</li>
+        <li><strong>Ajustar pool</strong> — <code>redis.options.maxRetriesPerRequest = 20</code> para lidar com reconnect</li>
+        <li><strong>Kubernetes liveness</strong> — Se Redis cai, workers devem restartar</li>
+      </ol>
+
+      <h2>📈 Diagrama</h2>
+      <pre class="flow-diagram">
+Redis Server (maxclients 10000)
+    ▲
+    │ │ │ │  (cada worker usa 1 conexão)
+    │ │ │ └── Worker[3]
+    │ │ └──── Worker[2]
+    │ └────── Worker[1]
+    └──────── Worker[0]
+
+Se workers são criados sem close → leak → esgota
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Redis singleton? ✅</li>
+        <li>Worker.close() no shutdown? ✅ (worker.ts linhas 233-235)</li>
+        <li>Watch interval cria workers duplicados? ⚠️ (linha 205-225: precisa de deduplicação)</li>
+        <li>Monitora conexões Redis? ❌</li>
+        <li>Teste de carga valida conexões? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Risco de Exaustão de Conexões</p>
+    </div>
+  </div>
+</body>
+</html>

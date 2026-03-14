@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Página de Detalhes do Job - JobSync Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Início</a>
+        <a href="../guides/api.html">API</a>
+        <a href="../guides/jobs.html">Jobs</a>
+        <a href="../guides/job-detail.html" class="active">Detalhe do Job</a>
+        <a href="../guides/queues.html">Filas</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <span class="badge">Guia Frontend</span>
+      <h1>Página de Detalhes do Job</h1>
+      <p class="subtitle">Documentação completa da interface de visualização de jobs no JobSync</p>
+    </div>
+
+    <div class="breadcrumb">
+      <a href="../index.html">Docs</a>
+      <span class="sep">/</span>
+      <a href="../guides/jobs.html">Jobs</a>
+      <span class="sep">/</span>
+      <span>Detalhe do Job</span>
+    </div>
+
+    <!-- 1. URL -->
+    <section class="section">
+      <h2>1. URL e Roteamento</h2>
+      <p>A página de detalhes do job é acessada através de uma rota dinâmica que recebe o ID do job como parâmetro:</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/jobs/:id</span>
+          <span class="endpoint-desc">Rota dinâmica</span>
+        </div>
+      </div>
+
+      <h3>Implementação no React Router</h3>
+      <pre><code>// No App.tsx ou routing principal
+&lt;Route path="/jobs/:id" element={<JobDetail />} /&gt;</code></pre>
+
+      <div class="alert info">
+        <span class="alert-icon">i</span>
+        <div class="alert-content">
+          <strong>Observação</strong>
+          <p>A rota usa <code>useParams()</code> do React Router para extrair o parâmetro <code>id</code> da URL.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Data Fetching -->
+    <section class="section">
+      <h2>2. Busca de Dados</h2>
+      <p>A página utiliza o hook <code>useJob</code> para buscar os dados do job. A requisição é configurada para refetçar automaticamente.</p>
+
+      <div class="entity">
+        <div class="entity-name">Hook: useJob(id)</div>
+        <div class="entity-fields">
+          <div class="entity-field"><span class="field-name">queryKey</span><span class="field-type">["job", id]</span></div>
+          <div class="entity-field"><span class="field-name">queryFn</span><span class="field-type">jobsApi.get(id)</span></div>
+          <div class="entity-field"><span class="field-name">enabled</span><span class="field-type">isAuthenticated && !!id</span></div>
+          <div class="entity-field"><span class="field-name">refetchInterval</span><span class="field-type">REFETCH_INTERVALS.JOB_DETAIL</span></div>
+        </div>
+      </div>
+
+      <h3>Intervalo de Refetch</h3>
+      <p>Configurado em <code>src/lib/constants.ts</code>:</p>
+      <pre><code>export const REFETCH_INTERVALS = {
+  JOBS_LIST: 30000,        // 30s para lista
+  JOB_DETAIL: 5000,        // 5s para detalhe de job ativo
+  QUEUES: 30000,
+  QUEUE_STATS: 10000,
+  STATS: 30000,
+  TIMELINE: 60000,
+};</code></pre>
+
+      <div class="alert success">
+        <span class="alert-icon">✓</span>
+        <div class="alert-content">
+          <strong>Atualização em Tempo Real</strong>
+          <p>A cada 5 segundos a query é refeita, permitindo acompanhar o progresso do job em tempo real sem necessidade de recarregar a página.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Displayed Fields -->
+    <section class="section">
+      <h2>3. Campos Exibidos</h2>
+      <p>A página exibe informações organizadas em dois cards principais.</p>
+
+      <h3>Informações do Job</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>id</code></td>
+            <td>string</td>
+            <td>UUID único do job (exibido no título)</td>
+          </tr>
+          <tr>
+            <td><code>status</code></td>
+            <td>enum</td>
+            <td>Estado atual do job com badge colorida</td>
+          </tr>
+          <tr>
+            <td><code>queueName</code></td>
+            <td>string</td>
+            <td>Nome da fila que o job pertence</td>
+          </tr>
+          <tr>
+            <td><code>webhookUrl</code></td>
+            <td>string</td>
+            <td>URL do webhook para o processamento</td>
+          </tr>
+          <tr>
+            <td><code>method</code></td>
+            <td>enum</td>
+            <td>Método HTTP da requisição (GET, POST, etc)</td>
+          </tr>
+          <tr>
+            <td><code>callbackUrl</code></td>
+            <td>string?</td>
+            <td>URL opcional para callback pós-processamento</td>
+          </tr>
+          <tr>
+            <td><code>payload</code></td>
+            <td>object</td>
+            <td>Dados enviados na requisição (JSON pretty print)</td>
+          </tr>
+          <tr>
+            <td><code>result</code></td>
+            <td>object?</td>
+            <td>Resultado retornado pelo webhook</td>
+          </tr>
+          <tr>
+            <td><code>error</code></td>
+            <td>string?</td>
+            <td>Mensagem de erro se o job falhou</td>
+          </tr>
+          <tr>
+            <td><code>priority</code></td>
+            <td>number</td>
+            <td>Prioridade do job (maior = mais prioritário)</td>
+          </tr>
+          <tr>
+            <td><code>attempts</code></td>
+            <td>number</td>
+            <td>Tentativas já realizadas</td>
+          </tr>
+          <tr>
+            <td><code>maxAttempts</code></td>
+            <td>number</td>
+            <td>Máximo de tentativas permitidas</td>
+          </tr>
+          <tr>
+            <td><code>userId</code></td>
+            <td>string?</td>
+            <td>ID do usuário que criou o job</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Cronograma (Timeline)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>createdAt</code></td>
+            <td>string (ISO)</td>
+            <td>Data de criação do job</td>
+          </tr>
+          <tr>
+            <td><code>updatedAt</code></td>
+            <td>string (ISO)</td>
+            <td>Última atualização do job</td>
+          </tr>
+          <tr>
+            <td><code>scheduledAt</code></td>
+            <td>string (ISO)?</td>
+            <td>Agendamento para execução futura</td>
+          </tr>
+          <tr>
+            <td><code>startedAt</code></td>
+            <td>string (ISO)?</td>
+            <td>Quando o processamento iniciou</td>
+          </tr>
+          <tr>
+            <td><code>completedAt</code></td>
+            <td>string (ISO)?</td>
+            <td>Quando o processamento terminou</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Metadados e Tags</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>metadata</code></td>
+            <td>object?</td>
+            <td>Metadados arbitrários do job</td>
+          </tr>
+          <tr>
+            <td><code>tags</code></td>
+            <td>string[]?</td>
+            <td>Tags para categorização</td>
+          </tr>
+          <tr>
+            <td><code>externalId</code></td>
+            <td>string?</td>
+            <td>ID externo (referência do sistema cliente)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. Job Logs -->
+    <section class="section">
+      <h2>4. Logs de Execução</h2>
+      <p>Os logs são exibidos em uma lista com as tentativas de execução do job. No JobDetail.tsx, apenas os arrays <code>logs</code> vindos do banco de dados são utilizados.</p>
+
+      <h3>Estrutura de um Log</h3>
+      <div class="entity">
+        <div class="entity-name">LogEntry</div>
+        <div class="entity-fields">
+          <div class="entity-field"><span class="field-name">id</span><span class="field-type">string</span></div>
+          <div class="entity-field"><span class="field-name">attempt</span><span class="field-type">number</span></div>
+          <div class="entity-field"><span class="field-name">status</span><span class="field-type">"COMPLETED"|"FAILED"</span></div>
+          <div class="entity-field"><span class="field-name">message</span><span class="field-type">string?</span></div>
+          <div class="entity-field"><span class="field-name">duration</span><span class="field-type">number (ms)</span></div>
+          <div class="entity-field"><span class="field-name">createdAt</span><span class="field-type">string (ISO)</span></div>
+        </div>
+      </div>
+
+      <h3>Exibição na UI</h3>
+      <p>Cada log é renderizado como um card com:</p>
+      <ul>
+        <li><strong>Badge de tentativa</strong>: Mostra "Attempt X" em verde (sucesso) ou vermelho (falha)</li>
+        <li><strong>Mensagem</strong>: Texto descritivo do log</li>
+        <li><strong>Duração</strong>: Tempo de execução em milissegundos</li>
+        <li><strong>Timestamp</strong>: Hora da execução (HH:mm:ss)</li>
+      </ul>
+
+      <p>Os logs são exibidos em ordem cronológica reversa (mais recente primeiro).</p>
+    </section>
+
+    <!-- 5. Actions -->
+    <section class="section">
+      <h2>5. Ações Disponíveis</h2>
+      <p>A página disponibiliza botões de ação no cabeçalho, condicionados ao status do job.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon red">✕</div>
+          <h3>Cancelar (Cancel)</h3>
+          <p>Disponível quando o job está em <code>PENDING</code> ou <code>SCHEDULED</code>. Cancela a execução do job antes que inicie.</p>
+          <span class="tag ops">Ação Destrutiva</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon blue">↻</div>
+          <h3>Tentar Novamente (Retry)</h3>
+          <p>Disponível quando o job está em <code>FAILED</code> ou <code>DEAD</code>. Cria uma nova tentativa executando o job novamente.</p>
+          <span class="tag ops">Recuperação</span>
+        </div>
+      </div>
+
+      <h3>Implementação das Ações</h3>
+      <pre><code>const retryJob = useRetryJob();   // Hook para retry
+const cancelJob = useCancelJob(); // Hook para cancel
+
+const handleRetry = async () => {
+  if (id) {
+    await retryJob.mutateAsync(id);
+  }
+};
+
+const handleCancel = async () => {
+  if (id && confirm("Are you sure you want to cancel this job?")) {
+    await cancelJob.mutateAsync(id);
+  }
+};</code></pre>
+
+      <h3>Observação sobre Permissões</h3>
+      <p>No frontend atual, não há verificação explícita de permissões. Recomenda-se implementar:</p>
+      <ul>
+        <li>Controle de acesso via AuthContext e roles (admin/user)</li>
+        <li>Habilitação/desabilitação condicional dos botões</li>
+        <li>O backend deve validar as permissões em todas as operações</li>
+      </ul>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠</span>
+        <div class="alert-content">
+          <strong>Importante</strong>
+          <p>Não existe interface de eliminação (delete) de jobs no frontend. A operação deve ser feita apenas via API ou admin tools.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Error States -->
+    <section class="section">
+      <h2>6. Estados de Erro</h2>
+      <p>Quando o job não é encontrado (404) ou ocorre um erro na requisição, a interface mostra mensagens específicas.</p>
+
+      <h3>Job Não Encontrado (404)</h3>
+      <pre><code>if (!job) {
+  return (
+    &lt;div className="text-center py-12"&gt;
+      &lt;p className="text-muted-foreground"&gt;
+        Job not found
+      &lt;/p&gt;
+      &lt;Link to="/jobs"&gt;Back to jobs&lt;/Link&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <div class="card" style="border-color: var(--border-light); background: var(--bg-secondary);">
+        <p style="margin-bottom: 0;"><strong>Navegação:</strong> O usuário pode clicar em "Back to jobs" para retornar à lista.</p>
+      </div>
+    </section>
+
+    <!-- 7. Real-time Updates -->
+    <section class="section">
+      <h2>7. Atualizações em Tempo Real</h2>
+      <p>A página monitora ativamente o status do job através do mecanismo de polling do React Query.</p>
+
+      <div class="alert info">
+        <span class="alert-icon">↻</span>
+        <div class="alert-content">
+          <strong>Polling Automático</strong>
+          <p>O <code>refetchInterval: 5000</code> configura uma nova requisição a cada 5 segundos enquanto a página estiver ativa e visível.</p>
+        </div>
+      </div>
+
+      <h3>Status Progressão</h3>
+      <p>Possíveis transições de status:</p>
+      <div class="flow-diagram">
+PENDING ──┐
+           │───► PROCESSING ──► COMPLETED
+           │                  │
+           │                  ▼
+           │                FAILED ─► DEAD (maxAttempts)
+           │                  │
+           │                  ▼
+           │                RETRY ──┐
+           │                       │
+SCHEDULED ────────────────────┘
+           │
+           ▼
+         CANCELLED (cancel action)</div>
+
+      <p>Enquanto um job estiver em processamento ou status ativo, a barra de status (Badge) atualizará automaticamente a cada 5 segundos.</p>
+    </section>
+
+    <!-- 8. Related Entities -->
+    <section class="section">
+      <h2>8. Entidades Relacionadas</h2>
+
+      <h3>Link para Queue Detail</h3>
+      <p>A interface ainda não possui link para a página da fila, mas recomenda-se adicionar:</p>
+      <pre><code>&lt;Link to={`/queues/${job.queueId}`}&gt;
+  Ver Fila: {job.queueName}
+&lt;/Link&gt;</code></pre>
+
+      <h3>Relacionamentos</h3>
+      <div class="entity">
+        <div class="entity-name">Job</div>
+        <div class="entity-fields">
+          <div class="entity-field"><span class="field-name">belongs to</span><span class="field-type">Queue</span></div>
+          <div class="entity-field"><span class="field-name">owned by</span><span class="field-type">User (userId)</span></div>
+          <div class="entity-field"><span class="field-name">has many</span><span class="field-type">Logs</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Permissions -->
+    <section class="section">
+      <h2>9. Permissões do Frontend</h2>
+      <p>No código atual, não há controle explícito de permissões. Recomenda-se a seguinte estrutura:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Permissão</th>
+            <th>Controle</th>
+            <th>Ações Afetadas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>jobs:view</code></td>
+            <td>Renderização da página</td>
+            <td>Bloquear se não autorizado</td>
+          </tr>
+          <tr>
+            <td><code>jobs:cancel</code></td>
+            <td>Botão Cancelar</td>
+            <td>Ocultar/desabilitar</td>
+          </tr>
+          <tr>
+            <td><code>jobs:retry</code></td>
+            <td>Botão Retry</td>
+            <td>Ocultar/desabilitar</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Implementação Sugerida</h3>
+      <pre><code>// AuthContext ou hook de permissões
+const { can } = usePermissions();
+
+// No render
+{can('jobs:cancel') && job.status === 'PENDING' && (
+  &lt;Button onClick={handleCancel}&gt;Cancel&lt;/Button&gt;
+)}</code></pre>
+
+      <div class="alert danger">
+        <span class="alert-icon">!</span>
+        <div class="alert-content">
+          <strong>Validação Obrigatória no Backend</strong>
+          <p>O frontend pode controlar a UI, mas o backend <em>sempre</em> deve validar permissões antes de executar cancel/retry.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. UI Components -->
+    <section class="section">
+      <h2>10. Componentes da UI (nomad/ui)</h2>
+      <p>A página utiliza a biblioteca de componentes <code>@nomad/ui</code> do projeto JobSync.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Uso</th>
+            <th>Importação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Card</code></td>
+            <td>Contêiner para informações</td>
+            <td><code>{ Card, CardHeader, CardContent, CardTitle }</code></td>
+          </tr>
+          <tr>
+            <td><code>Badge</code></td>
+            <td>Status do job com cores</td>
+            <td><code>Badge</code></td>
+          </tr>
+          <tr>
+            <td><code>Button</code></td>
+            <td>Ações (Retry, Cancel)</td>
+            <td><code>Button</code></td>
+          </tr>
+          <tr>
+            <td><code>Link</code></td>
+            <td>Navegação (React Router)</td>
+            <td><code>Link</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Cores de Status (statusColors)</h3>
+      <pre><code>const statusColors = {
+  PENDING: "secondary",
+  SCHEDULED: "secondary",
+  PROCESSING: "warning",
+  COMPLETED: "success",
+  FAILED: "destructive",
+  CANCELLED: "default",
+  DEAD: "destructive",
+};</code></pre>
+    </section>
+
+    <!-- Page Structure Diagram -->
+    <section class="section">
+      <h2>11. Estrutura da Página (Diagrama)</h2>
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                        JobDetail Page                        │
+├─────────────────────────────────────────────────────────────┤
+│  ╔═══════════════════════════════════════════════════════╗  │
+│  ║  HEADER                                              ║  │
+│  │  ┌←─ Back Button                                      │  │
+│  │  │  Job ID (monospace)   │   [STATUS_BADGE]          │  │
+│  │  │  Created ...          │   [Retry Btn][CancelBtn] │  │
+│  ╚═══════════════════════════════════════════════════════╝  │
+├─────────────────────────────────────────────────────────────┤
+│  ╔═══════════╗              ╔═══════════╗                  │
+│  ║  Job Info ║              ║  Timeline ║                  │
+│  │           │              │ • Created  │                  │
+│  │ • Queue   │              │ • Started  │                  │
+│  │ • Priority│              │ • End      │                  │
+│  │ • Attempts│              │ • Duration │                  │
+│  │ • Webhook │              └────────────┘                  │
+│  ╚═══════════╝                                              │
+├─────────────────────────────────────────────────────────────┤
+│  ╔═══════════╗              ╔═══════════╗                  │
+│  ║  Payload  ║              ║  Result   ║                  │
+│  │           │              │ / Error   │                  │
+│  │ {json}    │              │           │                  │
+│  │           │              │ {json}     │                  │
+│  │           │              │ or error   │                  │
+│  ╚═══════════╝              ┕────────────┘                  │
+├─────────────────────────────────────────────────────────────┤
+│  ╔═══════════════════════════════════════════════════════╗  │
+│  ║  Execution Logs (if logs.length > 0)                  ║  │
+│  │  [Attempt 1] message  •  45ms  •  10:30:00            │  │
+│  │  [Attempt 2] message  • 120ms  •  10:30:05            │  │
+│  └─────────────────────────────────────────────────────────┘  │
+└────────────────────────────��────────────────────────────────┘
+</code></pre>
+
+      <h3>Layout Responsivo</h3>
+      <p>Os cards usam CSS Grid responsivo:</p>
+      <pre><code>&lt;div className="grid gap-6 md:grid-cols-2"&gt;
+  {/* Cards dispostos em 1 coluna no mobile, 2 no desktop */}
+&lt;/div&gt;</code></pre>
+    </section>
+
+    <!-- 12. UX Considerations -->
+    <section class="section">
+      <h2>12. Considerações de UX</h2>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon green">⟳</div>
+          <h3>Auto-refresh</h3>
+          <p>O polling de 5s evita que o usuário precise recarregar para ver atualizações de status.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon purple">⏱</div>
+          <h3>Timestamps Locais</h3>
+          <p>Datas formatadas com <code>date-fns</code> para legibilidade: <code>format()</code> e <code>formatDistanceToNow()</code>.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon yellow">!</div>
+          <h3>Confirmação</h3>
+          <p>Cancel usa <code>confirm()</code> nativo para evitar ações acidentais.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon blue">⌨</div>
+          <h3>Monospace para IDs</h3>
+          <p>IDs técnicos usam fonte monoespaçada para facilitar leitura e cópia.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- File Reference -->
+    <section class="section">
+      <h2>13. Arquivos de Referência</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/pages/JobDetail.tsx</code></td>
+            <td>Componente principal da página</td>
+          </tr>
+          <tr>
+            <td><code>src/hooks/useJobs.ts</code></td>
+            <td>Hook useJob com refetchInterval configurado</td>
+          </tr>
+          <tr>
+            <td><code>src/lib/constants.ts</code></td>
+            <td>Constantes REFETCH_INTERVALS</td>
+          </tr>
+          <tr>
+            <td><code>docs/styles.css</code></td>
+            <td>Estilos desta documentação</td>
+          </tr>
+          <tr>
+            <td><code>@nomad/ui</code></td>
+            <td>Biblioteca de componentes</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="doc-footer">
+      <p>JobSync Documentation - Página gerada a partir do código fonte</p>
+      <p style="margin-top: 0.5rem; opacity: 0.7;">Baseado em <code>src/pages/JobDetail.tsx</code></p>
+    </footer>
+  </div>
+</body>
+</html>

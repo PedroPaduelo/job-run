@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxo de Dados - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/></svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="arquitetura-overview.html">arquitetura-overview</a>
+        <a href="api-reference.html">api-reference</a>
+        <a href="frontend-techstack.html">frontend-techstack</a>
+        <a href="deploy-configuracao.html">deploy-configuracao</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Fluxo de Dados</span>
+      </div>
+      <span class="badge">Data Flow</span>
+      <h1>Fluxo Completo de Dados do JobSync</h1>
+      <p class="subtitle">Documentação end-to-end do fluxo de dados interno para criação, processamento, callbacks e frontend.</p>
+    </div>
+
+    <section class="section">
+      <h2>Resumo</h2>
+      <p>Este guia descreve os fluxos internos do JobSync com diagramas ASCII, cada passo numerado e pontos de risco/considerações para garantir robustez operacional.</p>
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content"><strong>Importante:</strong> Essa página apresenta o fluxo de dados em português (pt-BR) e foca em design arquitetural e operações críticas.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Flow 1: Job Creation</h2>
+      <div class="flow-diagram">CLIENTE → API /api/jobs → BACKEND → DB + FILA
+
+ [Cliente] POST /api/jobs
+   Payload: {queue, webhookUrl, webhookMethod, payload, callbackUrl?, priority?, scheduledAt?}
+        |
+        v
+ [Fastify] Route /api/jobs
+   - Validação Zod (createJobSchema)
+   - Autenticação Bearer (JWT/API Key)
+   - organizationId no request
+        |
+        v
+ [JobService.create()]
+   - Find or create queue
+   - Cria Job no PostgreSQL (PENDING/SCHEDULED)
+   - Add BullMQ: jobs-{orgId}-{queueName}
+   - priority + attempts + retry/backoff
+        |
+        v
+ [Resposta HTTP]
+   {id, status, queue, createdAt}
+</div>
+      <ol>
+        <li>Cliente envia POST /api/jobs com {queue, webhookUrl, webhookMethod, payload, callbackUrl?, priority?, scheduledAt?}.</li>
+        <li>Fastify valida com Zod (createJobSchema).</li>
+        <li>Middleware auth verifica Bearer token (JWT ou API Key), seta organizationId.</li>
+        <li>JobService.create() encontra ou cria fila pelo nome.</li>
+        <li>Cria registro Job no PostgreSQL via Prisma (status: PENDING ou SCHEDULED).</li>
+        <li>Adiciona job na fila BullMQ jobs-{orgId}-{queueName} com prioridade, attempts, exponential backoff.</li>
+        <li>Retorna {id, status, queue, createdAt}.</li>
+      </ol>
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content"><strong>Ponto de risco:</strong> validação de payload e organização é crítica. Campos faltantes levam a criação incorreta de jobs e uso indevido de recursos.</div>
+      </div>
+      <p><strong>Considerações:</strong> Use transações para criar job + job logs quando necessário; garantir idempotência de APIs de criação de job para clientes que reenviam requisições.</p>
+    </section>
+
+    <section class="section">
+      <h2>Flow 2: Job Processing (Worker)</h2>
+      <div class="flow-diagram">BULLMQ → WORKER → WEBHOOK → RESULT
+
+ [BullMQ Queue jobs-{orgId}-{queueName}]
+        |
+        v
+ [Worker Poll]
+   - Pop job
+   - set status PROCESSING
+   - startedAt, attempts++
+        |
+        v
+ [HTTP Client: webhookUrl]
+   - GET => query params
+   - POST/PUT/PATCH => JSON body
+   - DELETE => sem payload ou com query
+   - AbortController timeout
+        |
+   sucesso? → sim → COMPLETED + result + JobLog
+        |                      ↘ callbackUrl (POST)
+   falha? → não → retry (exponential backoff) → attempts
+        |                                  ↘ se max attempts => DEAD + error + failure callback
+</div>
+      <ol>
+        <li>Worker faz polling na fila BullMQ.</li>
+        <li>Atualiza job para PROCESSING, startedAt e attempts++.</li>
+        <li>Executa requisição HTTP para webhookUrl com método correto.</li>
+        <li>GET envia payload como query params; POST/PUT/PATCH enviam JSON body; DELETE envia conforme contrato.</li>
+        <li>AbortController aplica timeout da request.</li>
+        <li>Sucesso: status COMPLETED, grava resultado, cria JobLog.</li>
+        <li>Sucesso + callbackUrl: faz POST para callbackUrl com {jobId, status, result, duration, attempts}.</li>
+        <li>Falha: BullMQ faz retry com exponential backoff.</li>
+        <li>Se atingir tentativas máximas: status DEAD, armazena erro, envia callback de falha.</li>
+      </ol>
+      <div class="alert danger">
+        <span class="alert-icon">🛑</span>
+        <div class="alert-content"><strong>Ponto de risco:</strong> requests para webhook podem travar; retry/backoff e timeout devem ser bem calibrados para evitar acumulo de jobs travados.</div>
+      </div>
+      <p><strong>Considerações:</strong> Assegure idempotência no endpoint do webhook para evitar efeitos colaterais quando o job for reprocessado após falha.</p>
+    </section>
+
+    <section class="section">
+      <h2>Flow 3: Bulk Job Creation</h2>
+      <div class="flow-diagram">POST /api/jobs/bulk → Validação → Batch DB + BullMQ
+
+ [Cliente] POST /api/jobs/bulk
+   Payload: {queue, jobs: [{webhookUrl, payload, ...}]}
+        |
+        v
+ [Backend] Validação e Auth
+   - organizationId
+   - permissões
+        |
+        v
+ [Service] Process batches de 1000
+   - Prisma createMany
+   - BullMQ addBulk
+        |
+        v
+ [Resposta] {created, failed, queue}
+</div>
+      <ol>
+        <li>POST /api/jobs/bulk com {queue, jobs:[...]}</li>
+        <li>Validação e autenticação (mesma estrutura que criação single job).</li>
+        <li>Processamento em batch de até 1000 jobs.</li>
+        <li>Inserção em massa via Prisma createMany + BullMQ addBulk.</li>
+        <li>Retorna resumo {created, failed, queue}.</li>
+      </ol>
+      <div class="alert info">
+        <span class="alert-icon">✅</span>
+        <div class="alert-content"><strong>Melhoria de performance:</strong> bulk reduz overhead de transações individuais, mas exige checagem de tamanho máximo e fallback em pequenos batches ao falhar.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Flow 4: Authentication Flow</h2>
+      <div class="flow-diagram">JWT e API Key
+
+ JWT Path:
+ [Bearer JWT] → verifyJWT (JWKS) → syncUser → syncOrganization → syncMembership → buildAuthenticatedUser
+
+ API Key Path:
+ [Bearer API Key] → findByKey → validate(active, expiration, IP allowlist) → set organizationId + permissions
+</div>
+      <ol>
+        <li>JWT: chama verifyJWT via JWKS, sincronia de usuário e organização, membership carregado, create authenticated user context.</li>
+        <li>API Key: busca na tabela, valida isActive, expiresAt, IP allowlist (se configurado), define organizationId e permissions no request.</li>
+      </ol>
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content"><strong>Ponto de risco:</strong> validar expiração e revogação de API Key constantemente. Considere cache TTL curto para JWKS e keys inválidas.</div>
+      </div>
+      <p><strong>Considerações:</strong> Use sempre contextos de request sem efeitos colaterais; não permita dados de token do usuário em APIs de máquina (API Key). Use logs de auditoria para autenticação falha.</p>
+    </section>
+
+    <section class="section">
+      <h2>Flow 5: Frontend Data Flow</h2>
+      <div class="flow-diagram">React → useQuery/useMutation → API → Backend
+
+ [React Components]
+   useJobs, useQueues, useStats
+        |
+        v
+ [API Client]
+   fetch com Authorization: Bearer {token}
+   X-Organization-Id
+        |
+        v
+ [Backend API]
+   /api/jobs, /api/queues, /api/stats
+
+ Mutations:
+ useMutation(create/cancel/retry) → onSuccess invalidates queries → auto-refetch
+
+ Polling:
+ jobs list, stats overview, timeline, queue stats
+</div>
+      <ol>
+        <li>React usa hooks de dados (useQuery) para consumir listagens e estatísticas.</li>
+        <li>API client injeta Bearer token e X-Organization-Id em todas as requisições.</li>
+        <li>Mutations (create, cancel, retry) usam useMutation; no success invalidam queries e causam refetch automático.</li>
+        <li>Polling configurado para jobs, stats e filas para UI em tempo quase real.</li>
+      </ol>
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content"><strong>Consideração de UX:</strong> para grandes listas, use paginação e cache de scroll para evitar excesso de consultas a API.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Considerações Gerais de Risco por Etapa</h2>
+      <ul>
+        <li><strong>Validação:</strong> sempre validar com Zod e garantir retorno de erro estruturado para debugging.</li>
+        <li><strong>Autenticação/Autorização:</strong> falhas aqui expõem dados multi-tenant. Use middlewares centralizados.</li>
+        <li><strong>Processamento de Jobs:</strong> timeout, retries e logs são essenciais; atualize as taxas de retry e backoff conforme SLA.</li>
+        <li><strong>Callback Externo:</strong> trate respostas 4xx/5xx e evite loops de callback recursivo com deduplicação por job.</li>
+        <li><strong>Failover Redis:</strong> BullMQ depende de Redis; monitore latência e memória para evitar filas paradas.</li>
+      </ul>
+      <div class="alert success">
+        <span class="alert-icon">✅</span>
+        <div class="alert-content"><strong>Operacional:</strong> implemente health checks no worker e no backend; use dashboards e alertas para filas altas, jobs dead, erros 5xx e timeouts.</div>
+      </div>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Docs - Fluxo de Dados completo (end-to-end)</p>
+      <p>Voltar para <a href="arquitetura-overview.html">Arquitetura</a> ou <a href="api-reference.html">API Reference</a>.</p>
+    </div>
+  </div>
+</body>
+</html>

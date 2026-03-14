@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuração de Ambiente (ENV) - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a><span class="sep">/</span><span>Configuração de Ambiente</span>
+      </div>
+      <span class="badge">Operação</span>
+      <h1>Configuração de Ambiente (ENV)</h1>
+      <p class="subtitle">Variáveis de ambiente essenciais do JobSync e seus valores padrão, exemplos e sensibilidade.</p>
+    </div>
+
+    <section class="section">
+      <h2>1. Visão geral</h2>
+      <p>JobSync usa variáveis de ambiente no backend e frontend. A fonte principal de valores é <code>.env.example</code> (backend/front-end). Os valores de tempo de execução podem ser alterados em plataformas de deploy (Heroku, Railway, Render, Kubernetes, etc).</p>
+      <ul>
+        <li>Backend: <code>backend-job-assync/.env.example</code></li>
+        <li>Frontend: <code>frontend-job-async/.env.example</code></li>
+      </ul>
+      <p>A arquitetura suporta multi-tenant via <code>x-organization-id</code> e JWT, mas a configuração de ambiente em si não varia por tenant.</p>
+    </section>
+
+    <section class="section">
+      <h2>2. Variáveis de ambiente (backend)</h2>
+      <p>Lista completa das variáveis de backend detectadas no código e nos exemplos:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Variável</th>
+            <th>Escopo</th>
+            <th>Obrigatória?</th>
+            <th>Valor padrão</th>
+            <th>Exemplo</th>
+            <th>Sensível?</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>PORT</td><td>Backend</td><td>Não (recomendado)</td><td>3001</td><td>3001</td><td>Não</td><td>Porta HTTP do Fastify</td></tr>
+          <tr><td>NODE_ENV</td><td>Backend</td><td>Não</td><td>development</td><td>development / production</td><td>Não</td><td>Controla comportamento de erros e CORS em dev</td></tr>
+          <tr><td>DATABASE_URL</td><td>Backend (Prisma)</td><td>Sim</td><td>N/A</td><td>postgres://user:password@localhost:5432/job_assync</td><td>Sim</td><td>URL de conexão do Postgres</td></tr>
+          <tr><td>PGDATABASE</td><td>Backend (Prisma/Node DB driver)</td><td>Não</td><td>Não definido</td><td>job_assync</td><td>Sim</td><td>Alternativa de conexão de DB (opcional, no lugar de DATABASE_URL)</td></tr>
+          <tr><td>PGUSER</td><td>Backend</td><td>Não</td><td>Não definido</td><td>user</td><td>Sim</td><td>Alternativa de conexão de DB</td></tr>
+          <tr><td>PGHOST</td><td>Backend</td><td>Não</td><td>Não definido</td><td>localhost</td><td>Sim</td><td>Alternativa de conexão de DB</td></tr>
+          <tr><td>PGPORT</td><td>Backend</td><td>Não</td><td>Não definido</td><td>5432</td><td>Sim</td><td>Alternativa de conexão de DB</td></tr>
+          <tr><td>REDIS_URL</td><td>Backend</td><td>Sim</td><td>redis://localhost:6379</td><td>redis://:password@localhost:6379/0</td><td>Sim</td><td>Usado por <code>ioredis</code> com <code>maxRetriesPerRequest: null</code></td></tr>
+          <tr><td>AUTH_SERVER_URL</td><td>Backend + Frontend</td><td>Sim</td><td>http://localhost:3000</td><td>https://auth.service.api.nommand.com</td><td>Não</td><td>URL base do Auth Service para JWT/JWKS e APIs</td></tr>
+          <tr><td>ALLOWED_ORIGINS</td><td>Backend</td><td>Não</td><td>http://localhost:5173,http://localhost:3000</td><td>https://app.jobsync.com</td><td>Não</td><td>CORS whitelist (comma-separated)</td></tr>
+          <tr><td>WORKER_CONCURRENCY</td><td>Backend</td><td>Não</td><td>10</td><td>20</td><td>Não</td><td>Paralelismo de workers (Job sync / jobs)</td></tr>
+          <tr><td>SENTRY_DSN</td><td>Backend</td><td>Não</td><td>vazio</td><td>https://...@o...ingest.sentry.io/...</td><td>Sim</td><td>Opcional, desabilitado se vazio</td></tr>
+          <tr><td>JWT_ISSUERS</td><td>Backend (implícito)</td><td>Não (não usado diretamente)</td><td>não configurado</td><td>https://auth.service.api.nommand.com</td><td>Não</td><td>O backend aceita vários issuers hardcoded no verifyJWT</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Como o backend usa essas variáveis</h3>
+      <ul>
+        <li><code>fastify.listen({ port: parseInt(process.env.PORT || '3001', 10) })</code></li>
+        <li><code>ALLOWED_ORIGINS</code> parseado e testado no plugin CORS</li>
+        <li><code>rateLimit</code> configurado com <code>max: 1000</code> e <code>timeWindow: '1 minute'</code> (limite por org ou IP)</li>
+        <li><code>AUTH_SERVER_URL</code> determina <code>JWKS_URL</code> para JWT</li>
+        <li><code>REDIS_URL</code> inicializa Redis com <code>maxRetriesPerRequest: null</code></li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>3. Variáveis de ambiente (frontend)</h2>
+      <p>As variáveis de frontend vêm de <code>frontend-job-async/.env.example</code> e são injetadas pelo Vite.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Variável</th><th>Obrigatória?</th><th>Valor padrão</th><th>Exemplo</th><th>Sensível?</th><th>Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>VITE_API_URL</td><td>Sim</td><td>http://localhost:3001</td><td>https://api.jobsync.com</td><td>Não</td><td>URL do backend JobSync</td></tr>
+          <tr><td>VITE_AUTH_URL</td><td>Sim</td><td>http://localhost:3000</td><td>https://auth.service.api.nommand.com</td><td>Não</td><td>URL do Auth Service (OAuth/JWKS)</td></tr>
+          <tr><td>VITE_AUTH_CLIENT_ID</td><td>Sim</td><td>job-sync</td><td>job-sync</td><td>Não</td><td>Client ID OAuth no SDK</td></tr>
+          <tr><td>VITE_SENTRY_DSN</td><td>Não</td><td>vazio</td><td>https://...@o...ingest.sentry.io/...</td><td>Sim</td><td>Opcional para monitoramento no frontend</td></tr>
+        </tbody>
+      </table>
+      <p>O SDK do frontend também usa tokens em <code>localStorage</code> (não env) para armazenar <code>nommand_access_token</code> e outras chaves.</p>
+    </section>
+
+    <section class="section">
+      <h2>4. Detalhes de segurança e sensibilidade</h2>
+      <p>Classificação de sensibilidade:</p>
+      <ul>
+        <li><strong>Segredos sensíveis</strong>: <code>DATABASE_URL</code> (inclui credencial), <code>REDIS_URL</code> (se incluir senha), <code>SENTRY_DSN</code>, credenciais do Auth Service se usadas em outros ambientes.</li>
+        <li><strong>Não sensíveis</strong>: <code>PORT</code>, <code>NODE_ENV</code>, <code>ALLOWED_ORIGINS</code>, <code>WORKER_CONCURRENCY</code>, <code>VITE_API_URL</code>, <code>VITE_AUTH_URL</code>, <code>VITE_AUTH_CLIENT_ID</code>.</li>
+      </ul>
+      <p>Mantenha arquivos <code>.env</code> fora do controle de versão e use secret manager no deploy.</p>
+    </section>
+
+    <section class="section">
+      <h2>5. Multi-tenant e valores de ambiente</h2>
+      <p>O JobSync é multi-tenant via payload JWT + cabeçalhos (<code>x-organization-id</code>) e não exige variáveis diferentes por tenant. A única variável relacionada a Auth (issuer / base URL) é global:</p>
+      <ul>
+        <li><code>AUTH_SERVER_URL</code>: todo tenant valida JWT contra o mesmo Auth Service.</li>
+      </ul>
+      <p>Se você usar provedores de token diferentes, atualize <code>AUTH_SERVER_URL</code> apropriadamente e garanta seus <code>iss</code> nas rotas.</p>
+    </section>
+
+    <section class="section">
+      <h2>6. .env.example - comparação backend e frontend</h2>
+      <p>Configurações base usadas em desenvolvimento para iniciar localmente.</p>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Backend</h3>
+          <pre><code># Database
+DATABASE_URL=postgres://user:password@localhost:5432/job_assync
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Auth Service
+AUTH_SERVER_URL=http://localhost:3000
+
+# API Server
+PORT=3001
+NODE_ENV=development
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Worker
+WORKER_CONCURRENCY=10
+
+# Sentry
+SENTRY_DSN=
+</code></pre>
+        </div>
+        <div class="card">
+          <h3>Frontend</h3>
+          <pre><code># API URLs
+VITE_API_URL=http://localhost:3001
+VITE_AUTH_URL=http://localhost:3000
+
+# Auth Client
+VITE_AUTH_CLIENT_ID=job-sync
+
+# Sentry
+VITE_SENTRY_DSN=
+</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>7. Boas práticas rápidas</h2>
+      <ul>
+        <li>Use variáveis de ambiente separadas por ambiente (dev/staging/prod) e mantenha segredos em Secret Store.</li>
+        <li>Verifique valores de <code>NODE_ENV</code> para modo de produção.</li>
+        <li>Não exponha <code>DATABASE_URL</code> ou <code>REDIS_URL</code> em logs.</li>
+        <li>Defina <code>ALLOWED_ORIGINS</code> com URLs da aplicação para segurança de CORS.</li>
+        <li>Monitore <code>SENTRY_DSN</code> e configure apenas quando habilitado.</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>Documentação gerada a partir do código-fonte JobSync e dos templates <code>.env.example</code>.</p>
+    </div>
+  </div>
+</body>
+</html>

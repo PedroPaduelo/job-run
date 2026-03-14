@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OWASP Top 10 Coverage - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>OWASP Top 10 Coverage</span></div>
+
+    <div class="doc-header">
+      <span class="badge security">Security</span>
+      <h1>OWASP Top 10 Coverage</h1>
+      <p class="subtitle">Como o sistema cobre (ou não) cada vulnerabilidade OWASP</p>
+    </div>
+
+    <div class="section">
+      <h2>📋 Cobertura por Categoria</h2>
+
+      <table>
+        <thead><tr><th>OWASP Vulnerability</th><th>Protegido?</th><th>Como / Notas</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>A01: Broken Access Control</strong></td>
+            <td><span class="status success">✅</span></td>
+            <td>Multi-tenant isolation via organizationId filter em todas queries</td>
+          </tr>
+          <tr>
+            <td><strong>A02: Cryptographic Failures</strong></td>
+            <td><span class="status warning">⚠️</span></td>
+            <td>JWT validado, mas metadata/PII sem encrypt at rest</td>
+          </tr>
+          <tr>
+            <td><strong>A03: Injection</strong></td>
+            <td><span class="status success">✅</span></td>
+            <td>Prisma ORM previne SQL injection, Zod valida input</td>
+          </tr>
+          <tr>
+            <td><strong>A04: Insecure Design</strong></td>
+            <td><span class="status warning">⚠️</span></td>
+            <td>RBAC implementado mas sem rate limit granular</td>
+          </tr>
+          <tr>
+            <td><strong>A05: Security Misconfiguration</strong></td>
+            <td><span class="status warning">⚠️</span></td>
+            <td>CORS permissivo, ALLOWED_ORIGINS pode ser vazio</td>
+          </tr>
+          <tr>
+            <td><strong>A06: Vulnerable Components</strong></td>
+            <td><span class="status success">✅</span></td>
+            <td>npm audit, dependências atualizadas</td>
+          </tr>
+          <tr>
+            <td><strong>A07: Auth Failures</strong></td>
+            <td><span class="status success">✅</span></td>
+            <td>JWT expiry, API key rotation, audit logs</td>
+          </tr>
+          <tr>
+            <td><strong>A08: Data Integrity Failures</strong></td>
+            <td><span class="status warning">⚠️</span></td>
+            <td>Jobs podem ser race condition em high concurrency</td>
+          </tr>
+          <tr>
+            <td><strong>A09: Security Logging</strong></td>
+            <td><span class="status success">✅</span></td>
+            <td>AuditLog model, Sentry integration</td>
+          </tr>
+          <tr>
+            <td><strong>A10: SSRF</strong></td>
+            <td><span class="status danger">❌</span></td>
+            <td>Webhook URL não validada (pode apontar p/ localhost/internal)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>💥 Detalhamento</h2>
+
+      <h3>A01: Broken Access Control</h3>
+      <p><strong>Protegido ✅</strong> — Toda query filtra por <code>organizationId</code>. API Keys e JWT setam <code>request.organizationId</code> no middleware. Não há endpoint que retorne dados sem filtro de organização.</p>
+
+      <h3>A02: Cryptographic Failures</h3>
+      <p><strong>Parcial ⚠️</strong> — JWT tokens são assinadas. Porém:</p>
+      <ul>
+        <li>Job metadata e payload são plain JSON no DB</li>
+        <li>Se DB é comprometido, dados sensíveis são legíveis</li>
+        <li>Backups não são encryptados</li>
+      </ul>
+
+      <h3>A03: Injection</h3>
+      <p><strong>Protegido ✅</strong> — Prisma usa parameterized queries. Zod valida tudo antes de usar. Não há string concatenation em SQL.</p>
+
+      <h3>A10: SSRF</h3>
+      <p><strong>Vulnerável ❌</strong> — Cliente pode enviar <code>webhookUrl: "http://169.254.169.254/latest/meta-data"</code> (AWS metadata) ou <code>http://localhost:8080/admin</code>.</p>
+      <p><strong>Mitigação necessária:</strong></p>
+      <ul>
+        <li>Blocklist: 127.0.0.1, 169.254.169.254, 10.0.0.0/8, 172.16.0.0/12</li>
+        <li>DNS resolve → verificar IP público</li>
+        <li>Allowlist de domínios (se possível)</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>SSRF Protection</strong> — adicionar validação de URL:
+          <pre><code>function isSSRF(url) {
+  const hostname = new URL(url).hostname;
+  const ip = dns.lookupSync(hostname);
+  return isPrivateIP(ip) || isMetadataIP(ip);
+}</code></pre>
+        </li>
+        <li><strong>Encrypt metadata at rest</strong> — se PII é enviada, usar pgcrypto ou app-level encryption</li>
+        <li><strong>Review CORS config</strong> — null origin em prod</li>
+        <li><strong>Input allowlist</strong> — se possível, permitir apenas certain URL patterns</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>A01 Access Control? ✅</li>
+        <li>A02 Encryption at rest? ❌</li>
+        <li>A03 SQLi? ✅</li>
+        <li>A04 Secure Design? ⚠️</li>
+        <li>A05 Security Config? ⚠️</li>
+        <li>A10 SSRF Protection? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — OWASP Coverage</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Leak in JobLogs - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Memory Leak: JobLogs</span></div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>Memory Leak in JobLogs</h1>
+      <p class="subtitle">JobLog cresce indefinidamente e causa estouro de disco</p>
+    </div>
+
+    <div class="section">
+      <h2>📈 O Problema</h2>
+      <p>Toda tentativa de job (incluindo retries) cria um <code>JobLog</code>. Não há TTL, archival ou limpeza automática.</p>
+
+      <div class="alert danger">
+        <div class="alert-icon">💾</div>
+        <div class="alert-content">
+          <strong>Growth Unlimited</strong>
+          <p>10k jobs/dia × 3 tentativas = 30k logs/dia → ~1M logs/mês → GBs de dados</p>
+        </div>
+      </div>
+
+      <h2>📊 Modelo JobLog (Prisma)</h2>
+      <pre><code>model JobLog {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  attempt   Int
+  status    String   // 'COMPLETED', 'FAILED'
+  message   String?
+  duration  Int?     // ms
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([jobId])
+  @@index([createdAt])
+}</code></pre>
+
+      <p>Não há:</p>
+      <ul>
+        <li>BSON/compression (PostgreSQL TOAST limited)</li>
+        <li>TTL automático</li>
+        <li>Partição por mês (↑ query perf em indexes)</li>
+        <li>Arquivação para cold storage</li>
+      </ul>
+
+      <h2>💥 Impacto</h2>
+      <ul>
+        <li>Disco enche → database readonly → sistema para</li>
+        <li>Queries <code>job.logs</code> cada vez mais lentas</li>
+        <li>Backups gigantic, restore lento</li>
+        <li>Custo de storage explode</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Retention Policy</strong> — Deletar logs após 90 dias via cron job:
+          <pre><code>DELETE FROM job_logs WHERE created_at < NOW() - INTERVAL '90 days';</code></pre>
+        </li>
+        <li><strong>Arquivar para S3/object storage</strong> — antes de deletar, exportar</li>
+        <li><strong>Partitioning por mês</code> — melhor performance e DROP partition fácil</li>
+        <li><strong>Contador de logs por job</strong> — limite de 1000 logs por job, circular buffer no DB</li>
+        <li><strong>Compressão columnar</strong> — usar TimescaleDB ou particionamento com compressão</li>
+        <li><strong>Alert</strong> — monitorar tabela size: <code>pg_size_pretty(pg_total_relation_size('job_logs'))</code></li>
+      </ol>
+
+      <h2>📈 Diagrama de Crescimento</h2>
+      <pre class="flow-diagram">
+Tempo ──────────────────────────────────────►
+ │
+ ├─ 1 dia: 100k logs (~500 MB)
+ ├─ 30 dias: 3M logs (~15 GB)
+ ├─ 90 dias: 9M logs (~45 GB)
+ └─ 365 dias: 36.5M logs (~180 GB) ← Sem limpeza!
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>JobLog tem TTL? ❌</li>
+        <li>JobLog é particionado? ❌</li>
+        <li>Há archival? ❌</li>
+        <li>Monitora tamanho da tabela? ❌</li>
+        <li>Testa crescimento em load test? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Gerenciamento de Logs</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs Page - JobSync Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        JobSync
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="./getting-started.html">Getting Started</a>
+        <a href="./jobs-page.html" class="active">Jobs</a>
+        <a href="./queues-page.html">Queues</a>
+        <a href="./api-reference.html">API Reference</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="page-wrapper">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html">Docs</a>
+      <span class="sep">/</span>
+      <a href="./getting-started.html">Guides</a>
+      <span class="sep">/</span>
+      <span>Jobs Page</span>
+    </div>
+
+    <!-- Header -->
+    <header class="doc-header">
+      <span class="badge">Frontend Reference</span>
+      <h1>Jobs Page</h1>
+      <p class="subtitle">Visualize, criar e gerenciar todos os jobs da fila. Acompanhe status, filtre por critérios eexecute ações em massa.</p>
+    </header>
+
+    <!-- Layout Overview -->
+    <section class="section">
+      <h2>Layout da Página</h2>
+      <p>A página de Jobs (<code>/src/pages/Jobs.tsx</code>) é composta por trs seções principais:</p>
+
+      <div class="card-grid">
+        <div class="card card-link">
+          <div class="card-icon purple">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </div>
+          <h3>Header</h3>
+          <p>Título "Jobs", botão "Create Job" e indicador de refresh quando há atualizações em andamento.</p>
+          <span class="tag arch">UI</span>
+        </div>
+
+        <div class="card card-link">
+          <div class="card-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M12 8v8M8 12h8"/>
+            </svg>
+          </div>
+          <h3>Create Job Form</h3>
+          <p>Formulário modal inline para criar novos jobs com todas as configurações disponíveis.</p>
+          <span class="tag flow">Feature</span>
+        </div>
+
+        <div class="card card-link">
+          <div class="card-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+            </svg>
+          </div>
+          <h3>Filters</h3>
+          <p>Filtros por status, fila e datas com debounce para evitar requests excessivos.</p>
+          <span class="tag arch">Logic</span>
+        </div>
+
+        <div class="card card-link">
+          <div class="card-icon yellow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18"/>
+            </svg>
+          </div>
+          <h3>Jobs Table</h3>
+          <p>Tabela com todos os jobs, badges de status coloridos e ações por linha.</p>
+          <span class="tag arch">Data</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Header Component -->
+    <section class="section">
+      <h2>Header</h2>
+      <p>O header da página contém o título e os controles principais. Quando há atualizações em background (refetch), um spinner giratório do <code>Loader2</code> icon aparece ao lado do botão.</p>
+
+      <h4>Estrutura do Header</h4>
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│  Jobs                                        [circ ⊗]  +Job │
+│  View and manage all jobs                                   │
+└─────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h4>Código Fonte</h4>
+      <pre><code>{`
+<div className="flex items-center justify-between">
+  <div>
+    <h1 className="text-3xl font-bold">Jobs</h1>
+    <p className="text-muted-foreground">
+      View and manage all jobs
+    </p>
+  </div>
+  <div className="flex items-center gap-4">
+    {/* Refresh indicator */}
+    {isFetching && !isLoading && (
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    )}
+    <Button onClick={() => setShowCreate(true)}>
+      <Plus className="h-4 w-4 mr-2" />
+      Create Job
+    </Button>
+  </div>
+</div>
+`}</code></pre>
+    </section>
+
+    <!-- Create Job Form -->
+    <section class="section">
+      <h2>Create Job Form</h2>
+      <p>O formulário de criação de job aparece quando o usuário clica em "Create Job". É um card com multipleis campos organizados em grid responsivo.</p>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ</span>
+        <div class="alert-content">
+          <strong>Modal inline</strong>
+          <p>Em vez de um modal separado, o formulário aparece como card inline dentro da página para melhor UX e contexto.</p>
+        </div>
+      </div>
+
+      <h3>Campos do Formulário</h3>
+
+      <h4>1. Queue (Select)</h4>
+      <p>Campo obrigatório que permite selecionar a fila onde o job será criado. Dados vindos do hook <code>useQueues()</code>.</p>
+
+      <pre><code>{`
+<Select
+  value={newJob.queue}
+  onValueChange={(value) =>
+    setNewJob((j) => ({ ...j, queue: value }))
+  }
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select a queue" />
+  </SelectTrigger>
+  <SelectContent>
+    {queues?.map((queue) => (
+      <SelectItem key={queue.id} value={queue.name}>
+        {queue.name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+`}</code></pre>
+
+      <h4>2. Webhook URL + Method</h4>
+      <p>URL do webhook que receberá o POST/PUT/etc com o payload. Inclui um select lateral para o método HTTP:</p>
+      <ul>
+        <li><code>GET</code> - payload via query parameters</li>
+        <li><code>POST</code> - payload no body JSON</li>
+        <li><code>PUT</code> - payload no body JSON</li>
+        <li><code>PATCH</code> - payload no body JSON</li>
+        <li><code>DELETE</code> - payload via query parameters</li>
+      </ul>
+
+      <pre><code>{`
+{/* Webhook URL + Method */}
+<div className="flex gap-2">
+  <Select
+    value={newJob.webhookMethod}
+    onValueChange={(value) =>
+      setNewJob((j) => ({ ...j, webhookMethod: value }))
+    }
+  >
+    <SelectTrigger className="w-28">
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="GET">GET</SelectItem>
+      <SelectItem value="POST">POST</SelectItem>
+      <SelectItem value="PUT">PUT</SelectItem>
+      <SelectItem value="PATCH">PATCH</SelectItem>
+      <SelectItem value="DELETE">DELETE</SelectItem>
+    </SelectContent>
+  </Select>
+  <Input
+    type="url"
+    value={newJob.webhookUrl}
+    onChange={(e) =>
+      setNewJob((j) => ({ ...j, webhookUrl: e.target.value }))
+    }
+    placeholder="https://your-api.com/process-job"
+    className="flex-1"
+  />
+</div>
+`}</code></pre>
+
+      <h4>3. Callback URL (opcional)</h4>
+      <p>URL onde o sistema enviará notificações sobre conclusão ou falha do job.</p>
+
+      <h4>4. Payload (JSON Textarea)</h4>
+      <p>Campo obrigatório com um textarea monoespaçado para edição de JSON. Inicialmente contém <code>{}</code> como valor padrão.</p>
+
+      <pre><code>{`
+<Textarea
+  id="payload"
+  value={newJob.payload}
+  onChange={(e) =>
+    setNewJob((j) => ({ ...j, payload: e.target.value }))
+  }
+  placeholder='{"key": "value"}'
+  className="font-mono min-h-[120px]"
+/>
+`}</code></pre>
+
+      <h4>5. Priority (number 0-100)</h4>
+      <p>Número inteiro de prioridade. Valores mais altos são processados primeiro. Padrão: 0.</p>
+
+      <h4>6. Scheduling (toggle + datetime-local)</h4>
+      <p>Toggle que habilita agendamento para data/hora futura. Quando ativado, mostra um input <code>datetime-local</code>.</p>
+
+      <pre><code>{`
+<div className="flex items-center gap-3">
+  <Switch
+    id="enableScheduling"
+    checked={enableScheduling}
+    onCheckedChange={setEnableScheduling}
+  />
+  <Label htmlFor="enableScheduling" className="flex items-center gap-2 cursor-pointer">
+    <Calendar className="h-4 w-4" />
+    Schedule for later
+  </Label>
+</div>
+
+{enableScheduling && (
+  <div className="space-y-2 pl-8">
+    <Label htmlFor="scheduledAt">Schedule Date & Time</Label>
+    <Input
+      id="scheduledAt"
+      type="datetime-local"
+      value={newJob.scheduledAt}
+      onChange={(e) =>
+        setNewJob((j) => ({ ...j, scheduledAt: e.target.value }))
+      }
+      min={new Date().toISOString().slice(0, 16)}
+    />
+  </div>
+)}
+`}</code></pre>
+
+      <h3>Submissão do Formulário</h3>
+      <p>No submit, o código executa as seguintes etapas:</p>
+
+      <pre><code>{`
+const handleCreateJob = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  // 1. Validar campos obrigatórios
+  if (!newJob.queue) {
+    toast.error("Please select a queue");
+    return;
+  }
+  if (!newJob.webhookUrl) {
+    toast.error("Webhook URL is required");
+    return;
+  }
+
+  // 2. Validar JSON do payload
+  let parsedPayload: Record<string, unknown>;
+  try {
+    parsedPayload = JSON.parse(newJob.payload);
+  } catch {
+    toast.error("Invalid JSON payload");
+    return;
+  }
+
+  // 3. Chamar mutateAsync da mutation
+  await createJob.mutateAsync({
+    queue: newJob.queue,
+    webhookUrl: newJob.webhookUrl,
+    webhookMethod: newJob.webhookMethod,
+    callbackUrl: newJob.callbackUrl || undefined,
+    payload: parsedPayload,
+    priority: newJob.priority,
+    scheduledAt: enableScheduling && newJob.scheduledAt
+      ? new Date(newJob.scheduledAt).toISOString()
+      : undefined,
+  });
+
+  // 4. Toast de sucesso
+  toast.success("Job created successfully!");
+
+  // 5. Resetar formulário e fechar card
+  setNewJob({ ...formDefaults });
+  setEnableScheduling(false);
+  setShowCreate(false);
+};
+`}</code></pre>
+
+      <div class="alert success">
+        <span class="alert-icon">✓</span>
+        <div class="alert-content">
+          <strong>Side Effects</strong>
+          <p>A mutation <code>createJob</code> automaticamente invalida as queries de jobs e stats, disparando um refetch dos dados.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters Section -->
+    <section class="section">
+      <h2>Filtros</h2>
+      <p>Card com controles de filtro que aplicam-se à lista de jobs. Os filtros são debounced para evitar requests a cada alteração.</p>
+
+      <h3>Campos de Filtro</h3>
+      <ul>
+        <li><strong>Status</strong> - Select com todas as opções: PENDING, SCHEDULED, PROCESSING, COMPLETED, FAILED, CANCELLED, DEAD</li>
+        <li><strong>Queue</strong> - Select populado das filas disponíveis</li>
+        <li><strong>From Date</strong> - Input date (YYYY-MM-DD)</li>
+        <li><strong>To Date</strong> - Input date (YYYY-MM-DD)</li>
+        <li><strong>Limit</strong> - Número de jobs por página</li>
+      </ul>
+
+      <pre><code>{`
+const [filters, setFilters] = useState({
+  status: "",
+  queue: "",
+  from: "",
+  to: "",
+  limit: 20,
+  offset: 0,
+});
+
+// Debounce: aguarda 300ms antes de aplicar filtro
+const debouncedFilters = useDebounce(filters, DEBOUNCE_DELAYS.FILTER);
+
+// Query usa os filtros debounced
+const { data, isLoading, isFetching } = useJobs(debouncedFilters);
+`}</code></pre>
+
+      <h3>Debouncing</h3>
+      <p>O hook <code>useDebounce</code> delaya a aplicação dos filtros em 300ms (<code>DEBOUNCE_DELAYS.FILTER</code>). Quando o usuário digita rápido, múltiplas alterações de estado não disparam requests. Apenas o último valor após o debounce é usado.</p>
+
+      <div class="alert info">
+        <span class="alert-icon">⚡</span>
+        <div class="alert-content">
+          <strong>Performance</strong>
+          <p>O reset do offset para 0 ocorre imediatamente na mudança de filtro para garantir que a primeira página seja mostrada.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Jobs Table -->
+    <section class="section">
+      <h2>Tabela de Jobs</h2>
+      <p>A tabela exibe cada job em uma linha com as seguintes colunas:</p>
+
+      <ul>
+        <li><strong>ID</strong> - Os primeiros 12 caracteres do ID, link para <code>/jobs/:id</code></li>
+        <li><strong>Queue</strong> - Nome da fila ou "Unknown"</li>
+        <li><strong>Status</strong> - Badge colorido</li>
+        <li><strong>Attempts</strong> - Formato <code>current/max</code></li>
+        <li><strong>Created</strong> - Data relativa usando <code>date-fns</code>: <code>formatDistanceToNow()</code></li>
+        <li><strong>Actions</strong> - Botões de ação (view, retry, cancel)</li>
+      </ul>
+
+      <h3>Status Badge Colors</h3>
+      <p>As cores dos badges vêm da constante <code>STATUS_COLORS</code>:</p>
+
+      <div class="entity">
+        <div class="entity-name">STATUS_COLORS</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">PENDING</span>
+            <span class="field-type">'secondary'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">SCHEDULED</span>
+            <span class="field-type">'secondary'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">PROCESSING</span>
+            <span class="field-type">'warning'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">COMPLETED</span>
+            <span class="field-type">'success'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">FAILED</span>
+            <span class="field-type">'destructive'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">CANCELLED</span>
+            <span class="field-type">'default'</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">DEAD</span>
+            <span class="field-type">'destructive'</span>
+          </div>
+        </div>
+      </div>
+
+      <pre><code>{`
+<Badge variant={STATUS_COLORS[job.status as JobStatus] || "default"}>
+  {job.status}
+</Badge>
+`}</code></pre>
+
+      <h3>Ações por Status</h3>
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│  Status      │ View │ Retry │ Cancel                         │
+├──────────────┼──────┼───────┼────────────────────────────────┤
+│  PENDING     │  ✓   │       │  ✓ (cancel)                    │
+│  SCHEDULED   │  ✓   │       │  ✓ (cancel)                    │
+│  PROCESSING  │  ✓   │       │                                │
+│  COMPLETED   │  ✓   │       │                                │
+│  FAILED      │  ✓   │  ✓    │                                │
+│  CANCELLED   │  ✓   │       │                                │
+│  DEAD        │  ✓   │  ✓    │                                │
+└─────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h4>Código das Ações</h4>
+      <pre><code>{`
+<div className="flex gap-2">
+  {/* View - always visible */}
+  <Link to={`/jobs/${job.id}`} className="inline-flex ...">
+    <Eye className="h-4 w-4" />
+  </Link>
+
+  {/* Retry - only FAILED or DEAD */}
+  {(job.status === "FAILED" || job.status === "DEAD") && (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => handleRetry(job.id)}
+      disabled={retryJob.isPending}
+    >
+      <RefreshCw className="h-4 w-4" />
+    </Button>
+  )}
+
+  {/* Cancel - only PENDING or SCHEDULED */}
+  {(job.status === "PENDING" || job.status === "SCHEDULED") && (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => handleCancel(job.id)}
+      disabled={cancelJob.isPending}
+    >
+      <X className="h-4 w-4" />
+    </Button>
+  )}
+</div>
+`}</code></pre>
+
+      <h3>Mutations das Ações</h3>
+      <pre><code>{`
+const cancelJob = useCancelJob();
+const retryJob = useRetryJob();
+
+const handleCancel = async (id: string) => {
+  if (confirm("Are you sure you want to cancel this job?")) {
+    await cancelJob.mutateAsync(id);
+  }
+};
+
+const handleRetry = async (id: string) => {
+  await retryJob.mutateAsync(id);
+};
+`}</code></pre>
+    </section>
+
+    <!-- Pagination -->
+    <section class="section">
+      <h2>Paginação</h2>
+      <p>Navegação baseada em offset/limit. O estado mantém <code>offset</code> e <code>limit</code> separadamente.</p>
+
+      <pre><code>{`
+const nextPage = () => {
+  if (data && filters.offset + filters.limit < data.total) {
+    setFilters((f) => ({
+      ...f,
+      offset: f.offset + f.limit
+    }));
+  }
+};
+
+const prevPage = () => {
+  if (filters.offset > 0) {
+    setFilters((f) => ({
+      ...f,
+      offset: Math.max(0, f.offset - f.limit)
+    }));
+  }
+};
+`}</code></pre>
+
+      <h3>UI de Paginação</h3>
+      <pre><code>{`
+{data && data.total > 0 && (
+  <div className="flex items-center justify-between mt-4">
+    <p className="text-sm text-muted-foreground">
+      Showing {filters.offset + 1} to{" "}
+      {Math.min(filters.offset + filters.limit, data.total)} of {data.total} jobs
+    </p>
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={prevPage}
+        disabled={filters.offset === 0}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={nextPage}
+        disabled={filters.offset + filters.limit >= data.total}
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  </div>
+)}
+`}</code></pre>
+    </section>
+
+    <!-- State Management -->
+    <section class="section">
+      <h2>Gerenciamento de Estado</h2>
+      <p>A página utiliza duas camadas de estado:</p>
+
+      <div class="entity">
+        <div class="entity-name">Local State (useState)</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">filters</span>
+            <span class="field-type">{status, queue, from, to, limit, offset}</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">newJob</span>
+            <span class="field-type">{queue, webhookUrl, webhookMethod, callbackUrl, payload, priority, scheduledAt}</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">showCreate</span>
+            <span class="field-type">boolean</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">enableScheduling</span>
+            <span class="field-type">boolean</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-name">Server State (React Query)</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">useJobs(debouncedFilters)</span>
+            <span class="field-type">Query</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useQueues()</span>
+            <span class="field-type">Query</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">createJob.mutateAsync()</span>
+            <span class="field-type">Mutation</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">cancelJob.mutateAsync()</span>
+            <span class="field-type">Mutation</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">retryJob.mutateAsync()</span>
+            <span class="field-type">Mutation</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mutation Side Effects -->
+    <section class="section">
+      <h2>Side Effects das Mutations</h2>
+      <p>Todas as mutations invalidam as queries de <code>jobs</code> e <code>stats</code> para disparar refetch dos dados.</p>
+
+      <pre><code>{`
+// useCreateJob.ts (exemplo)
+export const useCreateJob = () => {
+  return useMutation({
+    mutationFn: async (job: CreateJobInput) => {
+      const response = await apiClient.post("/jobs", job);
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidates both jobs list and stats
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+};
+`}</code></pre>
+
+      <div class="alert info">
+        <span class="alert-icon">📋</span>
+        <div class="alert-content">
+          <strong>Padrão consistente</strong>
+          <p>O mesmo padrão é usado em <code>useCancelJob</code> e <code>useRetryJob</code>, garantindo que a UI sempre reflita o estado atual.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Accessibility -->
+    <section class="section">
+      <h2>Acessibilidade</h2>
+      <p>A página implementa práticas de acessibilidade:</p>
+      <ul>
+        <li><strong>Labels</strong> - Todos os inputs possuem <code>Label</code> com <code>htmlFor</code> correto</li>
+        <li><strong>Navegação por teclado</strong> - Botões e links são focáveis</li>
+        <li><strong>Textos alternativos</strong> - Ícones em botões são complementados por texto oculto onde necessário</li>
+        <li><strong>Contraste</strong> - Cores atendem WCAG AA</li>
+        <li><strong>Estados de loading</strong> - Spinners visuais e atributos <code>disabled</code></li>
+      </ul>
+    </section>
+
+    <!-- Dependencies -->
+    <section class="section">
+      <h2>Dependências</h2>
+      <ul>
+        <li><code>@nomad/ui</code> - Componentes: Button, Badge, Input, Select, Textarea, Switch, Card, Table, Label</li>
+        <li><code>react-query</code> (TanStack Query) - Gerenciamento de estado servidor</li>
+        <li><code>date-fns</code> - <code>formatDistanceToNow()</code></li>
+        <li><code>lucide-react</code> - Ícones: RefreshCw, X, ChevronLeft, ChevronRight, Eye, Loader2, Plus, Calendar, Clock</li>
+      </ul>
+    </section>
+
+    <!-- File Reference -->
+    <section class="section">
+      <h2>Arquivos de Referência</h2>
+      <div class="entity">
+        <div class="entity-name">Component Source</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">Jobs.tsx</span>
+            <span class="field-type">/src/pages/Jobs.tsx</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-name">Hooks</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">useJobs</span>
+            <span class="field-type">/src/hooks/useJobs.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useCreateJob</span>
+            <span class="field-type">/src/hooks/useJobs.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useCancelJob</span>
+            <span class="field-type">/src/hooks/useJobs.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useRetryJob</span>
+            <span class="field-type">/src/hooks/useJobs.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useQueues</span>
+            <span class="field-type">/src/hooks/useQueues.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">useDebounce</span>
+            <span class="field-type">/src/hooks/useDebounce.ts</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-name">Constants</div>
+        <div class="entity-fields">
+          <div class="entity-field">
+            <span class="field-name">STATUS_COLORS</span>
+            <span class="field-type">/src/lib/constants.ts</span>
+          </div>
+          <div class="entity-field">
+            <span class="field-name">DEBOUNCE_DELAYS</span>
+            <span class="field-type">/src/lib/constants.ts</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      <p>JobSync Documentation - Built for developers</p>
+    </footer>
+  </div>
+</body>
+</html>

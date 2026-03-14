@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integração Sentry - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"></path>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Guías</a>
+        <span class="sep">/</span>
+        <span>Integração Sentry</span>
+      </div>
+      <span class="badge">Observabilidade</span>
+      <h1>Integração Sentry do JobSync</h1>
+      <p class="subtitle">Configuração e uso do Sentry para monitoramento de erros e performance no JobSync.</p>
+    </div>
+
+    <section class="section">
+      <h2>Configuração da Variável de Ambiente</h2>
+      <p>Adicione o DSN do Sentry ao arquivo <code>.env</code> na raiz do projeto:</p>
+      <pre><code># Sentry DSN (obrigatório para habilitar monitoramento)
+SENTRY_DSN=https://sua-chave-aqui@o123456.ingest.sentry.io/1234567
+
+# Ambiente (development | production)
+NODE_ENV=production</code></pre>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>IMPORTANTE</strong>
+          <p>O Sentry só envia erros em produção. Em desenvolvimento, os eventos são capturados mas não enviados (logados no console).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. Backend (@sentry/node)</h2>
+      <p>O backend usa <code>@sentry/node</code> para capturar erros do Fastify e monitorar requests HTTP como transações.</p>
+
+      <h3>Localização do código</h3>
+      <p>Arquivo de configuração:</p>
+      <pre><code>/workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/backend-job-assync/src/lib/sentry.ts</code></pre>
+
+      <p>Inicialização no servidor:</p>
+      <pre><code>/workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/backend-job-assync/src/server.ts</code></pre>
+      <p>Consulte a linha: <code>import { initSentry, captureError, flushSentry } from './lib/sentry.js';</code> e <code>initSentry();</code>.</p>
+
+      <h3>Configuração do initSentry()</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Opção</th>
+            <th>Valor</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>dsn</code></td>
+            <td><code>process.env.SENTRY_DSN</code></td>
+            <td>Chave DSN do Sentry. Se não definida, Sentry não inicializa.</td>
+          </tr>
+          <tr>
+            <td><code>environment</code></td>
+            <td><code>NODE_ENV</code></td>
+            <td>Ambiente: <code>development</code> ou <code>production</code>.</td>
+          </tr>
+          <tr>
+            <td><code>tracesSampleRate</code></td>
+            <td><code>1.0</code> dev, <code>0.1</code> prod</td>
+            <td>Taxa de amostragem de transações (tracing). 10% em produção.</td>
+          </tr>
+          <tr>
+            <td><code>beforeSend</code></td>
+            <td>null em <code>NODE_ENV === 'development'</code></td>
+            <td>Não envia eventos em dev (apenas loga no console).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Funções exportadas</h3>
+      <ul>
+        <li>
+          <strong><code>initSentry()</code></strong> — Inicializa o Sentry. Deve ser chamado no início da aplicação.
+          <pre><code>export function initSentry() {
+  if (!SENTRY_DSN) {
+    console.log('[Sentry] DSN not configured, skipping initialization');
+    return;
+  }
+
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    beforeSend(event) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Sentry] Event captured (not sent in dev):', event.message);
+        return null;
+      }
+      return event;
+    },
+  });
+  console.log('[Sentry] Initialized');
+}</code></pre>
+        </li>
+        <li>
+          <strong><code>captureError(error, context?)</code></strong> — Captura erro manualmente, adicionando contexto extra (url, method, organizationId, userId).
+          <pre><code>export function captureError(error: Error, context?: Record&lt;string, unknown&gt;) {
+  if (context) {
+    Sentry.setContext('additional', context);
+  }
+  Sentry.captureException(error);
+}</code></pre>
+        </li>
+        <li>
+          <strong><code>captureMessage(message, level)</code></strong> — Captura mensagens de log como evento no Sentry.
+        </li>
+        <li>
+          <strong><code>setUser(user)</code></strong> — Define usuário no contexto (parcialmente implementado, não usado no fluxo atual).
+        </li>
+        <li>
+          <strong><code>addBreadcrumb(message, category, data?)</code></strong> — Adiciona breadcrumb para rastrear ações anteriores.
+        </li>
+        <li>
+          <strong><code>sentryErrorHandler(error, request)</code></strong> — Handler de erro do Fastify com contexto da requisição.
+          <pre><code>export function sentryErrorHandler(error: Error, request: unknown) {
+  Sentry.withScope((scope) => {
+    scope.setExtra('request', request);
+    Sentry.captureException(error);
+  });
+}</code></pre>
+        </li>
+        <li>
+          <strong><code>flushSentry()</code></strong> — Aguarda envio de eventos pendentes no shutdown.
+          <pre><code>export async function flushSentry() {
+  await Sentry.close(2000);
+}</code></pre>
+        </li>
+      </ul>
+
+      <h3>Error Handler Global</h3>
+      <p>Definido em <code>server.ts</code> (linha 220-256). Captura todos os erros não tratados:</p>
+      <pre><code>fastify.setErrorHandler((error, request, reply) => {
+  // Capturar erro no Sentry com contexto
+  captureError(error, {
+    url: request.url,
+    method: request.method,
+    organizationId: request.organizationId,
+    userId: request.userId,
+  });
+
+  fastify.log.error(error);
+
+  // Log audit
+  if (request.organizationId) {
+    logAudit({ /* ... audit log ... */ });
+  }
+
+  const statusCode = error.statusCode || 500;
+  const message = process.env.NODE_ENV === 'production' && statusCode === 500
+    ? 'Internal Server Error'
+    : error.message;
+
+  reply.status(statusCode).send({ error: message });
+});</code></pre>
+
+      <h3>Shutdown Clean</h3>
+      <p>No shutdown (SIGTERM, SIGINT), o sistema aguarda 2 segundos para enviar eventos pendentes:</p>
+      <pre><code>process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down...');
+  await flushSentry();  // ← aguarda envio
+  await fastify.close();
+  await prisma.$disconnect();
+  process.exit(0);
+});</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>2. Frontend (@sentry/react)</h2>
+      <p>O frontend usa <code>@sentry/react</code> para capturar erros React e monitorar performance (RUM).</p>
+
+      <h3>Localização do código</h3>
+      <p>Arquivo de configuração:</p>
+      <pre><code>/workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/frontend-job-async/src/lib/sentry.ts</code></pre>
+
+      <p>Inicialização no ponto de entrada:</p>
+      <pre><code>/workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/frontend-job-async/src/main.tsx</code></pre>
+      <p>Linha: <code>import { initSentry } from './lib/sentry'</code> e <code>initSentry()</code> antes do render.</p>
+
+      <h3>Configuração do initSentry()</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Opção</th>
+            <th>Valor</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>dsn</code></td>
+            <td><code>import.meta.env.VITE_SENTRY_DSN</code></td>
+            <td>Chave DSN do Sentry via variável Vite.</td>
+          </tr>
+          <tr>
+            <td><code>environment</code></td>
+            <td><code>import.meta.env.MODE</code></td>
+            <td>Ambiente do Vite.</td>
+          </tr>
+          <tr>
+            <td><code>tracesSampleRate</code></td>
+            <td><code>import.meta.env.PROD ? 0.1 : 1.0</code></td>
+            <td>RUM tracing: 10% prod, 100% dev.</td>
+          </tr>
+          <tr>
+            <td><code>replaysSessionSampleRate</code></td>
+            <td><code>0.1</code></td>
+            <td>Session replay: 10% das sessões.</td>
+          </tr>
+          <tr>
+            <td><code>replaysOnErrorSampleRate</code></td>
+            <td><code>1.0</code></td>
+            <td>Session replay em erros: sempre.</td>
+          </tr>
+          <tr>
+            <td><code>ignoreErrors</code></td>
+            <td>Lista de erros ignorados</td>
+            <td><code>ResizeObserver loop limit exceeded</code>, etc.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Funcionalidades Frontend</h3>
+      <ul>
+        <li><strong>Error Boundaries</strong> — <code>ErrorBoundary</code> exportado e usável para capturar erros de renderização React.</li>
+        <li><strong>Performance Monitoring</strong> — Tracing automático de navegação SPA e renderizações.</li>
+        <li><strong>Session Replay</strong> — Gravação de sessões em 10% dos usuários (ou sempre em erros).</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>3. Contexto Capturado</h2>
+
+      <h3>Backend (Fastify errors)</h3>
+      <p>No error handler global, o contexto é capturado via <code>captureError</code>:</p>
+      <ul>
+        <li><code>url</code> — URL da requisição que falhou</li>
+        <li><code>method</code> — Método HTTP (GET, POST, etc.)</li>
+        <li><code>organizationId</code> — ID da organização do requester</li>
+        <li><code>userId</code> — ID do usuário (se autenticado via JWT)</li>
+      </ul>
+
+      <h3>Frontend</h3>
+      <ul>
+        <li><strong>setUser(id, email)</strong> — Implementado na lib mas não chamado (falta integração com Auth Context).</li>
+        <li><strong>Breadcrumbs</strong> — <code>addBreadcrumb()</code> disponível mas não utilizado no código atual.</li>
+      </ul>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>GAPS IDENTIFICADOS</strong>
+          <p>Não há chamada a <code>setUser()</code> no frontend apesar da função estar implementada. Pode-se adicionar no AuthContext após login. Breadcrumbs não são adicionados.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. Eventos Monitorados</h2>
+
+      <h3>Tipos de eventos enviados ao Sentry</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Fonte</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="status error">Exception</span></td>
+            <td>Backend error handler + Frontend ErrorBoundary</td>
+            <td>Exceções não tratadas ou capturadas manualmente via captureError().</td>
+          </tr>
+          <tr>
+            <td><span class="status warning">Handled Error</span></td>
+            <td>Qualquer <code>captureError()</code></td>
+            <td>Erros capturados explicitamente no código (ex: falha de webhook).</td>
+          </tr>
+          <tr>
+            <td><span class="status info">Transaction</span></td>
+            <td>HTTP requests (backend) + navegação (frontend)</td>
+            <td>Transações de tracing com duração, URL, método HTTP.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>O que é monitorado</h3>
+      <ul>
+        <li><strong>API request failures</strong> — Todas as requisições que geram erro 4xx/5xx são enviadas ao Sentry.</li>
+        <li><strong>Worker crashes</strong> — Não capturado atualmente (worker.ts não usa Sentry).</li>
+        <li><strong>Auth sync failures</strong> — Erros no hook <code>onRequest</code> são capturados.</li>
+        <li><strong>Database connection errors</strong> — Erros do Prisma caem no error handler.</li>
+        <li><strong>Redis errors</strong> — Erros de conexão Redis são capturados.</li>
+      </ul>
+
+      <div class="alert danger">
+        <span class="alert-icon">🔴</span>
+        <div class="alert-content">
+          <strong>WORKER NÃO INTEGRADO COM SENTRY</strong>
+          <p>O arquivo <code>worker.ts</code> não importa ou usa Sentry. Erros de processamento de jobs só são logados no console e no banco (jobLog). Considere adicionar captura de erros no worker.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>5. Gaps e Recomendações</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Gap</th>
+            <th>Impacto</th>
+            <th>Recomendação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>setUser</code> não chamado no frontend</td>
+            <td>Sem identificação de usuário nas exceções frontend</td>
+            <td>Chamar <code>setUser({ id, email })</code> no AuthContext após login</td>
+          </tr>
+          <tr>
+            <td>Sem breadcrumbs adicionados</td>
+            <td>Falta rastreamento de ações anteriores ao erro</td>
+            <td>Adicionar <code>addBreadcrumb()</code> em ações importantes (navegação, cliques)</td>
+          </tr>
+          <tr>
+            <td>Sem release version</td>
+            <td>Impossível agrupar erros por versão</td>
+            <td>Setar <code>releases</code> no init com git SHA ou package version</td>
+          </tr>
+          <tr>
+            <td>Worker sem Sentry</td>
+            <td>Erros de processamento de jobs invisíveis no Sentry</td>
+            <td>Importar e usar <code>captureError()</code> no catch do worker</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Exemplo: Adicionar Release</h3>
+      <pre><code>import { execSync } from 'child_process';
+
+const release = process.env.SENTRY_RELEASE ||
+  execSync('git rev-parse --short HEAD').toString().trim();
+
+Sentry.init({
+  // ...
+  release: `job-run@${release}`,
+});</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>6. Alertas (Recomendação)</h2>
+      <p>Configure alertas no Sentry para notificar sobre:</p>
+      <ul>
+        <li><strong>Novas Issues</strong> — Quando um novo tipo de erro surge.</li>
+        <li><strong>Increase in Errors</strong> — Quando a taxa de erros sobe X% acima da média.</li>
+        <li><strong>Performance Issues</strong> — Quando transações ficam lentas.</li>
+      </ul>
+      <p>Alertas podem ser enviados por email, Slack, Discord, PagerDuty, etc.</p>
+    </section>
+
+    <section class="section">
+      <h2>7. Diagrama de Fluxo</h2>
+      <div class="flow-diagram">
+┌────────────────────────────────────────────────────────────────────┐
+│                         ERROR OCCURS                               │
+└─────────────────────────┬──────────────────────────────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Backend     │  │   Frontend   │  │    Worker    │
+│ (Fastify)    │  │  (React)     │  │  (BullMQ)    │
+├──────────────┤  ├──────────────┤  ├──────────────┤
+│ · capture-   │  │ · Error      │  │ · Console    │
+│   Error()    │  │   Boundary   │  │   log only   │
+│ · setContext │  │ · capture-   │  │              │
+│ · Sentry SDK │  │   Error()    │  │  ⚠️ NOT      │
+│              │  │              │  │   CAPTURED   │
+└──────┬───────┘  └──────┬───────┘  └──────────────┘
+       │                 │
+       └─────────────────┼─────────────────┘
+                         │
+                         ▼
+           ┌────────────────────────────┐
+           │        SENTRY              │
+           │  · Exceptions             │
+           │  · Transactions           │
+           │  · Performance Monitoring │
+           │  · Session Replay         │
+           └────────────────────────────┘
+      </div>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Integração Sentry</p>
+      <p>Última atualização: Março 2026</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Multi-Tenancy - JobSync</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin: 30px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 20px 0 10px;
+            font-size: 1.2rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        /* Diagrama CSS */
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .diagram {
+            display: flex;
+            align-items: flex-start;
+            gap: 40px;
+            font-size: 14px;
+        }
+
+        .entity {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 160px;
+            border: 2px solid var(--border);
+            position: relative;
+        }
+
+        .entity.primary {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .entity h4 {
+            text-align: center;
+            margin-bottom: 12px;
+            color: var(--primary);
+            font-size: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .entity.primary h4 {
+            color: var(--success);
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent);
+        }
+
+        .field {
+            padding: 4px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+        }
+
+        .field.key {
+            color: var(--warning);
+            font-weight: bold;
+        }
+
+        .field.relation {
+            color: #a78bfa;
+        }
+
+        .relation-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .arrow-line {
+            width: 2px;
+            height: 60px;
+            background: linear-gradient(180deg, var(--primary), var(--success));
+            margin-bottom: 5px;
+        }
+
+        .cardinality {
+            background: var(--bg-tertiary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Tabela de Permissões */
+        .permissions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .permissions-table th,
+        .permissions-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        .permissions-table th {
+            background: var(--bg-tertiary);
+            color: var(--primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        .permissions-table tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .permissions-table .role-owner {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .permissions-table .role-admin {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .permissions-table .role-member {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .permissions-table .role-viewer {
+            background: rgba(107, 114, 128, 0.2);
+        }
+
+        .check {
+            color: var(--success);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .partial {
+            color: var(--warning);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .deny {
+            color: var(--danger);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 12px 16px;
+            margin: 8px 0;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            border-left: 4px solid var(--border);
+        }
+
+        .checklist li.critical {
+            border-left-color: var(--danger);
+        }
+
+        .checklist li.important {
+            border-left-color: var(--warning);
+        }
+
+        .checklist li.good {
+            border-left-color: var(--success);
+        }
+
+        .check-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .checklist-content h4 {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .checklist-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+        }
+
+        /* Flow Chart */
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .flow-step {
+            background: var(--bg-tertiary);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .flow-connector {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .alert {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 15px 0;
+        }
+
+        .alert h4 {
+            color: var(--danger);
+            margin-bottom: 8px;
+        }
+
+        .success-box {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 15px 0;
+        }
+
+        .warning-box {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 15px 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Análise de Multi-Tenancy - JobSync</h1>
+        <p class="subtitle">Sistema de isolamento de dados organizacionais com RBAC e API Keys</p>
+
+        <!-- Seção 1: Diagrama de Relacionamentos -->
+        <h2>1. Diagrama de Relacionamentos (Prisma ORM)</h2>
+        <div class="section">
+            <div class="diagram-container">
+                <div class="diagram">
+                    <!-- Organization -->
+                    <div class="entity primary">
+                        <h4>🏢 Organization</h4>
+                        <div class="field key">id (PK)</div>
+                        <div class="field">slug</div>
+                        <div class="field">name</div>
+                        <div class="field">logoUrl?</div>
+                        <div class="field">settings?</div>
+                        <div class="field">isActive</div>
+                        <div class="field">lastSyncAt</div>
+                        <div class="field">createdAt</div>
+                        <div class="relation">Queues (1:N)</div>
+                        <div class="relation">ApiKeys (1:N)</div>
+                        <div class="relation">Jobs (1:N)</div>
+                        <div class="relation">AuditLogs (1:N)</div>
+                        <div class="relation">Members (1:N via OrgMember)</div>
+                    </div>
+
+                    <div class="relation-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="cardinality">CASCADE</div>
+                    </div>
+
+                    <!-- OrganizationMember -->
+                    <div class="entity primary">
+                        <h4>👥 OrganizationMember</h4>
+                        <div class="field key">id (PK)</div>
+                        <div class="field relation">userId (FK)</div>
+                        <div class="field relation">organizationId (FK)</div>
+                        <div class="field">role</div>
+                        <div class="field">permissions[]</div>
+                        <div class="field">joinedAt</div>
+                        <div class="field">lastSyncAt</div>
+                        <div class="field">@@unique(userId, orgId)</div>
+                    </div>
+
+                    <div class="relation-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="cardinality">CASCADE</div>
+                    </div>
+
+                    <!-- User -->
+                    <div class="entity primary">
+                        <h4>👤 User</h4>
+                        <div class="field key">id (PK)</div>
+                        <div class="field">email</div>
+                        <div class="field">firstName?</div>
+                        <div class="field">lastName?</div>
+                        <div class="field">displayName?</div>
+                        <div class="field">avatarUrl?</div>
+                        <div class="field">status</div>
+                        <div class="field">lastSyncAt</div>
+                        <div class="field">createdAt</div>
+                        <div class="relation">Memberships (N:1)</div>
+                        <div class="relation">Jobs (N:1)</div>
+                        <div class="relation">AuditLogs (N:1)</div>
+                    </div>
+
+                    <div class="relation-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="cardinality">CASCADE</div>
+                    </div>
+
+                    <!-- ApiKey -->
+                    <div class="entity">
+                        <h4>🔑 ApiKey</h4>
+                        <div class="field key">id (PK)</div>
+                        <div class="field key">key (unique)</div>
+                        <div class="field">name</div>
+                        <div class="field relation">organizationId</div>
+                        <div class="field relation">createdById</div>
+                        <div class="field">permissions[]</div>
+                        <div class="field">allowedDomains[]</div>
+                        <div class="field">allowedIps[]</div>
+                        <div class="field">rateLimit?</div>
+                        <div class="field">isActive</div>
+                        <div class="field">expiresAt?</div>
+                        <div class="field">lastUsedAt</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>📋 Chaves de Relacionamento:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><span class="code">User (1) --- (N) OrganizationMember (N) --- (1) Organization</span> - Relação N:N com metadados (role, permissions)</li>
+                    <li><span class="code">Organization (1) --- (N) ApiKey</span> - Escopo por organização (CASCADE DELETE)</li>
+                    <li><span class="code">Organization (1) --- (N) Queue</span> - Filas por organização (CASCADE DELETE)</li>
+                    <li><span class="code">Organization (1) --- (N) Job</span> - Jobs por organização (CASCADE DELETE)</li>
+                    <li><span class="code">Queue (1) --- (N) Job</span> - Filas contêm jobs (CASCADE DELETE)</li>
+                    <li><span class="code">Job (1) --- (N) JobLog</span> - Logs de execução (CASCADE DELETE)</li>
+                    <li><span class="code">User/Organization --- (N) AuditLog</span> - SET NULL ao deletar</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Seção 2: Tabela de Permissões por Role -->
+        <h2>2. Matriz de Permissões por Role (RBAC)</h2>
+        <div class="section">
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th>Permissão</th>
+                        <th class="role-owner">OWNER</th>
+                        <th class="role-admin">ADMIN</th>
+                        <th class="role-member">MEMBER</th>
+                        <th class="role-viewer">VIEWER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="role-owner">
+                        <td><code>admin:*</code> (todas)</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>org:settings</code></td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:create</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:read</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:update</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:delete</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:retry</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>jobs:cancel</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>queues:create</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>queues:read</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>queues:update</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>queues:delete</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>queues:pause</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>apikeys:create</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>apikeys:read</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                    <tr class="role-admin">
+                        <td><code>apikeys:delete</code></td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="deny">✗</td>
+                        <td class="deny">✗</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Seção 3: Fluxo de Autenticação -->
+        <h2>3. Fluxo de Autenticação e Extração do organizationId</h2>
+        <div class="section">
+            <div class="flow" style="flex-direction: column; gap: 0;">
+                <div style="text-align: center; margin-bottom: 10px; color: var(--text-secondary);">
+                    Handler: <code>onRequest</code> em <code>server.ts</code> (linha 71-122)
+                </div>
+
+                <div class="flow">
+                    <div class="flow-step">
+                        <strong>1.</strong> Recebe requisição<br>
+                        <code>Authorization: Bearer &lt;token&gt;</code><br>
+                        <code>X-Organization-Id: &lt;org-id&gt;</code> (opcional)
+                    </div>
+                    <span class="flow-connector">→</span>
+                    <div class="flow-step">
+                        <strong>2.</strong> Tenta API Key<br>
+                        Busca por token no banco<br>
+                        <code>prisma.apiKey.findUnique({ where: { key: token } })</code>
+                    </div>
+                    <span class="flow-connector">→</span>
+                    <div class="flow-step">
+                        <strong>Se encontrado</strong><br>
+                        organizationId = <code>apiKey.organizationId</code><br>
+                        permissions = <code>apiKey.permissions</code>
+                    </div>
+                </div>
+
+                <div style="text-align: center; color: var(--text-secondary); margin: 10px 0;">OU</div>
+
+                <div class="flow">
+                    <div class="flow-step">
+                        <strong>3.</strong> Se não API Key → JWT<br>
+                        <code>verifyJWT(token)</code> via JWKS
+                    </div>
+                    <span class="flow-connector">→</span>
+                    <div class="flow-step">
+                        <strong>4.</strong> Extrai orgId<br>
+                        Prioridade: <code>X-Organization-Id</code> → <code>payload.organizationId</code> → <code>payload.org_id</code> → <code>payload.organization_id</code>
+                    </div>
+                    <span class="flow-connector">→</span>
+                    <div class="flow-step">
+                        <strong>5.</strong> Fallback<br>
+                        <code>getUserOrganizations(token)</code> → usa primeira org
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 10px 0;">→</div>
+
+                <div class="flow-step" style="border-color: var(--success); background: rgba(16, 185, 129, 0.15);">
+                    <strong>✓ Resultado:</strong><br>
+                    <code>request.organizationId</code><br>
+                    <code>request.userId</code><br>
+                    <code>request.permissions</code><br>
+                    <code>request.user (JWT)</code> | <code>request.apiKeyId (APK)</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção 4: Puntos Críticos de Isolamento -->
+        <h2>4. Pontos Críticos de Isolamento de Dados</h2>
+        <div class="section">
+            <div class="alert">
+                <h4>⚠️ Pontos de Falha Identificados</h4>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 15px;">
+                <div class="warning-box">
+                    <h4>🔴 1. Query Builder - Ausência de organizationId</h4>
+                    <p>Todo método de serviço <strong>deve</strong> receber <code>organizationId</code> como parâmetro e incluí-lo no <code>where</code>. Falha em adicionar expõe dados de outras organizações.</p>
+                    <p style="margin-top: 8px;"><strong>Exemplo correto:</strong></p>
+                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 5px;">
+prisma.job.findMany({<br>
+&nbsp;&nbsp;where: { organizationId, ...filters }<br>
+})
+                    </code>
+                </div>
+
+                <div class="warning-box">
+                    <h4>🔴 2. Update/Delete sem organizationId no WHERE</h4>
+                    <p><code>prisma.job.update({ where: { id } })</code> sem organizationId permite modificar jobs de outras orgs.</p>
+                    <p><strong>Solução:</strong> Usar <code>updateMany</code> ou incluir org no where.</p>
+                </div>
+
+                <div class="success-box">
+                    <h4>✅ 3. API Key Escopo por Organização</h4>
+                    <p>API Keys são criadas com <code>organizationId</code> vinculado. No middleware (server.ts:82-102), a chave é validada contra o banco e apenas o <code>organizationId</code> da chave é usado.</p>
+                    <p><code>request.organizationId = apiKey.organizationId</code></p>
+                </div>
+
+                <div class="success-box">
+                    <h4>✅ 4. JWT Validação e Extração</h4>
+                    <p>O JWT é verificado com JWKS e o <code>organizationId</code> é extraído do payload ou do header <code>X-Organization-Id</code>. A validação impede tokens inválidos.</p>
+                </div>
+
+                <div class="warning-box">
+                    <h4>🔴 5. BullMQ Queue Names</h4>
+                    <p>As queues do BullMQ usam o padrão <code>jobs-${organizationId}-${queue.name}</code> (worker.ts:151). Isso isola filas Redis por organização, mas se um erro de nomeação ocorrer, jobs podem vazar.</p>
+                </div>
+
+                <div class="success-box">
+                    <h4>✅ 6. Foreign Keys com CASCADE</h4>
+                    <p>Deletar uma organização remove automaticamente: ApiKeys, Queues, Jobs, OrganizationMembers, AuditLogs (SET NULL). Protege contra órfãos.</p>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ 7. Soft Delete vs Hard Delete</h4>
+                    <p><code>isActive</code> é usado para desativar (soft delete) queues e API keys, mas Jobs usam status. A organização em si não tem campo <code>isActive</code> - deletar remove tudo (hard delete via CASCADE).</p>
+                </div>
+
+                <div class="warning-box">
+                    <h4>🔴 8. AuditLog inclui organizationId?</h4>
+                    <p><strong>SIM!</strong> O logAudit() sempre recebe <code>organizationId</code> do contexto. Todos os logs de ação incluem a organização.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção 5: HasPermission & Authorization -->
+        <h2>5. Sistema de Permissões (hasPermission)</h2>
+        <div class="section">
+            <h3>Função <code>hasPermission()</code> (auth.ts:385-398)</h3>
+            <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; font-family: monospace; margin: 15px 0;">
+                <pre style="margin: 0;">
+export function hasPermission(
+  userPermissions: string[],
+  requiredPermission: string
+): boolean {
+  // Admin tem tudo
+  if (userPermissions.includes('*')) return true;
+
+  // Wildcard (ex: jobs:* inclui jobs:create)
+  const [resource, action] = requiredPermission.split(':');
+  if (userPermissions.includes(`${resource}:*`)) return true;
+
+  // Permissao exata
+  return userPermissions.includes(requiredPermission);
+}</pre>
+            </div>
+
+            <h3>Fluxo de Autorização nas Rotas</h3>
+            <div style="padding: 15px;">
+                <ol style="margin-left: 20px;">
+                    <li><strong>Middleware onRequest</strong> (server.ts:71-122)
+                        <ul style="margin-top: 8px; margin-left: 20px; margin-bottom: 15px;">
+                            <li>Autentica (API Key ou JWT)</li>
+                            <li>Extrai <code>organizationId</code></li>
+                            <li>Define <code>request.permissions</code></li>
+                            <li>Loga audit trail</li>
+                        </ul>
+                    </li>
+                    <li><strong>Permission Check</strong> (server.ts:135-143)
+                        <ul style="margin-top: 8px; margin-left: 20px; margin-bottom: 15px;">
+                            <li><code>requirePermission('jobs:create')</code></li>
+                            <li>Verifica <code>request.permissions</code></li>
+                            <li>Registra denied em audit log</li>
+                        </ul>
+                    </li>
+                    <li><strong>Service Layer</strong>
+                        <ul style="margin-top: 8px; margin-left: 20px; margin-bottom: 15px;">
+                            <li>Recebe <code>organizationId</code> da request</li>
+                            <li>Inclui no <code>where</code> das queries Prisma</li>
+                            <li>Não faz authorization adicional (confia no middleware)</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="alert">
+                <h4>⚠️ Vulnerabilidade Potencial</h4>
+                <p>A autorização acontece <strong>antes</strong> de passar para os services, mas se uma rota esquecer de usar <code>requirePermission()</strong>, qualquer permissão concedida no cockpit de auth terá acesso. Faltam proteções em nível de serviço.</p>
+            </div>
+        </div>
+
+        <!-- Seção 6: Deleção de Organização -->
+        <h2>6. Deleção de Organização e Cascade Effects</h2>
+        <div class="section">
+            <h3>Foreign Keys com CASCADE</h3>
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th>Tabela</th>
+                        <th>ON DELETE</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>OrganizationMember.userId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta membros da organização</td>
+                    </tr>
+                    <tr>
+                        <td><code>OrganizationMember.organizationId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta membros da organização</td>
+                    </tr>
+                    <tr>
+                        <td><code>ApiKey.organizationId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta todas as API keys da org</td>
+                    </tr>
+                    <tr>
+                        <td><code>Queue.organizationId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta todas as filas da org</td>
+                    </tr>
+                    <tr>
+                        <td><code>Job.organizationId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta todos os jobs da org</td>
+                    </tr>
+                    <tr>
+                        <td><code>Job.queueId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta jobs quando queue é deletada</td>
+                    </tr>
+                    <tr>
+                        <td><code>JobLog.jobId</code></td>
+                        <td>CASCADE</td>
+                        <td>Deleta logs quando job é deletado</td>
+                    </tr>
+                    <tr>
+                        <td><code>AuditLog.userId</code></td>
+                        <td>SET NULL</td>
+                        <td>Mantém log, mas sem referência ao usuário</td>
+                    </tr>
+                    <tr>
+                        <td><code>AuditLog.organizationId</code></td>
+                        <td>SET NULL</td>
+                        <td>Mantém log, mas sem referência à org</td>
+                    </tr>
+                    <tr>
+                        <td><code>Job.userId</code></td>
+                        <td>SET NULL</td>
+                        <td>Job permanece sem criador</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Não há Soft Delete de Organização</h3>
+            <div class="warning-box">
+                <p>O modelo <code>Organization</code> não possui campo <code>deletedAt</code> ou <code>isActive</code>. Deletar uma organização causa <strong>hard delete com CASCADE</strong> - todos os dados são removidos fisicamente do banco.</p>
+                <p style="margin-top: 10px;"><strong>Recomendação:</strong> Adicionar campos para arquivamento/restauração, preservando dados históricos para compliance.</p>
+            </div>
+        </div>
+
+        <!-- Seção 7: Checklist de Segurança -->
+        <h2>7. Checklist de Segurança do Multi-Tenancy</h2>
+        <div class="section">
+            <ul class="checklist">
+                <li class="critical">
+                    <span class="check-icon">🔴</span>
+                    <div class="checklist-content">
+                        <h4>TODAS as queries incluem organizationId no WHERE</h4>
+                        <p>Verificar cada método <code>findFirst</code>, <code>findMany</code>, <code>update</code>, <code>updateMany</code>, <code>delete</code> em todos os services. Incluir <code>organizationId</code> é obrigatório.</p>
+                    </div>
+                </li>
+
+                <li class="critical">
+                    <span class="check-icon">🔴</span>
+                    <div class="checklist-content">
+                        <h4>Nenhuma rota pública sem autenticação</h4>
+                        <p>Todas as rotas (exceto <code>/health</code>, <code>/ready</code>, <code>/docs</code>) passam pelo middleware que valida token e extrai organizationId.</p>
+                    </div>
+                </li>
+
+                <li class="critical">
+                    <span class="check-icon">🔴</span>
+                    <div class="checklist-content">
+                        <h4>API Keys são validadas por organizationId</h4>
+                        <p>No update/delete de API Key: <code>prisma.apiKey.findFirst({ where: { id, organizationId } })</code>. Não usar apenas <code>id</code>.</p>
+                    </div>
+                </li>
+
+                <li class="important">
+                    <span class="check-icon">🟡</span>
+                    <div class="checklist-content">
+                        <h4>AuditLog registra organizationId em todas as ações</h4>
+                        <p>Verificar que <code>logAudit()</code> sempre inclui <code>organizationId</code> extraído de <code>request.organizationId</code>. A função já suporta空值, mas deve ser preenchida.</p>
+                    </div>
+                </li>
+
+                <li class="good">
+                    <span class="check-icon">🟢</span>
+                    <div class="checklist-content">
+                        <h4>API Key escopo por organização (IMPLEMENTADO)</h4>
+                        <p><code>ApiKey</code> possui <code>organizationId</code> FK. No middleware (server.ts:84-102), o organizationId é extraído da chave e usado na request.</p>
+                    </div>
+                </li>
+
+                <li class="good">
+                    <span class="check-icon">🟢</span>
+                    <div class="checklist-content">
+                        <h4>Foreign Keys com CASCADE/SET NULL (IMPLEMENTADO)</h4>
+                        <p>Todas as relações tem proteção contra órfãos. Deleção de organização limpa dados relacionados.</p>
+                    </div>
+                </li>
+
+                <li class="good">
+                    <span class="check-icon">🟢</span>
+                    <div class="checklist-content">
+                        <h4>BullMQ Queue Names incluem organizationId (IMPLEMENTADO)</h4>
+                        <p><code>jobs-${organizationId}-${queue.name}</code> isola filas Redis por tenant.</p>
+                    </div>
+                </li>
+
+                <li class="important">
+                    <span class="check-icon">🟡</span>
+                    <div class="checklist-content">
+                        <h4>Rate Limiting por organização (parcial)</h4>
+                        <p>fastify-rate-limit usa <code>request.organizationId</code> como chave (server.ts:46), mas ainda pode ser por IP. Ideal: combinar IP + org.</p>
+                    </div>
+                </li>
+
+                <li class="critical">
+                    <span class="check-icon">🔴</span>
+                    <div class="checklist-content">
+                        <h4>Worker processa jobs com validação de organizationId</h4>
+                        <p><strong>VULNERABILIDADE:</strong> O worker (worker.ts) não valida se o job pertence à organização. Se um atacante injetar um <code>jobId</code> de outra org no Redis, o worker processará sem verificação.</p>
+                    </div>
+                </li>
+
+                <li class="important">
+                    <span class="check-icon">🟡</span>
+                    <div class="checklist-content">
+                        <h4>Validate queue ownership before operation</h4>
+                        <p>No <code>queueService.pause()</code>/<code>resume()</code>, usar <code>getById(organizationId, id)</code> e checar resultado antes de executar ação (parcialmente correcto).</p>
+                    </div>
+                </li>
+
+                <li class="good">
+                    <span class="check-icon">🟢</span>
+                    <div class="checklist-content">
+                        <h4>API Key retorna key apenas na criação</h4>
+                        <p><code>apiKeyService.create()</code> retorna a chave completa uma única vez. Listagem e get omitem o campo <code>key</code>.</p>
+                    </div>
+                </li>
+
+                <li class="important">
+                    <span class="check-icon">🟡</span>
+                    <div class="checklist-content">
+                        <h4>Organization Sync do Auth Service</h4>
+                        <p><code>buildAuthenticatedUser()</code> sincroniza usuário, organização e membership. Isso garante que dados do auth service são refletidos localmente. Mas falha silenciosa se auth service indisponível?</p>
+                    </div>
+                </li>
+
+                <li class="critical">
+                    <span class="check-icon">🔴</span>
+                    <div class="checklist-content">
+                        <h4>Race conditions em create/update</h4>
+                        <p>Sem transações ou locks, um usuário pode modificar um recurso se adivinhar o <code>id</code>. Exemplo: <code>PATCH /queues/:id</code> se o <code>id</code> pertence a outra org, <code>updateMany</code> retorna <code>count === 0</code> (seguro), mas create pode falhar se validação搭车.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Seção 8: Resumo -->
+        <h2>8. Resumo e Recomendações</h2>
+        <div class="section">
+            <div class="grid-2">
+                <div>
+                    <h3>🟢 Pontos Fortes</h3>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Padronização clara: <code>organizationId</code> sliceado no middleware</li>
+                        <li>API Key suporta permissões granulares por tenant</li>
+                        <li>RBAC robusto com <code>OrganizationMember.permissions</code> array</li>
+                        <li>Auditoria via <code>AuditLog</code> com FK organizationId</li>
+                        <li>Foreign keys protegem contra orfãos</li>
+                        <li>BullMQ usa naming convention com orgId</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>🔴 Vulnerabilidades</h3>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Worker não valida ownership do job antes de processar</li>
+                        <li>Falta proteção em service layer (confia 100% no middleware)</li>
+                        <li>Pendência de soft delete para organização</li>
+                        <li>Rate limit por IP não considera org</li>
+                        <li>Possível race condition se ID colidir cross-tenant</li>
+                        <li>Credenciais em variações de JWT payload inconsistente</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 25px;">🎯 Ações Recomendadas</h3>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                <li><strong>Worker validation:</strong> Antes de processar job, validar <code>job.organizationId</code> contra lista de organizações ativas.</li>
+                <li><strong>Service guards:</strong> Adicionar verificação de ownership em cada método de service como defesa em profundidade.</li>
+                <li><strong>Soft delete org:</strong> Adicionar <code>deletedAt</code> em Organization com restore.</li>
+                <li><strong>UUIDs:</strong> Garantir IDs usando UUIDv4 ou cuid com entropia suficiente para evitar colisões.</li>
+                <li><strong>Rate limit:</strong> Mudar para <code>${organizationId}:${ip}</code>.</li>
+                <li><strong>Integration tests:</strong> Testes que tentam acessar dados cross-tenant devem falhar.</li>
+            </ol>
+        </div>
+
+        <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; color: var(--text-secondary); font-size: 13px;">
+            Análise técnica do sistema JobSync - Multi-tenancy com Prisma + Fastify<br>
+            Foco: Isolamento de dados, RBAC, API Keys, Audit Trail
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Input Validation Boundaries - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Input Validation Boundaries</span></div>
+
+    <div class="doc-header">
+      <span class="badge security">Security</span>
+      <h1>Input Validation Boundaries</h1>
+      <p class="subtitle">Onde validar, schemas Zod, defesa em profundidade</p>
+    </div>
+
+    <div class="section">
+      <h2>📋 Camadas de Validação</h2>
+
+      <pre><code>// 1. HTTP Request → Fastify body/query
+fastify.post('/jobs', async (request, reply) => {
+  const result = createJobSchema.safeParse(request.body);  // Zod
+  if (!result.success) {
+    return reply.status(400).send({ error: 'Validation error', details: result.error.flatten() });
+  }
+  // ... continua para service
+});
+
+// 2. Service → Database
+const job = await prisma.job.create({ data: {...} }); // Prisma valida schema
+</code></pre>
+
+      <div class="alert success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <strong>Zod + Prisma</strong>
+          <p>Duas camadas de validação: Zod no input HTTP, Prisma no DB.</p>
+        </div>
+      </div>
+
+      <h2>📊 Schemas Zod Atuais</h2>
+      <pre><code>// src/types/index.ts
+
+// Job
+createJobSchema = z.object({
+  queue: z.string().min(1),
+  webhookUrl: z.string().url(),       // ← URL validada
+  webhookMethod: z.enum(['GET','POST','PUT','PATCH','DELETE']),
+  callbackUrl: z.string().url().optional(),
+  payload: z.record(z.unknown()),    // ← JSON qualquer
+  userId: z.string().optional(),
+  externalId: z.string().optional(),
+  priority: z.number().int().min(0).max(100),
+  scheduledAt: z.string().datetime().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+// Queue
+createQueueSchema = z.object({
+  name: z.string().min(1).max(100),
+  concurrency: z.number().int().min(1).max(100).default(5),
+  maxRetries: z.number().int().min(0).max(10).default(3),
+  retryDelay: z.number().int().min(1000).max(3600000).default(5000),
+  timeout: z.number().int().min(5000).max(3600000).default(300000),
+  rateLimit: z.number().int().min(1).optional(),
+});</code></pre>
+
+      <h2>✅ Boas Práticas Implementadas</h2>
+      <ul>
+        <li><strong>Zod.safeParse()</strong> — não lança exceção, retorna { success, data, error }</li>
+        <li><strong>Coerce tipos</strong> — query params chegam como string, <code>z.coerce.number()</code> converte</li>
+        <li><strong>Defaults sensatos</strong> — timeout = 5min, maxRetries = 3</li>
+        <li><strong>Limites de tamanho</strong> — max 100 chars em name, max 100 retries</li>
+      </ul>
+
+      <h2>⚠️ Gaps de Validação</h2>
+      <ul>
+        <li><strong>webhookUrl sem SSRF check</strong> — pode ser localhost, 169.254.169.254</li>
+        <li><strong>callbackUrl sem SSRF check</strong> — mesmo problema</li>
+        <li><strong>payload sem tamanho max</strong> — pode ser GBs de JSON</li>
+        <li><strong>metadata sem tamanho max</strong> — mesmo problema</li>
+        <li><strong>bulk jobs max 1000</strong> — bom limite, mas não configurável</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>SSRF Validation</strong> — adicionar em createJobSchema:
+          <pre><code>const webhookUrlSchema = z.string().url().refine(
+  (url) => !isPrivateURL(url),
+  { message: "Webhook URL cannot point to private/internal addresses" }
+);</code></pre>
+        </li>
+        <li><strong>Payload/Metadata size limit</strong>:
+          <pre><code>payload: z.record(z.unknown()).max(1024 * 100), // 100KB max</code></pre>
+        </li>
+        <li><strong>URL scheme validation</strong> — só https em produção:
+          <pre><code>webhookUrl: z.string().url().refine(
+  (url) => process.env.NODE_ENV === 'production' ? url.startsWith('https') : true
+)</code></pre>
+        </li>
+        <li><strong>Rate limit validation</strong> — range menor, evitar 0</li>
+        <li><strong>Input sanitization</strong> — se webhookUrl é refletido em logs, sanitizar</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Zod validation? ✅</li>
+        <li>Prisma schema validation? ✅</li>
+        <li>URL SSRF check? ❌</li>
+        <li>Payload size limit? ❌</li>
+        <li>HTTPS only em prod? ⚠️</li>
+        <li>Input sanitized em logs? ⚠️</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Input Validation</p>
+    </div>
+  </div>
+</body>
+</html>

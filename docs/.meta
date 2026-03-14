@@ -1,0 +1,56 @@
+# Inventory das 30 Páginas de Documentação
+
+## Seções Técnicas (Infraestrutura e Core)
+
+1. **arquitetura-overview** - Visão geral da arquitetura do sistema JobSync
+2. **dados-fluxo** - Fluxo de dados end-to-end
+3. **modelo-dados** - Modelo de dados Prisma (entidades e relacionamentos)
+4. **sistema-filas** - BullMQ, workers, processamento assíncrono
+5. **webhooks-callbacks** - Sistema de webhooks e callbacks
+6. **multitenancy** - Multi-tenant com organizações
+7. **permissions** - Sistema de permissões RBAC
+8. **auth-flow** - Autenticação OAuth e JWT
+9. **apikeys** - API Keys e M2M
+10. **rate-limiting** - Rate limiting e segurança
+11. **error-handling** - Gestão de erros e Sentry
+12. **audit-logging** - Audit log e compliance
+
+## Integrações e Infra
+
+13. **integracao-authservice** - Integração com Auth Service
+14. **integracao-redis** - Redis para cache e filas
+15. **integracao-postgres** - PostgreSQL
+16. **integracao-sentry** - Sentry monitoring
+17. **healthchecks** - Health check e readiness
+18. **config-env** - Variáveis de ambiente
+
+## Frontend
+
+19. **frontend-techstack** - React, Vite, TanStack Query, shadcn/ui
+20. **frontend-architecture** - Arquitetura e organização de código
+21. **dashboard** - Dashboard page
+22. **jobs-page** - Jobs list e criação
+23. **job-detail** - Detalhe do job e logs
+24. **queues-page** - Gerenciamento de filas
+25. **queue-detail** - Estatísticas da fila
+26. **settings** - Configurações e API Keys
+
+## Operações
+
+27. **workers-escalabilidade** - Workers e escalabilidade
+28. **deploy-configuracao** - Deploy e configuração
+29. **troubleshooting** - Troubleshooting guia
+30. **api-reference** - Referência completa da API REST
+
+---
+
+## Status Template
+Cada arquivo terá:
+- ~~**Título claro**~~
+- **Descrição concisa**
+- **Diagramas de fluxo** se relevante (ASCII)
+- **Código de exemplo** se relevante
+- **Boas práticas** e considerações
+- **Referências** a outros docs
+
+Todos em HTML com o mesmo tema visual.

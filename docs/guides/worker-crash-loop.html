@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Worker Crash Loop - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Worker Crash Loop</span></div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>Worker Crash Loop</h1>
+      <p class="subtitle">Worker sem restart automático causa perda de processamento</p>
+    </div>
+
+    <div class="section">
+      <h2>💥 O Problema</h2>
+      <p>Worker rodando com <code>tsx watch</code> ou <code>node dist/worker.js</code> sem processo gerenciador (PM2/Systemd) pode crashar e não restartar.</p>
+
+      <div class="alert danger">
+        <div class="alert-icon">🔁</div>
+        <div class="alert-content">
+          <strong>No Auto-Restart</strong>
+          <p>Se worker levanta exception não tratada, processo morre. Jobs pendentes ficam presos na fila BullMQ até que workers voltem.</p>
+        </div>
+      </div>
+
+      <h2>📊 Código de Inicialização</h2>
+      <pre><code>// package.json scripts
+"dev:worker": "tsx watch src/worker.ts"
+
+// Em produção, como é startado?
+// Se for: node dist/worker.js → sem restart automático</code></pre>
+
+      <p>BullMQ não auto-reconnect se worker morre. Workers são independentes.</p>
+
+      <h2>💥 Cenários de Crash</h2>
+      <ul>
+        <li>Unhandled promise rejection em processJob</li>
+        <li>Out of memory (processa payload gigante)</li>
+        <li>Redis connection lost → worker wrestling ao reconnectar</li>
+        <li>Database outage → prisma.$connect falha</li>
+        <li>SIGKILL (OOM killer) </li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Usar PM2</strong> — restart automático, log rotation:
+          <pre><code>pm2 start dist/worker.js --name "jobsync-worker" --restart-delay 5000</code></pre>
+        </li>
+        <li><strong>Docker restart policy</strong> — se rodar em container:
+          <pre><code>restart: unless-stopped</code></pre>
+        </li>
+        <li><strong>ProcessError handler</strong> — em startWorkers():
+          <pre><code>process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+  process.exit(1); // deixa PM2 restartar
+});</code></pre>
+        </li>
+        <li><strong>Health check de workers</strong> — endpoint que verifica se workers estão rodando (BullMQ <code>worker.isRunning()</code>)</li>
+        <li><strong>Alert on worker down</strong> — Sentry captura <code>process.on('uncaughtException')</code> com notify Slack</li>
+        <li><strong>Queue metrics</strong> — se <code>queue.getWaitingCount()</code> sobe sem workers ativos, alertar</li>
+      </ol>
+
+      <h2>📈 Diagrama de Recuperação</h2>
+      <pre class="flow-diagram">
+Worker crash
+    │
+    ├─► PM2 detecta exit code != 0
+    │   └─► restart after 5s
+    │       └─► worker.close() anteriores? (BullMQ limpa connections)
+    │
+    └─► Jobs na fila:
+        PENDING → são reprocessados (idempotency?)
+        ACTIVE → BullMQ reassigna após timeout? (Stalled checker)
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Workers gerenciados por PM2? ❌</li>
+        <li>Docker restart policy? ❌</li>
+        <li>Graceful shutdown (SIGTERM) tratado? ✅</li>
+        <li>unhandledRejection/exception logado? ⚠️</li>
+        <li>Health check workers? ❌</li>
+        <li>Alertas de worker down? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Resiliência de Workers</p>
+    </div>
+  </div>
+</body>
+</html>

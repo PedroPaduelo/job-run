@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rate Limiting - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">JobSync Docs</a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <span>Rate Limiting</span></div>
+      <span class="badge">Segurança</span>
+      <h1>Rate Limiting</h1>
+      <p class="subtitle">Proteção contra abuso e garantia de disponibilidade</p>
+    </div>
+
+    <section class="section">
+      <h2>Camadas de Rate Limit</h2>
+      <ul>
+        <li><strong>Global (Fastify):</strong> 1000 req/min por organização (key = organizationId ou ip). Configurado em server.ts.</li>
+        <li><strong>Por Queue (BullMQ):</strong>Configurável por fila; usa rateLimit (jobs por minuto) no worker.</li>
+        <li><strong>Por API Key:</strong>Camada de rateLimit na API Key (opcional) — se definido, override global?</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Implementação Global</h2>
+      <pre><code>await fastify.register(rateLimit, {
+  max: 1000,
+  timeWindow: '1 minute',
+  keyGenerator: (request) => {
+    return request.organizationId || request.ip;
+  },
+});</code></pre>
+      <p>Se não houver organizationId (ex: health check), usa IP. Aplica a todas as rotas exceto health.</p>
+    </section>
+
+    <section class="section">
+      <h2>Rate Limit por Queue (Workers)</h2>
+      <p>No worker, cada fila pode ter <code>rateLimit</code>. Exemplo de configuração no código:</p>
+      <pre><code>const worker = new Worker(queueName, processJob, {
+  connection: redis,
+  concurrency: queue.concurrency || 10,
+  limiter: {
+    max: queue.rateLimit || 100,
+    duration: 60000,
+  },
+});</code></pre>
+      <p>Se <code>queue.rateLimit</code> for null, o worker não limita (só o global).</p>
+    </section>
+
+    <section class="section">
+      <h2>Considerações</h2>
+      <ul>
+        <li>Rate limit por organization garante fair usage entre tenants.</li>
+        <li>Limite de 1000 req/min é alto para API interna — pode ser ajustado via environment?</li>
+        <li>BullMQ limiter evita sobrecarregar endpoints externos quando o processamento é rápido.</li>
+        <li>Não há rate limit diferenciado por API Key (pode ser implementado no futuro).</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">Voltar para <a href="../index.html">Home</a></div>
+  </div>
+</body>
+</html>

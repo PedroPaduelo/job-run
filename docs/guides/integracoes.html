@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integrações Externas - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"></path>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Integrações Externas</span>
+      </div>
+      <span class="badge">Integrações</span>
+      <h1>Integrações Externas do JobSync</h1>
+      <p class="subtitle">Referência das integrações externas usadas no JobSync e os riscos operacionais associados.</p>
+    </div>
+
+    <section class="section">
+      <h2>Visão Geral</h2>
+      <p>O JobSync depende de serviços externos para autenticação, persistência, filas, observabilidade e callbacks. Abaixo documentamos cada integração, endpoints, variáveis de ambiente e riscos principais.</p>
+    </section>
+
+    <section class="section" id="auth-service">
+      <h2>1. Auth Service (Nommand)</h2>
+      <p>O JobSync delega a autenticação de usuários ao Auth Service (Nommand). O frontend usa a SDK OAuth PKCE para login e o backend valida JWT via JWKS.</p>
+      <h3>Configuração e endpoints</h3>
+      <ul>
+        <li><strong>URL base:</strong> <code>AUTH_SERVER_URL</code> (default <code>http://localhost:3000</code>)</li>
+        <li><strong>JWKS:</strong> <code>/.well-known/jwks.json</code></li>
+        <li><strong>Endpoints consumidos:</strong>
+          <ul>
+            <li><code>GET /auth/profile</code></li>
+            <li><code>GET /organizations/</code></li>
+            <li><code>GET /organizations/{id}</code></li>
+            <li><code>GET /organizations/{id}/members/me</code></li>
+          </ul>
+        </li>
+      </ul>
+      <h3>SDK</h3>
+      <p>Frontend: <code>@nommand/auth-sdk</code> (OAuth PKCE).</p>
+      <h3>Risco operacional</h3>
+      <p><strong>Auth Service downtime:</strong> impediria novos logins para usuários. A validação de tokens existentes continua funcionando enquanto o JWKS em cache estiver válido (cerca de 5 minutos).</p>
+    </section>
+
+    <section class="section" id="postgresql-prisma">
+      <h2>2. PostgreSQL (Prisma)</h2>
+      <p>O JobSync usa PostgreSQL como banco de dados primário para persistir dados de jobs, filas, organizações, usuários, API Keys e logs.</p>
+      <h3>Configuração</h3>
+      <ul>
+        <li><strong>Connection string:</strong> <code>DATABASE_URL</code></li>
+        <li><strong>ORM:</strong> Prisma Client</li>
+        <li><strong>Schema:</strong> 8 modelos (User, Organization, OrganizationMember, Queue, Job, JobLog, ApiKey, AuditLog) com índices de performance e constraints de integridade</li>
+      </ul>
+      <h3>Risco operacional</h3>
+      <ul>
+        <li><strong>Connection pool exhaustion:</strong> muitas conexões simultâneas podem saturar o banco e causar erros 500.</li>
+        <li><strong>Migration drift:</strong> divergência entre schema Prisma e base de dados em produção pode quebrar queries e gerar comportamentos inesperados.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="redis-bullmq">
+      <h2>3. Redis (ioredis + BullMQ)</h2>
+      <p>Redis é usado como backend para BullMQ (filas de jobs), cache de estado e coordenação entre workers.</p>
+      <h3>Configuração</h3>
+      <ul>
+        <li><strong>URL de conexão:</strong> <code>REDIS_URL</code> (default <code>redis://localhost:6379</code>)</li>
+        <li><strong>Cliente:</strong> <code>ioredis</code></li>
+        <li><strong>Uso principal:</strong> filas BullMQ para jobs e workers</li>
+        <li><strong>Retry:</strong> <code>maxRetriesPerRequest: null</code> (retry infinito no cliente Redis)</li>
+      </ul>
+      <h3>Risco operacional</h3>
+      <p><strong>Redis indisponível:</strong> o processamento de jobs é interrompido e a fila não avança. A API CRUD permanece disponível (desde que o banco PostgreSQL esteja saudável), mas nenhuma execuçãode jobs ocorrerá.</p>
+    </section>
+
+    <section class="section" id="sentry">
+      <h2>4. Sentry</h2>
+      <p>O JobSync envia erros para Sentry para monitoramento de produção e rastreamento de exceções.</p>
+      <h3>Configuração</h3>
+      <ul>
+        <li><strong>DSN:</strong> <code>SENTRY_DSN</code></li>
+        <li><strong>Backend:</strong> <code>@sentry/node</code></li>
+        <li><strong>Frontend:</strong> <code>@sentry/react</code></li>
+      </ul>
+      <h3>Risco operacional</h3>
+      <p>Se o Sentry estiver indisponível, o sistema ignora erros de envio e continua funcionando. As falhas de observabilidade podem atrasar a detecção de incidentes.</p>
+    </section>
+
+    <section class="section" id="webhooks-externos">
+      <h2>5. Webhooks Externos (definidos pelo usuário)</h2>
+      <p>Workers fazem chamadas para URLs de webhook definidos pelo usuário para executar tarefas externas (por exemplo, notificar outro sistema, criar registros externos, etc.).</p>
+      <h3>Suporte de métodos</h3>
+      <ul>
+        <li><code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code></li>
+      </ul>
+      <h3>Risco operacional</h3>
+      <ul>
+        <li><strong>URLs maliciosos:</strong> podem causar exposição de dados ou chamadas a endpoints não confiáveis.</li>
+        <li><strong>SSRF:</strong> URLs internas podem permitir acesso a serviços internos se não houver validação adequada.</li>
+        <li><strong>Endpoints lentos:</strong> chamadas longas podem atrasar o processamento de jobs ou esgotar timeouts.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="callbacks-externos">
+      <h2>6. Callbacks Externos (definidos pelo usuário)</h2>
+      <p>Após conclusão ou falha de um job, o sistema realiza POST em URLs de callback configurados pelo usuário para notificar sistemas externos.</p>
+      <h3>Comportamento</h3>
+      <ul>
+        <li>Chamadas feitas via <code>POST</code></li>
+        <li>Execução fire-and-forget: não há retry automático em falha de callback</li>
+      </ul>
+      <h3>Risco operacional</h3>
+      <p>Se o endpoint de callback estiver indisponível, a notificação será perdida. Recomendamos implementar um mecanismo idempotente e retries no consumidor do callback, ou usar webhooks adicionais para confiabilidade.</p>
+    </section>
+
+    <section class="section" id="dependency-diagram">
+      <h2>Diagrama de Dependências</h2>
+      <div class="flow-diagram">
+      CLIENTE FRONTEND
+        |
+        |--> Auth Service (Nommand)
+        |       - /auth/profile
+        |       - /organizations
+        |
+        |--> Backend API (Fastify + Prisma)
+                - JWT (JWKS)
+                - API Keys
+                - CRUD
+                - Jobs endpoints
+                |
+                |--> PostgreSQL (Prisma)
+                |--> Redis (BullMQ)
+                |--> Sentry
+                |
+                |--> Workers
+                       - Webhooks (user URLs)
+                       - Callbacks (user URLs)
+      </div>
+      <p>Este diagrama resume os principais dependentes externos e como os componentes se relacionam.</p>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Integrações Externas</p>
+      <p>Use esta página como referência para configurar variáveis de ambiente e entender riscos de disponibilidade.</p>
+    </div>
+  </div>
+</body>
+</html>

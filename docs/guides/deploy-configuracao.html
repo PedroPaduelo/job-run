@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deploy e Configuração - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html" class="active">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Deploy</span>
+      </div>
+      <span class="badge">Infraestrutura</span>
+      <h1>Deploy e Configuração</h1>
+      <p class="subtitle">Guia completo para implantar e configurar o JobSync em produção</p>
+    </div>
+
+    <!-- Prerequisites -->
+    <div class="card-grid section">
+      <div class="card">
+        <div class="card-icon blue">1️⃣</div>
+        <h3>Pré-requisitos</h3>
+        <p><strong>Node.js 20+</strong> — Suporte a ES Modules nativo</p>
+        <p><strong>PostgreSQL</strong> — Banco de dados compartilhado ou dedicado</p>
+        <p><strong>Redis</strong> — Para filas BullMQ e cache</p>
+        <p><strong>Auth Service</strong> — Servidor OAuth em execução (compatível com JWT)</p>
+        <span class="tag arch">Infraestrutura</span>
+      </div>
+
+      <div class="card">
+        <div class="card-icon purple">2️⃣</div>
+        <h3>Build</h3>
+        <p><strong>Backend:</strong> <code>npm run build</code> (tsc) → <code>dist/</code></p>
+        <p><strong>Frontend:</strong> <code>npm run build</code> (tsc -b + vite build) → <code>dist/</code></p>
+        <p>Produção: arquivos estáticos prontos para servir</p>
+        <span class="tag frontend">Build</span>
+      </div>
+
+      <div class="card">
+        <div class="card-icon green">3️⃣</div>
+        <h3>Runtime</h3>
+        <p><strong>Backend:</strong> Variável <code>PORT</code> (padrão: 3001)</p>
+        <p><strong>Frontend:</strong> <code>VITE_API_URL</code> aponta para backend</p>
+        <p><strong>PM2:</strong> Gerenciamento de processos essencial</p>
+        <span class="tag ops">Execução</span>
+      </div>
+
+      <div class="card">
+        <div class="card-icon yellow">4️⃣</div>
+        <h3>Monitoramento</h3>
+        <p><code>/health</code> e <code>/ready</code> para health checks</p>
+        <p>Sentry para rastreamento de erros</p>
+        <p><code>/api/stats</code> para métricas internas</p>
+        <span class="tag api">Observabilidade</span>
+      </div>
+    </div>
+
+    <!-- Build Steps -->
+    <div class="section">
+      <h2 id="build-steps">Etapas de Build</h2>
+
+      <h3>Backend</h3>
+      <div class="card">
+        <pre><code># Clonar e instalar dependências
+git clone &lt;repo&gt;
+cd job-run
+npm ci --only=production
+
+# Build TypeScript
+npm run build
+# Output: dist/</code></pre>
+      </div>
+
+      <h3>Frontend</h3>
+      <div class="card">
+        <pre><code># Na raiz do projeto
+npm run build
+# Executa tsc -b e depois vite build
+# Output: dist/ (arquivos estáticos)</code></pre>
+      </div>
+
+      <h3>Comandos de Inicialização</h3>
+      <div class="card">
+        <pre><code># Backend (Node.js)
+npm run start
+# Escuta em PORT (padrão: 3001)</code></pre>
+
+        <pre><code># Frontend (preview local)
+npm run preview
+# Servidor Vite em porta 4173 (ou configurada)</code></pre>
+
+        <pre><code># Frontend em produção (nginx)
+# Servir arquivos de dist/ como estáticos</code></pre>
+      </div>
+    </div>
+
+    <!-- PM2 Deployment -->
+    <div class="section">
+      <h2 id="pm2-deployment">Deploy com PM2</h2>
+      <p>O PM2 é <strong>crítico</strong> para gerenciamento de processos em produção. Use-o para manter a aplicação rodando com auto-restart e logs centralizados.</p>
+
+      <h3>Comandos Básicos</h3>
+      <div class="card">
+        <pre><code># Instalar PM2 globalmente
+npm install -g pm2
+
+# Iniciar backend
+pm2 start npm --name "job-sync-backend" -- run start
+
+# Iniciar frontend (servir estáticos)
+pm2 start npx --name "job-sync-frontend" -- serve dist/ -p 8080
+
+# Iniciar workers separadamente
+pm2 start npm --name "job-sync-worker-1" -- run start:worker
+pm2 start npm --name "job-sync-worker-2" -- run start:worker
+
+# Salvar configuração
+pm2 save
+
+# Configurar startup no sistema
+pm2 startup
+# Siga as instruções geradas</code></pre>
+      </div>
+
+      <h3>Ecosystem Config</h3>
+      <div class="card">
+        <pre><code>{
+  "apps": [
+    {
+      "name": "job-sync-backend",
+      "cwd": "/opt/job-sync",
+      "script": "npm",
+      "args": "run start",
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "3001"
+      }
+    },
+    {
+      "name": "job-sync-frontend",
+      "cwd": "/opt/job-sync",
+      "script": "npx",
+      "args": "serve dist/ -p 8080",
+      "env": {
+        "NODE_ENV": "production",
+        "VITE_API_URL": "https://api.jobsync.com"
+      }
+    },
+    {
+      "name": "job-sync-worker-1",
+      "cwd": "/opt/job-sync",
+      "script": "npm",
+      "args": "run start:worker",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "instances": 1
+    },
+    {
+      "name": "job-sync-worker-2",
+      "cwd": "/opt/job-sync",
+      "script": "npm",
+      "args": "run start:worker",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "instances": 1
+    }
+  ]
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Runtime Config -->
+    <div class="section">
+      <h2 id="runtime">Configuração de Runtime</h2>
+
+      <div class="card">
+        <h4>Backend (API)</h4>
+        <ul>
+          <li><code>PORT</code> — Porta de escuta (padrão: 3001)</li>
+          <li><code>NODE_ENV</code> — environment: production / development</li>
+          <li><code>DATABASE_URL</code> — Connection string PostgreSQL</li>
+          <li><code>REDIS_URL</code> — Connection string Redis</li>
+          <li><code>JWT_SECRET</code> — Chave para assinar tokens</li>
+          <li><code>ALLOWED_ORIGINS</code> — CORS allowlist</li>
+          <li><code>SENTRY_DSN</code> — Sentry configuration</li>
+          <li><code>AUTH_SERVICE_URL</code> — URL do serviço de autenticação</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4>Frontend</h4>
+        <ul>
+          <li><code>VITE_API_URL</code> — URL do backend API</li>
+          <li><code>VITE_AUTH_URL</code> — URL do serviço de autenticação</li>
+          <li><code>VITE_APP_NAME</code> — Nome da aplicação (opcional)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Health Checks -->
+    <div class="section">
+      <h2 id="health-checks">Health Checks</h2>
+      <p>Endpoints para monitoramento de saúde do sistema:</p>
+
+      <div class="card">
+        <h4>/health</h4>
+        <p>Retorna status geral da aplicação, incluindo conexões com banco e Redis.</p>
+        <pre><code>GET /health
+Response: { "status": "healthy", "timestamp": "..." }</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>/ready</h4>
+        <p>Indica se a aplicação está pronta para receber tráfego. Usado em Kubernetes readinessProbe.</p>
+        <pre><code>GET /ready
+Response: { "ready": true, "timestamp": "..." }</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>/api/stats</h4>
+        <p>Métricas internas: jobs ativos, workers, filas, database.</p>
+        <pre><code>GET /api/stats
+Response: { "jobs": {...}, "queues": {...} }</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Configuração em Orquestração</h4>
+        <pre><code># Kubernetes example
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 3001
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3001
+  initialDelaySeconds: 30
+  periodSeconds: 10</code></pre>
+      </div>
+    </div>
+
+    <!-- Environment Variables -->
+    <div class="section">
+      <h2 id="env-vars">Variáveis de Ambiente</h2>
+      <div class="card">
+        <h4>Backend (.env)</h4>
+        <pre><code># required
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+REDIS_URL=redis://:password@redis-host:6379
+JWT_SECRET=your-secret-key-min-32-chars
+AUTH_SERVICE_URL=https://auth.yourapp.com
+
+# optional (recommended)
+PORT=3001
+NODE_ENV=production
+ALLOWED_ORIGINS=https://app.yourapp.com,https://admin.yourapp.com
+SENTRY_DSN=https://xxxx@sentry.io/xxxx
+RESEND_API_KEY=re_xxxxx
+FRONTEND_URL=https://app.yourapp.com
+MAX_UPLOAD_SIZE=104857600
+JOB_TIMEOUT=3600000
+MAX_WORKERS=4</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Frontend (.env.production)</h4>
+        <pre><code>VITE_API_URL=https://api.yourapp.com
+VITE_AUTH_URL=https://auth.yourapp.com
+VITE_APP_NAME=JobSync</code></pre>
+      </div>
+    </div>
+
+    <!-- Scaling -->
+    <div class="section">
+      <h2 id="scaling">Escalabilidade</h2>
+      <p>Os workers podem ser executados em processos separados e até em máquinas diferentes, compartilhando o mesmo Redis + PostgreSQL:</p>
+
+      <div class="card">
+        <h4>Workers em Processos Separados</h4>
+        <pre><code># Cada worker como instância independente
+pm2 start npm --name "worker-1" -- run start:worker
+pm2 start npm --name "worker-2" -- run start:worker
+pm2 start npm --name "worker-3" -- run start:worker
+pm2 start npm --name "worker-4" -- run start:worker</code></pre>
+        <p>Use <code>--instances</code> no PM2 ecosystem para múltiplas instâncias do mesmo worker.</p>
+      </div>
+
+      <div class="card">
+        <h4>Scaling Horizontal</h4>
+        <p>Para escalar em múltiplas máquinas:</p>
+        <ul>
+          <li>Configure todos os workers para apontar ao mesmo Redis + PostgreSQL</li>
+          <li>BullMQ gerencia distribuição de jobs automaticamente</li>
+          <li>Use lock Durability no Redis para evitar duplicação</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Dockerization -->
+    <div class="section">
+      <h2 id="docker">Dockerização</h2>
+
+      <h3>Multi-stage Build (Backend)</h3>
+      <div class="card">
+        <pre><code>FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+RUN npm ci --only=production
+EXPOSE 3001
+CMD ["node", "dist/index.js"]</code></pre>
+      </div>
+
+      <h3>Multi-stage Build (Frontend)</h3>
+      <div class="card">
+        <pre><code>FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine AS runtime
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]</code></pre>
+      </div>
+
+      <h3>docker-compose.yml (Completo)</h3>
+      <div class="card">
+        <pre><code>version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: jobsync
+      POSTGRES_USER: jobsync
+      POSTGRES_PASSWORD: strong-password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobsync"]
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass $$REDIS_PASSWORD$$ --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+
+  backend:
+    build: .
+    command: npm run start
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://jobsync:strong-password@postgres:5432/jobsync
+      REDIS_URL: redis://:$$REDIS_PASSWORD$$@redis:6379
+      JWT_SECRET: $$JWT_SECRET$$
+      AUTH_SERVICE_URL: https://auth.yourapp.com
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: .
+    command: npx serve dist/ -p 8080
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+
+  worker:
+    build: .
+    command: npm run start:worker
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://jobsync:strong-password@postgres:5432/jobsync
+      REDIS_URL: redis://:$$REDIS_PASSWORD$$@redis:6379
+    deploy:
+      replicas: 4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:</code></pre>
+      </div>
+
+      <h3>All-in-One Container</h3>
+      <p>Para deployments simples, todos os componentes podem rodar no mesmo container via PM2:</p>
+      <div class="card">
+        <pre><code># Dockerfile simples
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Expor portas
+EXPOSE 3001 4173
+
+# Usar PM2 para gerenciar todos os processos
+CMD ["pm2-runtime", "ecosystem.config.js"]</code></pre>
+      </div>
+    </div>
+
+    <!-- Production Hardening -->
+    <div class="section">
+      <h2 id="hardening">Produção — Hardening</h2>
+
+      <div class="card">
+        <h4>CORS</h4>
+        <p>Restrinja origens explicitamente:</p>
+        <pre><code>ALLOWED_ORIGINS=https://app.yourapp.com,https://admin.yourapp.com</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Monitoramento (Sentry)</h4>
+        <pre><code>SENTRY_DSN=https://xxxxxx@sentry.io/xxxxx
+# Sentry captura erros automaticamente em produção</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Redis Segurança</h4>
+        <ul>
+          <li>Use senha forte (<code>requirepass</code>)</li>
+          <li>Habilite persistência AOF (<code>appendonly yes</code>)</li>
+          <li>Configure bind apenas a interfaces internas</li>
+          <li>Evite expor Redis diretamente à internet</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4>PostgreSQL</h4>
+        <ul>
+          <li>SSL recomendado para conexões externas</li>
+          <li>Backup automático (WAL archiving ou pg_dump)</li>
+          <li>Índices apropriados para consultas frequentes</li>
+          <li>Connection pooling (PgBouncer ou pool no app)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4>Node.js</h4>
+        <ul>
+          <li>Use <code>NODE_ENV=production</code> (desabilita dev warnings)</li>
+          <li>Configure ulimit para número de arquivos abertos</li>
+          <li>Habilite Core Dump para debug de crash</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Monitoring -->
+    <div class="section">
+      <h2 id="monitoring">Monitoramento</h2>
+
+      <div class="card">
+        <h4>Sentry</h4>
+        <p>Rastreamento de erros com stack traces e contexto de requisição.</p>
+        <pre><code># Configurar no código
+Sentry.init({ dsn: process.env.SENTRY_DSN });</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Health Endpoints</h4>
+        <ul>
+          <li><code>/health</code> — Status geral</li>
+          <li><code>/ready</code> — Pronto para tráfego</li>
+          <li><code>/api/stats</code> — Métricas de jobs, workers, queues</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4>Logs PM2</h4>
+        <pre><code># Ver logs em tempo real
+pm2 logs job-sync-backend
+
+# Logs com filtro
+pm2 logs --lines 100
+
+# Salvar logs em arquivos
+pm2 install pm2-logrotate</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Redis Info</h4>
+        <pre><code>redis-cli info
+# Verificar: connected_clients, used_memory, total_connections_received</code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Database</h4>
+        <pre><code># Tamanho do banco
+SELECT pg_size_pretty(pg_database_size('jobsync'));
+
+# Conexões ativas
+SELECT count(*) FROM pg_stat_activity;</code></pre>
+      </div>
+    </div>
+
+    <!-- Rollback -->
+    <div class="section">
+      <h2 id="rollback">Rollback</h2>
+      <p>Procedimento para reverter deployments problemáticos:</p>
+
+      <div class="card">
+        <h4>Passos</h4>
+        <ol>
+          <li>Identifique o commit anterior estável: <code>git log --oneline</code></li>
+          <li>Reverta: <code>git revert &lt;commit-hash&gt;</code> ou <code>git checkout &lt;stable-commit&gt;</code></li>
+          <li>Rebuild: <code>npm run build</code></li>
+          <li>Reinicie com PM2:
+            <pre><code>pm2 restart job-sync-backend
+pm2 restart job-sync-frontend
+pm2 restart all</code></pre>
+          </li>
+          <li>Verifique logs: <code>pm2 logs</code></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h4>Recuperação Rápida sem Git</h4>
+        <p>Se o build anterior ainda está no diretório:</p>
+        <pre><code># Parar serviços
+pm2 stop all
+
+# Restaurar dist anterior (se backupado)
+cp -r dist.backup/ dist/
+
+# Reiniciar
+pm2 start all</code></pre>
+      </div>
+    </div>
+
+    <!-- Security Checklist -->
+    <div class="section">
+      <h2 id="security">Checklist de Segurança</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Firewall</h3>
+          <p>Apenas portas 80/443, 3001 (backend) e 8080/80 (frontend)</p>
+          <span class="tag security">Recomendado</span>
+        </div>
+        <div class="card">
+          <h3>TLS/HTTPS</h3>
+          <p>Let's Encrypt ou certificado válido em produção</p>
+          <span class="tag security">Obrigatório</span>
+        </div>
+        <div class="card">
+          <h3>CORS</h3>
+          <p>ALLOWED_ORIGINS com domínios específicos</p>
+          <span class="tag security">Obrigatório</span>
+        </div>
+        <div class="card">
+          <h3>Redis</h3>
+          <p>Senha forte e bind apenas local/internal</p>
+          <span class="tag security">Recomendado</span>
+        </div>
+        <div class="card">
+          <h3>JWT Secret</h3>
+          <p>Chave longa e aleatória mín. 32 caracteres</p>
+          <span class="tag security">Obrigatório</span>
+        </div>
+        <div class="card">
+          <h3>Rate Limiting</h3>
+          <p>Implementado no backend via middleware</p>
+          <span class="tag security">Recomendado</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+    <p>JobSync Documentation — Deploy e Configuração</p>
+  </footer>
+
+</body>
+</html>

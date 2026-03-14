@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connection Pooling - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Connection Pooling</span></div>
+
+    <div class="doc-header">
+      <span class="badge performance">Performance</span>
+      <h1>Connection Pooling</h1>
+      <p class="subtitle">Prisma e Redis pool tuning para alta concorrência</p>
+    </div>
+
+    <div class="section">
+      <h2>🔌 O Problema</h2>
+      <p>Cada requisição HTTP abre conexão DB eRedis. Sem pool adequado, threads/processos ficam sem conexões sob carga.</p>
+
+      <div class="alert info">
+        <div class="alert-icon">💧</div>
+        <div class="alert-content">
+          <strong>Pool Padrão</strong>
+          <p>Prisma usa connection pool via node-postgres. Redis (ioredis) também tem pool configurável.</p>
+        </div>
+      </div>
+
+      <h2>📊 Configuração Prisma</h2>
+      <pre><code>// .env
+DATABASE_URL="postgresql://...?connection_limit=20"</code></pre>
+
+      <p>Parâmetros de connection string:</p>
+      <ul>
+        <li><code>connection_limit</code> — máximo de conexões no pool (default 10)</li>
+        <li><code>pool_timeout</code> — tempo máximo espera por conexão (default 10s)</li>
+        <li><code>idle_timeout</code> — fecha conexões ociosas após X ms</li>
+        <li><code>max_uses</code> — quantas queries uma conexão serve antes de recycle</li>
+      </ul>
+
+      <h2>📊 Configuração Redis (ioredis)</h2>
+      <pre><code>// src/lib/redis.ts
+const redis = new Redis({
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  maxRetriesPerRequest: 20,    // retry se conexão cai
+  retryStrategy: (times) => Math.min(times * 100, 3000),
+  family: 4,                   // IPv4
+  keepAlive: true,
+  connectTimeout: 10000,
+  commandTimeout: 5000,
+  // Não há maxPoolSize exposto no ioredis v5 — usa keepAlive +connection reuse
+});</code></pre>
+
+      <h2>💥 Sintomas de Pool Insuficiente</h2>
+      <ul>
+        <li><strong>Prisma</strong>: <code>Error: Connection pool timed out</code></li>
+        <li><strong>Redis</strong>: <code>Max retries reached for command</code></li>
+        <li>Latência sobe (requests waiting por conexão)</li>
+        <li>Timeouts aleatórios em load spikes</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Sizing do pool DB</strong>:
+          <pre><code>connection_limit = min(100, (CPU cores * 2) + effective_spindle_count)
+// Ex: 4 cores → 8-12 connections
+// Evitar pool muito grande (PostgreSQL default max_connections = 100)</code></pre>
+        </li>
+        <li><strong>Separar pools por workload</strong>:
+          <ul>
+            <li>HTTP requests (Fastify) — pool dedicated</li>
+            <li>Workers (processJob) — pool separado? BullMQ workers não usam HTTP, usam Prisma direto</li>
+            <li>Configurar pool por instância (<code>prisma.$extends</code> com datasource diferente)</li>
+          </ul>
+        </li>
+        <li><strong>Redis keepAlive</strong> — já está, bom. Ajustar keepAliveTimeout se necessário</li>
+        <li><strong>Pool reuse</strong> — garantir que mesma instância Prisma/Redis é reused (singleton pattern)</li>
+        <li><strong>Monitor pool metrics</strong> — pg_stat_activity para DB, <code>redis.clients()</code> para Redis</li>
+        <li><strong>Graceful shutdown</strong> — no SIGTERM, fechar pool: <code>await prisma.$disconnect()</code></li>
+      </ol>
+
+      <h2>📈 Diagrama de Pool</h2>
+      <pre class="flow-diagram">
+Request A    Request B    Request C    Request D
+    │            │            │            │
+    ▼            ▼            ▼            ▼
+  ┌─────────────────────────────────────────┐
+  │   Connection Pool (max: 10)             │
+  │  ┌───┐  ┌───┐  ┌───┐  ┌───┐  ┌───┐     │
+  │  │ 1 │  │ 2 │  │ 3 │  │ 4 │  │ 5 │ ... │
+  │  └───┘  └───┘  └───┘  └───┘  └───┘     │
+  └─────────────────────────────────────────┘
+    │            │            │            │
+    ▼            ▼            ▼            ▼
+  Query        Query       Query       Query
+  (3s)         (1s)        (5s)        (2s)
+
+Se todos slots ocupados → Request espera (pool_timeout)
+Se timeout → erro "pool timed out"
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>connection_limit definido? ⚠️ (ver connection string)</li>
+        <li>pool_timeout ajustado? ❌</li>
+        <li>idle_timeot definido? ❌</li>
+        <li>Redis keepAlive? ✅</li>
+        <li>Metrics de pool monitoradas? ❌</li>
+        <li>Prisma singleton? ✅ (src/lib/prisma.ts)</li>
+        <li>Redis singleton? ✅ (src/lib/redis.ts)</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Connection Pooling</p>
+    </div>
+  </div>
+</body>
+</html>

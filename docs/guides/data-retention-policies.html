@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Retention Policies - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Data Retention Policies</span></div>
+
+    <div class="doc-header">
+      <span class="badge data">Data</span>
+      <h1>Data Retention Policies</h1>
+      <p class="subtitle">TTL por tabela, archival, cleanup automático</p>
+    </div>
+
+    <div class="section">
+      <h2>🗂️ Tabelas e Retenção</h2>
+      <table>
+        <thead><tr><th>Tabela</th><th>Retenção</th><th>Justificativa</th></tr></thead>
+        <tbody>
+          <tr><td>Job</td><td>Indefinida (ou 2 anos)</td><td>Histórico de execuções</td></tr>
+          <tr><td>JobLog</td><td>90 dias</td><td>Logs operacionais</td></tr>
+          <tr><td>AuditLog</td><td>7 anos (compliance)</td><td>Trilha de auditoria</td></tr>
+          <tr><td>Queue</td><td>Indefinida</td><td>Config</td></tr>
+        </tbody>
+      </table>
+
+      <h2>🗑️ Cleanup Automático</h2>
+      <pre><code>// Cron diário (00:00)
+DELETE FROM job_logs WHERE created_at < NOW() - INTERVAL '90 days';
+DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '7 years';
+VACUUM ANALYZE job_logs;</code></pre>
+
+      <h2>📦 Archival</h2>
+      <p>Antes de deletar, exportar para S3/Google Cloud Storage em Parquet/CSV.</p>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Cronjob diário</strong> — rodar cleanup às 00:00</li>
+        <li><strong>Partitioning por mês</strong> — facilita DROP partition</li>
+        <li><strong>Export antes deletar</strong> — manter archival por 10 anos</li>
+        <li><strong>pg_cron</strong> — agendar dentro do próprio PostgreSQL</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Política de retenção documentada? ⚠️</li>
+        <li>Cleanup automation? ❌</li>
+        <li>Archival implementado? ❌</li>
+        <li>Partitioning? ❌</li>
+        <li>VACUUM schedule? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Retention</p>
+    </div>
+  </div>
+</body>
+</html>

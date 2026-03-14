@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Filas - BullMQ - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <span class="sep">/</span>
+        <span>Sistema de Filas</span>
+      </div>
+      <span class="badge">Core System</span>
+      <h1>Sistema de Filas BullMQ</h1>
+      <p class="subtitle">Arquitetura completa de processamento assíncrono com BullMQ, Redis e workers inteligentes</p>
+    </div>
+
+    <section id="queue-architecture" class="section">
+      <h2>Queue Architecture</h2>
+      <p>O JobSync utiliza <strong>BullMQ</strong>, uma biblioteca de filas baseada em Redis, para processamento assíncrono de jobs. A arquitetura foi desenhada para suportar múltiplas organizações com isolamento completo de recursos.</p>
+
+      <h3>Nomenclatura de Filas</h3>
+      <p>Cada fila no Redis segue um padrão de nomeação que garante isolamento multi-tenant:</p>
+
+      <div class="flow-diagram">
+┌────────────────────────────────────────────────────────────────────┐
+│                      NOME DA FILA NO REDIS                          │
+│  Format: jobs-{orgId}-{queueName}                                  │
+│                                                                     │
+│  Exemplo: jobs-org_abc123def456-marketing-campaigns                │
+│           └──────┘ └──────────────────────┘                        │
+│           prefixo    nome da fila específico                       │
+└────────────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h3>Lazy Creation Pattern</h3>
+      <p>As filas são criadas sob demanda (lazy loading) e armazenadas em cache em um <code>Map</code> para reutilização. Isso evita criar múltiplas instâncias da mesma fila e melhora performance.</p>
+
+      <div class="card">
+        <div class="card-icon purple">📦</div>
+        <h4>Arquivo: <code>src/lib/bullmq.ts</code></h4>
+        <pre><code>const queues = new Map&lt;string, Queue&gt;();
+
+export function getQueue(orgId: string, queueName: string): Queue {
+  const key = `jobs-${orgId}-${queueName}`;
+
+  if (!queues.has(key)) {
+    queues.set(
+      key,
+      new Queue(key, {
+        connection: redis,
+        defaultJobOptions: {
+          removeOnComplete: 100,   // Manter últimos 100 completados
+          removeOnFail: 1000,      // Manter últimos 1000 falhos
+        },
+      })
+    );
+  }
+
+  return queues.get(key)!;
+}</code></pre>
+      </div>
+
+      <h3>Opções Padrão (Default Job Options)</h3>
+      <table>
+        <thead>
+          <tr><th>Opção</th><th>Valor Padrão</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>removeOnComplete</code></td><td>100</td><td>Mantém os últimos 100 jobs completados na memória do Redis. Jobs mais antigos são removidos automaticamente.</td></tr>
+          <tr><td><code>removeOnFail</code></td><td>1000</td><td>Mantém os últimos 1000 jobs falhos. Útil para debug e retry manual.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Limpeza Manual</strong>
+          <p>Como o BullMQ limpa automaticamente jobs antigos, a contagem de jobs COMPLETED/FAILED deve ser obtida do PostgreSQL, não do Redis.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="queue-configuration" class="section">
+      <h2>Queue Configuration</h2>
+      <p>As configurações de cada fila são armazenadas no banco de dados PostgreSQL e controlam o comportamento dos workers.</p>
+
+      <h3>Schema de Validação</h3>
+      <div class="card">
+        <div class="card-icon green">✅</div>
+        <h4>Arquivo: <code>src/types/index.ts</code> (createQueueSchema)</h4>
+        <pre><code>export const createQueueSchema = z.object({
+  name: z.string().min(1).max(100),
+  concurrency: z.number().int().min(1).max(100).default(5),
+  maxRetries: z.number().int().min(0).max(10).default(3),
+  retryDelay: z.number().int().min(1000).max(3600000).default(5000),
+  timeout: z.number().int().min(5000).max(3600000).default(300000),
+  rateLimit: z.number().int().min(1).optional(),
+});</code></pre>
+      </div>
+
+      <h3>Parâmetros de Configuração</h3>
+      <table>
+        <thead>
+          <tr><th>Parâmetro</th><th>Tipo</th><th>Range</th><th>Padrão</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>string</td><td>1-100 chars</td><td>—</td><td>Nome identificador da fila (ex: "email-campaigns")</td></tr>
+          <tr><td><code>concurrency</code></td><td>number</td><td>1-100</td><td>5</td><td>Número de jobs processados simultaneamente por worker</td></tr>
+          <tr><td><code>maxRetries</code></td><td>number</td><td>0-10</td><td>3</td><td>Tentativas máximas antes de marcar como DEAD</td></tr>
+          <tr><td><code>retryDelay</code></td><td>number</td><td>1000-3600000ms</td><td>5000</td><td>Delay base para retry exponencial (ver seção Retry)</td></tr>
+          <tr><td><code>timeout</code></td><td>number</td><td>5000-3600000ms</td><td>300000</td><td>Timeout por job (5 min padrão)</td></tr>
+          <tr><td><code>rateLimit</code></td><td>number</td><td>1+</td><td>100</td><td>Máximo de jobs por minuto (rate limiting)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Campos de Controle (BD)</h3>
+      <table>
+        <thead>
+          <tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>isActive</code></td><td>boolean</td><td>Fila habilitada para processamento. Inativo = exclude da descoberta de workers.</td></tr>
+          <tr><td><code>isPaused</code></td><td>boolean</td><td>Fila pausada (novos jobs aceitos mas não processados). Controlado via BullMQ pause/resume.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="flow-diagram">
+┌──────────────────────────────────────────────────────────────────────┐
+│  CONFIGURAÇÃO DA FILA (PostgreSQL)                                   │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  Queue {                                                             │
+│    id: "uuid"                                                        │
+│    name: "email-campaigns"          ← Nome lógico                   │
+│    organizationId: "org_uuid"       ← Tenant                        │
+│    concurrency: 10                  ← Workers simultâneos           │
+│    maxRetries: 5                    ← Tentativas                    │
+│    retryDelay: 10000               ← Delay base (ms)               │
+│    timeout: 300000                 ← Timeout por job (ms)          │
+│    rateLimit: 100                  ← Jobs/min                      │
+│    isActive: true                  ← Descoberta de workers         │
+│    isPaused: false                 ← Estado BullMQ                 │
+│    createdAt, updatedAt                                           │
+│  }                                                                   │
+│                                                                       │
+└──────────────────────────────────────────────────────────────────────┘
+      </div>
+    </section>
+
+    <section id="worker-architecture" class="section">
+      <h2>Worker Architecture</h2>
+      <p>Os workers são processos independentes que consomem jobs das filas BullMQ. A arquitetura suporta auto-descoberta de novas filas e graceful shutdown.</p>
+
+      <h3>Inicialização de Workers</h3>
+      <div class="card">
+        <div class="card-icon purple">🚀</div>
+        <h4>Arquivo: <code>src/worker.ts</code></h4>
+        <pre><code>async function startWorkers() {
+  // 1. Buscar todas as filas ativas do banco
+  const queues = await prisma.queue.findMany({
+    where: { isActive: true },
+    include: { organization: true },
+  });
+
+  const workers: Worker[] = [];
+
+  // 2. Criar um worker por fila ativa
+  for (const queue of queues) {
+    const queueName = `jobs-${queue.organizationId}-${queue.name}`;
+
+    const worker = new Worker&lt;WorkerJobData&gt;(queueName, processJob, {
+      connection: redis,
+      concurrency: queue.concurrency || CONCURRENCY,
+      limiter: {
+        max: queue.rateLimit || 100,   // max jobs
+        duration: 60000,               // por 60 segundos
+      },
+    });
+
+    workers.push(worker);
+  }
+
+  console.log(`Started ${workers.length} workers`);
+}</code></pre>
+      </div>
+
+      <h3>Auto-Discovery</h3>
+      <p>O worker monitora o banco a cada 30 segundos para detectar novas filas ativas:</p>
+
+      <div class="flow-diagram">
+┌────────────────────────────────────────────────────────────────────┐
+│                    WORKER AUTO-DISCOVERY                          │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│   ┌─────────────────────────┐                                     │
+│   │   Workers rodando      │                                     │
+│   │   para filas ativas    │                                     │
+│   └───────────┬─────────────┘                                     │
+│               │                                                   │
+│         (a cada 30s)                                              │
+│               │                                                   │
+│               ▼                                                   │
+│   ┌─────────────────────────┐                                     │
+│   │  Query: SELECT * FROM   │                                     │
+│   │  queues WHERE isActive=true                                   │
+│   └───────────┬─────────────┘                                     │
+│               │                                                   │
+│     ┌─────────┴─────────────────────────┐                        │
+│     │  Para cada fila:                   │                        │
+│     │  Verifica se worker já existe? ─Yes─┐                     │
+│     └────No──────────────────────────────┘ │                     │
+│                │                            │                     │
+│                ▼                            │                     │
+│         Criar novo                         │                     │
+│         Worker                             │                     │
+│                                            │                     │
+│                               (Workers ficam rodando)             │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h3>Rate Limiter</h3>
+      <p>Cada worker tem um rate limiter configurado que controla quantos jobs daquela fila podem ser processados por período:</p>
+      <ul>
+        <li><code>limiter.max</code> — Número máximo de jobs (padrão: 100)</li>
+        <li><code>limiter.duration</code> — Período em ms (sempre 60000 = 1 minuto)</li>
+        <li>Exemplo: <code>rateLimit: 200</code> = máximo de 200 jobs por minuto</li>
+      </ul>
+
+      <h3>Graceful Shutdown</h3>
+      <div class="flow-diagram">
+┌────────────────────────────────────────────────────────────────────┐
+│              GRACEFUL SHUTDOWN (SIGTERM/SIGINT)                   │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│   Recebe sinal SIGTERM ou SIGINT                                   │
+│            │                                                        │
+│            ▼                                                        │
+│   ┌──────────────────────┐                                        │
+│   │  shutdown() async    │                                        │
+│   │  função executada    │                                        │
+│   └──────────┬───────────┘                                        │
+│              │                                                     │
+│              ▼                                                     │
+│   ┌─────────────────────────────────────────────┐                │
+│   │  Para cada worker: await worker.close()    │                │
+│   │  • Para de aceitar novos jobs              │                │
+│   │  • Aguarda jobs ativos terminarem          │                │
+│   │  • Fecha conexões Redis                    │                │
+│   └─────────────────────────────────────────────┘                │
+│              │                                                     │
+│              ▼                                                     │
+│   await prisma.$disconnect()                                       │
+│              │                                                     │
+│              ▼                                                     │
+│   process.exit(0)  ← Saída limpa                                  │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h3>Concorrência por Worker</h3>
+      <p>A concorrência é herdada da configuração da fila no banco. Se não configurada, usa o valor do <code>WORKER_CONCURRENCY</code> do ambiente (padrão: 10):</p>
+      <pre><code>const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '10', 10);
+
+// Na criação do worker:
+concurrency: queue.concurrency || CONCURRENCY</code></pre>
+    </section>
+
+    <section id="job-lifecycle" class="section">
+      <h2>Job Lifecycle</h2>
+      <p>Cada job passa por um estado definido durante seu ciclo de vida. O BullMQ gerencia a transição entre estados PENDING, PROCESSING e estados finais, enquanto o banco armazena o histórico.</p>
+
+      <h3>State Machine</h3>
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       JOB STATE MACHINE (BullMQ)                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌──────────┐                                                        │
+│   │ PENDING  │  ← Job criado, aguardando na fila                      │
+│   │  (idle)  │                                                        │
+│   └─────┬────┘                                                        │
+│         │                                                              │
+│         │ Worker disponível + concurrency disponível                  │
+│         ▼                                                              │
+│   ┌──────────────┐                                                    │
+│   │ PROCESSING   │  ← Worker executando o job                        │
+│   │  (active)    │      • atualizado startedAt                        │
+│   └──────┬───────┘      • attempts incrementado                     │
+│          │                                                             │
+│   ┌──────┴──────────────────────────────┬──────────────────────────┐  │
+│   │                                     │                         │  │
+│   ▼                                     ▼                         │  │
+│  ┌──────┐                              ┌──────┐                   │  │
+│  │ Sucesso │                             │ Falha │                   │  │
+│  └────┬───┘                              └───┬──┘                   │  │
+│       │                                    │                        │  │
+│       ▼                                    ▼                        │  │
+│   ┌──────────┐                        ┌──────────┐                 │  │
+│   │COMPLETED │                        │  FAILED  │                 │  │
+│   └──────────┘                        └─────┬────┘                 │  │
+│                                              │                       │  │
+│           removeOnComplete limpa            │ maxRetries atingido?   │  │
+│                                              │                       │  │
+│                                              ▼  Yes                  │  │
+│                                       ┌────────────┐                │  │
+│                                       │    DEAD    │                │  │
+│                                       └────────────┘                │  │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Retry?
+                              ▼
+                    ┌──────────────────┐
+                    │ backoff delay    │
+                    │ (exponencial)    │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    Volta para PENDING
+                    (com nova tentativa)
+
+Transition Table:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Trigger                         | Next State        | Action
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Job.add()                       | PENDING           | job.id gerado
+Worker.process()                | PROCESSING        | atualiza startedAt, attempts++
+Job completes                   | COMPLETED         | atualiza completedAt, result
+Job falha & attempts < max      | FAILED → retry    | delay exponencial → PENDING
+Job falha & attempts >= max     | DEAD              | error salvo
+Job.remove() / Job.cancel()     | CANCELLED         | removido da fila
+bullQueue.pause()               | (no process)      | workers parados
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      </div>
+
+      <h3>Estados no PostgreSQL</h3>
+      <p>A tabela <code>job</code> armazena o estado persistente. Campos relevantes:</p>
+      <pre><code>Job {
+  id: string            ← UUID, usado como jobId no BullMQ
+  status: enum          ← PENDING|PROCESSING|COMPLETED|FAILED|CANCELLED|DEAD|SCHEDULED
+  attempts: number      ← Contador de tentativas
+  error: string?        ← Mensagem de erro se falhou
+  result: json?         ← Resultado se completado
+  startedAt: DateTime?  ← Quando começou a processar
+  completedAt: DateTime?← Quando terminou
+  scheduledAt: DateTime?← Para jobs agendados
+}</code></pre>
+
+      <h3>Log de Status (JobLog)</h3>
+      <p>Toda transição de estado é registrada na tabela <code>jobLog</code>:</p>
+      <pre><code>JobLog {
+  id: string
+  jobId: string         ← referencia Job.id
+  attempt: number       ← Número da tentativa
+  status: enum          ← PENDING|PROCESSING|COMPLETED|FAILED|DEAD
+  message: string       ← Descrição do evento
+  duration: number?     ← Duração em ms (se completou/falhou)
+  createdAt: DateTime
+}</code></pre>
+    </section>
+
+    <section id="retry-strategy" class="section">
+      <h2>Retry Strategy</h2>
+      <p>Jobs falhos são automaticamente重新acions de acordo com a estratégia de exponential backoff configurada na fila.</p>
+
+      <h3>Cálculo do Delay</h3>
+      <div class="card">
+        <div class="card-icon yellow">⏱️</div>
+        <h4>Backoff Exponencial</h4>
+        <pre><code>delay = retryDelay × 2^(attempt - 1)
+
+Onde:
+- retryDelay = configuração da fila (padrão: 5000ms)
+- attempt = número da tentativa atual (começa em 1)
+- delay final = tempo de espera antes da próxima tentativa</code></pre>
+      </div>
+
+      <h3>Exemplos</h3>
+      <table>
+        <thead>
+          <tr><th>Tentativa</th><th>Cálculo (retryDelay=5s)</th><th>Delay Total</th><th>Delay Acumulado</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 (falha)</td><td>5000 × 2^0</td><td>5s</td><td>5s</td></tr>
+          <tr><td>2</td><td>5000 × 2^1</td><td>10s</td><td>15s</td></tr>
+          <tr><td>3</td><td>5000 × 2^2</td><td>20s</td><td>35s</td></tr>
+          <tr><td>4</td><td>5000 × 2^3</td><td>40s</td><td>1m 15s</td></tr>
+          <tr><td>5 (max=5)</td><td>— (atingiu maxRetries)</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Configuração no Job</h3>
+      <p>A strategy de retry é definida ao adicionar o job à fila (em <code>job.service.ts</code>):</p>
+      <pre><code>await bullQueue.add('process', jobData, {
+  attempts: queue.maxRetries,      ← Máximo de tentativas
+  backoff: {
+    type: 'exponential',
+    delay: queue.retryDelay,       ← Delay base em ms
+  },
+  delay: scheduledAt ? ... : undefined,
+});</code></pre>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Nota sobre Dead Letters</strong>
+          <p>Quando <code>attemptsMade >= maxRetries</code>, o job é marcado como DEAD e não será mais processado automaticamente. É possível retry manual via API (<code>POST /jobs/:id/retry</code>).</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="queue-operations" class="section">
+      <h2>Queue Operations (API)</h2>
+      <p>Todas as operações de fila estão disponíveis via REST API. Cada endpoint requer autenticação e autorização.</p>
+
+      <h3>Endpoints</h3>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues</span>
+          <span class="endpoint-desc">Lista todas as filas da organização</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>Response: Queue[]
+{
+  id: "uuid",
+  name: "email-campaigns",
+  organizationId: "org_uuid",
+  concurrency: 10,
+  maxRetries: 5,
+  retryDelay: 10000,
+  timeout: 300000,
+  rateLimit: 200,
+  isActive: true,
+  isPaused: false,
+  createdAt, updatedAt
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues</span>
+          <span class="endpoint-desc">Cria uma nova fila</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>Request Body:
+{
+  "name": "video-processing",
+  "concurrency": 5,       // opcional, padrão: 5
+  "maxRetries": 3,        // opcional, padrão: 3
+  "retryDelay": 5000,     // opcional, padrão: 5000
+  "timeout": 300000,      // opcional, padrão: 300000
+  "rateLimit": 100        // opcional, padrão: 100
+}
+
+Response: Queue (201 Created)</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Obtém uma fila específica por ID</span>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Atualiza configurações da fila</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>Request Body (campos opcionais):
+{
+  "concurrency": 20,
+  "maxRetries": 5,
+  "retryDelay": 10000,
+  "timeout": 600000,
+  "rateLimit": 200,
+  "isActive": true/false
+}
+
+Response: Queue (atualizado)</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Desativa a fila (soft-delete)</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>Response: { "message": "Queue deactivated" }
+
+Nota: É soft-delete. A fila é marcada como isActive=false.
+Workers param de descobrir novas filas desta.</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues/:id/stats</span>
+          <span class="endpoint-desc">Obtém estatísticas da fila</span>
+        </div>
+        <div class="endpoint-body">
+          <pre><code>Response:
+{
+  "id": "uuid",
+  "name": "email-campaigns",
+  "waiting": 42,       ← Do BullMQ (em fila)
+  "active": 5,         ← Do BullMQ (processando agora)
+  "completed": 15234,  ← Do PostgreSQL (histórico)
+  "failed": 234,       ← Do PostgreSQL (FAILED + DEAD)
+  "delayed": 12        ← Do BullMQ (retry agendado)
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues/:id/pause</span>
+          <span class="endpoint-desc">Pausa a fila (não processa novos jobs)</span>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues/:id/resume</span>
+          <span class="endpoint-desc">Reativa uma fila pausada</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="stats-collection" class="section">
+      <h2>Stats Collection</h2>
+      <p>As estatísticas são coletadas de <strong>duas fontes</strong>: Redis (via BullMQ) para dados em tempo real, e PostgreSQL para dados históricos.</p>
+
+      <h3>Fontes de Dados</h3>
+
+      <div class="card">
+        <div class="card-icon red">🔴</div>
+        <h4>Redis / BullMQ (Real-time)</h4>
+        <ul>
+          <li><code>getWaitingCount()</code> — Jobs aguardando na fila (PENDING)</li>
+          <li><code>getActiveCount()</code> — Jobs atualmente em processamento</li>
+          <li><code>getDelayedCount()</code> — Jobs com retry agendado</li>
+        </ul>
+        <p><em>Fonte: <code>queue.service.ts:getStats()</code></em></p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon green">🟢</div>
+        <h4>PostgreSQL (Histórico)</h4>
+        <ul>
+          <li><code>COUNT COMPLETED</code> — Total de jobs concluídos</li>
+          <li><code>COUNT FAILED + DEAD</code> — Total de jobs falhos</li>
+        </ul>
+        <pre><code>dbStats = await prisma.job.groupBy({
+  by: ['status'],
+  where: { queueId: id },
+  _count: true,
+});</code></pre>
+      </div>
+
+      <h3>Implementação</h3>
+      <pre><code>async getStats(organizationId: string, id: string) {
+  const queue = await prisma.queue.findFirst({
+    where: { id, organizationId },
+  });
+
+  if (!queue) return null;
+
+  const bullQueue = getQueue(organizationId, queue.name);
+
+  // Coleta paralela
+  const [waiting, active, delayed, dbStats] = await Promise.all([
+    bullQueue.getWaitingCount(),
+    bullQueue.getActiveCount(),
+    bullQueue.getDelayedCount(),
+    prisma.job.groupBy({
+      by: ['status'],
+      where: { queueId: id },
+      _count: true,
+    }),
+  ]);
+
+  const statusCounts = dbStats.reduce((acc, item) => {
+    acc[item.status] = item._count;
+    return acc;
+  }, {});
+
+  return {
+    id: queue.id,
+    name: queue.name,
+    waiting,
+    active,
+    completed: statusCounts['COMPLETED'] || 0,
+    failed: (statusCounts['FAILED'] || 0) + (statusCounts['DEAD'] || 0),
+    delayed,
+  };
+}</code></pre>
+
+      <h3>Por que não usar BullMQ para completed/failed?</h3>
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Limpeza automática</strong>
+          <p>O BullMQ remove jobs antigos conforme configurado (<code>removeOnComplete: 100</code>, <code>removeOnFail: 1000</code>). Isso significa que contagens históricas seriam imprecisas. O PostgreSQL armazena todo o histórico permanentemente.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="risks" class="section">
+      <h2>Riscos e Considerações</h2>
+      <p>A arquitetura BullMQ oferece robustez, mas requer atenção a pontos críticos:</p>
+
+      <h3>1. Perda de Conexão Redis</h3>
+      <div class="alert danger">
+        <span class="alert-icon">🔴</span>
+        <div class="alert-content">
+          <strong>Impacto: Crítico</strong>
+          <p>Se o Redis ficar indisponível, workers param de processar e novas filas não podem ser criadas. Jobs aguardando na fila bloquearão timeouts do cliente.</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>Mitigação:</strong> Redis Cluster com replicação, sentinel mode, alertas de health check.</li>
+        <li><strong>Código:</strong> <code>redis.on('error')</code> loga erros. Workers tentam reconectar automaticamente.</li>
+      </ul>
+
+      <h3>2. Colisão de Nomes de Fila</h3>
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Impacto: Alto</strong>
+          <p>Se duas organizações usarem o mesmo <code>queueName</code>, não há risco pois o <code>orgId</code> garante isolamento. O risco está em que nomes duplicados na mesma org — o sistema deve rejeitar criar filas com nomes duplicados.</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>Banco:</strong> unique constraint <code>(organizationId, name)</code></li>
+        <li><strong>Código:</strong> Validar com <code>getByName()</code> antes de criar, ou capturar erro de unique constraint.</li>
+      </ul>
+
+      <h3>3. Worker Starvation</h3>
+      <div class="alert danger">
+        <span class="alert-icon">🔴</span>
+        <div class="alert-content">
+          <strong>Impacto: Alto</strong>
+          <p>Fila com <code>concurrency=1</code> mas jobs longos podem gerar backlog. Muitas filas concorrentes podem saturar workers.</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>Monitorar:</strong> Stats de <code>waiting</code> crescendo sem <code>active</code> acompanhando.</li>
+        <li><strong>Ajustar:</strong> Aumentar <code>concurrency</code> (limite max 100) ou adicionar mais workers.</li>
+        <li><strong>Rate limit:</strong> Use <code>rateLimit</code> para evitar sobrecarga por spikes.</li>
+      </ul>
+
+      <h3>4. Memory Pressure no Redis</h3>
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Impacto: Médio</strong>
+          <p>Muitas filas ativas com alta concorrência geram muitas chaves no Redis. <code>removeOnFail: 1000</code> ajuda mas falhas massivas podem crescer.</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>maxmemory-policy:</strong> Configurar Redis com <code>volatile-lru</code> ou <code>allkeys-lru</code></li>
+        <li><strong>Monitoring:</strong> <code>redis-cli info memory</code>, alertas de uso &gt;80%</li>
+        <li><strong>Limpeza manual:</strong> <code>Queue.clean(completed, failed)</code> para remover batches</li>
+      </ul>
+
+      <h3>5. Timeouts e Zombie Jobs</h3>
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Impacto: Médio</strong>
+          <p>Se um worker morrer durante processamento, o job fica "preso" em PROCESSING. O BullMQ tem stampede protection que automaticamente reassigna após timeout.</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>stuckPeriod:</strong> Configurar <code>settings.stuckPeriod</code> (padrão: ~30s × attempts)</li>
+        <li><strong>Monitor:</strong> Jobs em PROCESSING por muito tempo devem ser investigados.</li>
+      </ul>
+
+      <h3>6. Database vs Redis Consistency</h3>
+      <p>A arquitetura usa dual-write:</p>
+      <ol>
+        <li>Job criado → PostgreSQL INSERT</li>
+        <li>Job adicionado → BullMQ Queue.add()</li>
+      </ol>
+      <p><strong>Risco:</strong> Se uma das operações falhar, pode haver inconsistência.</p>
+      <ul>
+        <li><strong>Atualmente:</strong> Sem transação distribuída (2PC).</li>
+        <li><strong>Recuperação:</strong> Jobs órfãos no Redis sem对应 PG podem ser limpos; jobs no PG sem Redis serão re-adicionados via retry manual.</li>
+      </ul>
+    </section>
+
+    <section id="architecture-summary" class="section">
+      <h2>Resumo da Arquitetura</h2>
+
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       SISTEMA COMPLETO DE FILAS                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   CLIENTE → API (Fastify) → Serviços                                  │
+│                              ├─ QueueService (CRUD + pause/resume)   │
+│                              ├─ JobService (create + retry + cancel) │
+│                              └─ StatsService (overview + timeline)   │
+│                              │                                          │
+│                              ▼                                          │
+│             ┌─────────────────────────────┐                            │
+│             │   Dual Write (Parallel)     │                            │
+│             ├─────────────────────────────┤                            │
+│             │ 1. PostgreSQL Prisma        │                            │
+│             │    • queues (config)        │                            │
+│             │    • jobs (histórico)       │                            │
+│             │    • jobLog (audit)         │                            │
+│             │                              │                            │
+│             │ 2. Redis (BullMQ)           │                            │
+│             │    • jobs-{org}-{queue}     │                            │
+│             └──────────────┬──────────────┘                            │
+│                            │                                             │
+│                            ▼                                             │
+│               ┌─────────────────────┐                                  │
+│               │   Worker Pool       │                                  │
+│               │   (worker.ts)       │                                  │
+│               ├─────────────────────┤                                  │
+│               │ Por fila ativa:     │                                  │
+│               │ • getQueue(key)     │                                  │
+│               │ • concurrency cfg   │                                  │
+│               │ • rate limiter      │                                  │
+│               │ • processJob()      │                                  │
+│               └──────────┬──────────┘                                  │
+│                          │                                              │
+│                ┌─────────┴──────────┐                                 │
+│                │  HTTP webhook call  │                                 │
+│                │  (fetch timeout)    │                                 │
+│                └─────────────────────┘                                 │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+      </div>
+
+      <h3>Componentes Chave</h3>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">7</div>
+          <div class="metric-label">Tabelas Principais</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">100</div>
+          <div class="metric-label">Max Concurrency</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">10</div>
+          <div class="metric-label">Max Retries</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">30s</div>
+          <div class="metric-label">Auto-Discovery Interval</div>
+        </div>
+      </div>
+
+      <h3>Checklist de Health</h3>
+      <ul>
+        <li><strong>Redis Health:</strong> PING → PONG,Connection ativo</li>
+        <li><strong>PostgreSQL Health:</strong> Query simples logada</li>
+        <li><strong>Workers:</strong> Log de "Started X workers" na inicialização</li>
+        <li><strong>Queues:</strong> Filas ativas existem no PG e Redis</li>
+        <li><strong>API:</strong> <code>GET /api/queues</code> retorna 200 com lista</li>
+        <li><strong>Stats:</strong> <code>GET /api/queues/:id/stats</code> retorna números coerentes</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Sistema de Filas BullMQ</p>
+      <p>Consulte também: <a href="arquitetura-overview.html">Arquitetura Geral</a> | <a href="api-reference.html">API Reference</a> | <a href="deploy-configuracao.html">Deploy</a></p>
+    </div>
+  </div>
+</body>
+</html>

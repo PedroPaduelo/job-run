@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Permissões - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">JobSync Docs</a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <span>Permissões</span></div>
+      <span class="badge">Segurança</span>
+      <h1>Sistema de Permissões (RBAC)</h1>
+      <p class="subtitle">Controle de acesso baseado em papéis e permissões granulares</p>
+    </div>
+
+    <section class="section">
+      <h2>Visão Geral</h2>
+      <p>O JobSync usa RBAC: cada usuário tem uma <strong>role</strong> dentro de uma organização (OWNER, ADMIN, MEMBER, VIEWER). As roles mapeiam para conjuntos de permissões.</p>
+      <p>Permissões são strings no formato <code>recurso:ação</code> (ex: <code>jobs:create</code>). O backend verifica via <code>hasPermission(userPermissions, required)</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2>Roles e Permissões Padrão</h2>
+      <table>
+        <thead><tr><th>Role</th><th>Permissões</th></tr></thead>
+        <tbody>
+          <tr><td><code>OWNER</code></td><td>Todas (<code>*</code>)</td></tr>
+          <tr><td><code>ADMIN</code></td><td>Jobs: create/read/update/delete/retry/cancel; Queues: create/read/update/delete/pause; ApiKeys: create/read/delete</td></tr>
+          <tr><td><code>MEMBER</code></td><td>Jobs: create/read/retry/cancel; Queues: read</td></tr>
+          <tr><td><code>VIEWER</code></td><td>Jobs: read; Queues: read</td></tr>
+        </tbody>
+      </table>
+      <p>Veja o mapeamento completo em <code>src/lib/auth.ts</code> na constante <code>ROLE_PERMISSIONS</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2>Tipos de Permissões</h2>
+      <ul>
+        <li><code>jobs:create</code></li>
+        <li><code>jobs:read</code></li>
+        <li><code>jobs:update</code></li>
+        <li><code>jobs:delete</code></li>
+        <li><code>jobs:retry</code></li>
+        <li><code>jobs:cancel</code></li>
+        <li><code>queues:create</code></li>
+        <li><code>queues:read</code></li>
+        <li><code>queues:update</code></li>
+        <li><code>queues:delete</code></li>
+        <li><code>queues:pause</code></li>
+        <li><code>apikeys:create</code></li>
+        <li><code>apikeys:read</code></li>
+        <li><code>apikeys:delete</code></li>
+        <li><code>admin:*</code> (wildcard)</li>
+        <li><code>org:settings</code></li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Verificação</h2>
+      <p>Função <code>hasPermission(permissions, required)</code>:</p>
+      <pre><code>if (userPermissions.includes('*')) return true;
+if (userPermissions.includes('resource:*')) return true;
+return userPermissions.includes(required);</code></pre>
+      <p>Rotas usam o middleware <code>requirePermission('jobs:create')</code> que chama <code>hasPermission</code> e retorna 403 se negado.</p>
+    </section>
+
+    <section class="section">
+      <h2>Contexto de Permissões Frontend</h2>
+      <p>O hook <code>usePermissions()</code> (da SDK) permite mostrar/esconder botões condicionalmente. Exemplo:</p>
+      <pre><code>const { hasPermission } = usePermissions();
+if (hasPermission('jobs:create')) {
+  // Botão Novo Job aparecerá
+}</code></pre>
+    </section>
+
+    <div class="doc-footer">Voltar para <a href="../index.html">Home</a></div>
+  </div>
+</body>
+</html>

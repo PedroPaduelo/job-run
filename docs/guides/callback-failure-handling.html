@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Callback Failure Handling - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span class="sep">/</span>
+      <span>Callback Failure Handling</span>
+    </div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>Callback Failure Handling</h1>
+      <p class="subtitle">O que acontece quando o callbackUrl do cliente falha</p>
+    </div>
+
+    <div class="section">
+      <h2>🤔 O Problema</h2>
+      <p>Quando o <code>callbackUrl</code> configurado pelo cliente está indisponível, a requisição falha. O código atual trata isso com um <code>try/catch</code> que <strong>silencia a falha</strong> — apenas loga no console.</p>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <strong>Silent Failure</strong>
+          <p>O job é marcado como COMPLETED mesmo se o callback falhar. O cliente não sabe que sua notificação não foi entregue.</p>
+        </div>
+      </div>
+
+      <h2>📊 Cenário de Falha</h2>
+      <ol>
+        <li>Job processa com sucesso (webhook retorna 200)</li>
+        <li>Worker tenta POST para callbackUrl</li>
+        <li>callbackUrl está down (timeout, DNS, 5xx)</li>
+        <li>catch log: <code>console.error('Callback failed for job...')</code></li>
+        <li>Job permanece COMPLETED — cliente nunca sabe</li>
+      </ol>
+
+      <h2>💥 Impacto</h2>
+      <ul>
+        <li><strong>Perda de notificações</strong> — cliente não recebe resultado</li>
+        <li><strong>Inconsistência de estado</strong> — sistema acha que delivered, mas não foi</li>
+        <li><strong>Debug impossível</strong> — não há retry, não há métrica de callback failures</li>
+      </ul>
+
+      <h2>🛡️ Mitigações Atuais</h2>
+      <pre><code>// worker.ts (linhas 98-114)
+if (callbackUrl) {
+  try {
+    await fetch(callbackUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId,
+        status: 'COMPLETED',
+        result,
+        duration,
+        attempts: job.attemptsMade,
+      }),
+    });
+  } catch (callbackError) {
+    console.error(`Callback failed for job ${jobId}:`, callbackError);
+  }
+}</code></pre>
+
+      <p>Apenas log, sem:</p>
+      <ul>
+        <li>Retry automático</li>
+        <li>DLQ para callbacks falhados</li>
+        <li>Métrica/alert</li>
+        <li>Atualização no job (callbackStatus)</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Adicionar campo <code>callbackStatus</code></strong> no Job (PENDING, SUCCESS, FAILED, RETRYING)</li>
+        <li><strong>Retry com backoff</strong> — usar BullMQ para schedule retry do callback</li>
+        <li><strong>Dead Letter Queue</strong> após maxAttempts, marcar job como CALLBACK_FAILED</li>
+        <li><strong>Métrica</strong> — contador de callback failures por organização</li>
+        <li><strong>Webhook de alerta</strong> — notificar admin quando callback falhar repeatedly</li>
+        <li><strong>Tempo limite menor</strong> — callback timeout deve ser configurável (default 5s)</li>
+      </ol>
+
+      <h2>📈 Diagrama de Fluxo</h2>
+      <pre class="flow-diagram">
+Job COMPLETED
+    │
+    ├─► Callback POST
+    │   ├─► 200 OK → ✅ callbackStatus: SUCCESS
+    │   ├─► Timeout/5xx → 🔄 retry (3x)
+    │   │   └─► esgota → ❌ callbackStatus: FAILED
+    │   └─► network error → 🛑 log only (ATUAL)
+    │
+    └─► Job fica COMPLETED independente do callback
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Callback failures são logados? ✅</li>
+        <li>Callback failures são metricados? ❌</li>
+        <li>Há retry para callbacks? ❌</li>
+        <li>Status do callback é salvo no DB? ❌</li>
+        <li>Alertas configurados? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Análise de Riscos</p>
+    </div>
+  </div>
+</body>
+</html>

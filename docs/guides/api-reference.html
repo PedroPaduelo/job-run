@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referência da API - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html" class="active">API</a>
+        <a href="auth-flow.html">Autenticação</a>
+        <a href="modelo-dados.html">Dados</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a><span class="sep">/</span><span>Referência da API</span>
+      </div>
+      <span class="badge">API Reference</span>
+      <h1>JobSync API Reference</h1>
+      <p class="subtitle">Documentação completa de todos os endpoints REST da API JobSync com exemplos de requisição e resposta.</p>
+    </div>
+
+    <section class="section">
+      <h2>Autenticação e Autorização</h2>
+      <p>Todos os endpoints da API (exceto <code>/health</code> e <code>/ready</code>) requerem autenticação. O JobSync suporta dois métodos de autenticação:</p>
+
+      <h3>Headers Obrigatórios</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Header</th>
+            <th>Descrição</th>
+            <th>Exemplo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Authorization</code></td>
+            <td>Token de autenticação (JWT ou API Key)</td>
+            <td><code>Bearer eyJhbGciOiJIUzI1NiIs...</code> ou <code>Bearer jsk_abc123...</code></td>
+          </tr>
+          <tr>
+            <td><code>X-Organization-Id</code></td>
+            <td>ID da organização (opcional, pode estar no token)</td>
+            <td><code>org_123abc456</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-content">
+          <strong>Métodos de autenticação suportados:</strong>
+          <p>
+            <strong>JWT:</strong> Tokens OAuth 2.0 com PKCE do Auth Service.<br>
+            <strong>API Key:</strong> Chaves geradas via <code>POST /api/apikeys</code> com prefixo <code>jsk_</code>.
+          </p>
+        </div>
+      </div>
+
+      <h3>Respostas de Erro de Autenticação</h3>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Mensagem</th><th>Causa</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>401</td><td><code>Missing authorization header</code></td><td>Header Authorization ausente</td></tr>
+          <tr><td>401</td><td><code>Invalid token</code></td><td>Token JWT inválido ou expirado</td></tr>
+          <tr><td>401</td><td><code>API key is inactive</code></td><td>API Key foi revogada</td></tr>
+          <tr><td>401</td><td><code>API key has expired</code></td><td>API Key expirou (expiresAt)</td></tr>
+          <tr><td>401</td><td><code>IP not allowed</code></td><td>IP não está na allowlist da API Key</td></tr>
+          <tr><td>403</td><td><code>Forbidden: Missing permission: ...</code></td><td>Usuário sem permissão necessária</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Jobs</h2>
+      <p>Endpoints para gerenciar jobs na fila de processamento.</p>
+
+      <h3>POST /api/jobs — Criar Job Único</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/jobs</span>
+          <span class="endpoint-desc">Cria um novo job na fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:create</code>)</p>
+
+          <h4>Request Body (Zod Schema)</h4>
+          <pre><code>{
+  "queue": "email-notifications",           // string, obrigatório
+  "webhookUrl": "https://api.example.com/", // string URL, obrigatório
+  "webhookMethod": "POST",                   // GET|POST|PUT|PATCH|DELETE, default: POST
+  "callbackUrl": "https://callback.example.com/", // string URL, opcional
+  "payload": { "to": "user@example.com" },  // object, obrigatório
+  "userId": "user_123",                      // string, opcional
+  "externalId": "ext_456",                   // string, opcional
+  "priority": 10,                            // 0-100, default: 0
+  "scheduledAt": "2024-01-15T10:00:00Z",   // ISO datetime, opcional
+  "metadata": { "source": "api" }           // object, opcional
+}</code></pre>
+
+          <h4>Response (201 Created)</h4>
+          <pre><code>{
+  "id": "job_abc123",
+  "status": "PENDING",
+  "queue": "email-notifications",
+  "createdAt": "2024-01-15T09:30:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error (schema Zod)</td></tr>
+              <tr><td>400</td><td>Queue is not active</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Cria registro na tabela <code>jobs</code></li>
+            <li>Adiciona job na fila BullMQ</li>
+            <li>Cria fila automaticamente se não existir</li>
+            <li>Log de auditoria: <code>job.create</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST https://api.jobsync.com/api/jobs \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{
+    "queue": "email-notifications",
+    "webhookUrl": "https://api.example.com/send",
+    "webhookMethod": "POST",
+    "payload": { "to": "user@example.com", "subject": "Hello" }
+  }'</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/jobs/bulk — Criar Múltiplos Jobs</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/jobs/bulk</span>
+          <span class="endpoint-desc">Cria múltiplos jobs de uma vez</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:create</code>)</p>
+
+          <h4>Request Body (Zod Schema)</h4>
+          <pre><code>{
+  "queue": "batch-processing",
+  "jobs": [
+    {
+      "webhookUrl": "https://api.example.com/1",
+      "webhookMethod": "POST",
+      "payload": { "id": 1 },
+      "priority": 5,
+      "metadata": { "batch": "A" }
+    },
+    {
+      "webhookUrl": "https://api.example.com/2",
+      "webhookMethod": "POST",
+      "payload": { "id": 2 },
+      "priority": 5
+    }
+    // ... até 1000 jobs por requisição
+  ]
+}</code></pre>
+
+          <h4>Response (201 Created)</h4>
+          <pre><code>{
+  "created": 100,
+  "failed": 0,
+  "queue": "batch-processing"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error</td></tr>
+              <tr><td>400</td><td>Queue is not active</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Cria registros em massa na tabela <code>jobs</code></li>
+            <li>Adiciona jobs em lote na fila BullMQ</li>
+            <li>Log de auditoria: <code>job.bulk_create</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST https://api.jobsync.com/api/jobs/bulk \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{
+    "queue": "batch-processing",
+    "jobs": [
+      { "webhookUrl": "https://api.example.com/1", "payload": { "id": 1 } },
+      { "webhookUrl": "https://api.example.com/2", "payload": { "id": 2 } }
+    ]
+  }'</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/jobs — Listar Jobs</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/jobs</span>
+          <span class="endpoint-desc">Lista jobs com filtros</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:read</code>)</p>
+
+          <h4>Query Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th><th>Exemplo</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>status</td><td>string</td><td>Filtro por status</td><td><code>?status=PENDING</code></td></tr>
+              <tr><td>queue</td><td>string</td><td>Nome da fila</td><td><code>?queue=email</code></td></tr>
+              <tr><td>userId</td><td>string</td><td>ID do usuário</td><td><code>?userId=user_123</code></td></tr>
+              <tr><td>from</td><td>datetime</td><td>Data inicial (ISO)</td><td><code>?from=2024-01-01T00:00:00Z</code></td></tr>
+              <tr><td>to</td><td>datetime</td><td>Data final (ISO)</td><td><code>?to=2024-01-31T23:59:59Z</code></td></tr>
+              <tr><td>limit</td><td>number</td><td>Limite de resultados (1-100)</td><td><code>?limit=20</code></td></tr>
+              <tr><td>offset</td><td>number</td><td>Deslocamento para paginação</td><td><code>?offset=0</code></td></tr>
+            </tbody>
+          </table>
+
+          <h4>Status Válidos</h4>
+          <p><code>PENDING</code>, <code>SCHEDULED</code>, <code>PROCESSING</code>, <code>COMPLETED</code>, <code>FAILED</code>, <code>CANCELLED</code>, <code>DEAD</code></p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "jobs": [
+    {
+      "id": "job_abc123",
+      "status": "COMPLETED",
+      "webhookUrl": "https://api.example.com/",
+      "webhookMethod": "POST",
+      "payload": { "to": "user@example.com" },
+      "priority": 0,
+      "attempts": 1,
+      "result": { "statusCode": 200 },
+      "createdAt": "2024-01-15T09:30:00.000Z",
+      "completedAt": "2024-01-15T09:30:05.000Z",
+      "queueName": "email-notifications",
+      "userId": "user_123"
+    }
+  ],
+  "total": 150,
+  "limit": 20,
+  "offset": 0
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error (parâmetros inválidos)</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/jobs?status=PENDING&queue=email&limit=10" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/jobs/:id — Obter Job</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/jobs/:id</span>
+          <span class="endpoint-desc">Obtém detalhes de um job</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:read</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID do job (ex: job_abc123)</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "job_abc123",
+  "organizationId": "org_123",
+  "queueId": "queue_xyz789",
+  "status": "COMPLETED",
+  "webhookUrl": "https://api.example.com/",
+  "webhookMethod": "POST",
+  "callbackUrl": "https://callback.example.com/",
+  "payload": { "to": "user@example.com" },
+  "priority": 0,
+  "attempts": 1,
+  "maxAttempts": 3,
+  "error": null,
+  "result": { "statusCode": 200, "body": "ok" },
+  "scheduledAt": null,
+  "startedAt": "2024-01-15T09:30:00.000Z",
+  "completedAt": "2024-01-15T09:30:05.000Z",
+  "createdAt": "2024-01-15T09:29:55.000Z",
+  "updatedAt": "2024-01-15T09:30:05.000Z",
+  "queue": { "name": "email-notifications" },
+  "logs": [
+    { "id": "log_1", "message": "Job started", "createdAt": "2024-01-15T09:30:00.000Z" }
+  ]
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Job not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/jobs/job_abc123" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>DELETE /api/jobs/:id — Cancelar Job</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/api/jobs/:id</span>
+          <span class="endpoint-desc">Cancela um job pendente</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:cancel</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID do job</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "job_abc123",
+  "status": "CANCELLED",
+  "organizationId": "org_123",
+  "queueId": "queue_xyz789",
+  "updatedAt": "2024-01-15T09:35:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Cannot cancel a job that is currently processing</td></tr>
+              <tr><td>400</td><td>Job is already finished</td></tr>
+              <tr><td>404</td><td>Job not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Atualiza status para <code>CANCELLED</code></li>
+            <li>Remove job da fila BullMQ</li>
+            <li>Log de auditoria: <code>job.cancel</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X DELETE "https://api.jobsync.com/api/jobs/job_abc123" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/jobs/:id/retry — Tentar Novamente</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/jobs/:id/retry</span>
+          <span class="endpoint-desc">Retenta um job falhado</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>jobs:retry</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID do job</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "job_abc123",
+  "status": "PENDING"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Can only retry failed or dead jobs</td></tr>
+              <tr><td>404</td><td>Job not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Reseta status para <code>PENDING</code></li>
+            <li>Zera contagem de tentativas</li>
+            <li>Remove erro e resultado anteriores</li>
+            <li>Re-adiciona job à fila BullMQ</li>
+            <li>Log de auditoria: <code>job.retry</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/jobs/job_abc123/retry" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Queues</h2>
+      <p>Endpoints para gerenciar filas de jobs.</p>
+
+      <h3>GET /api/queues — Listar Filas</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues</span>
+          <span class="endpoint-desc">Lista todas as filas</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:read</code>)</p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>[
+  {
+    "id": "queue_xyz789",
+    "organizationId": "org_123",
+    "name": "email-notifications",
+    "concurrency": 5,
+    "maxRetries": 3,
+    "retryDelay": 5000,
+    "timeout": 300000,
+    "rateLimit": null,
+    "isActive": true,
+    "isPaused": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-15T00:00:00.000Z"
+  }
+]</code></pre>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/queues" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/queues — Criar Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues</span>
+          <span class="endpoint-desc">Cria uma nova fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:create</code>)</p>
+
+          <h4>Request Body (Zod Schema)</h4>
+          <pre><code>{
+  "name": "email-notifications",    // string, obrigatório, max 100 chars
+  "concurrency": 5,                 // 1-100, default: 5
+  "maxRetries": 3,                  // 0-10, default: 3
+  "retryDelay": 5000,               // 1000-3600000 ms, default: 5000
+  "timeout": 300000,                // 5000-3600000 ms, default: 300000
+  "rateLimit": 100                  // jobs/minuto, opcional
+}</code></pre>
+
+          <h4>Response (201 Created)</h4>
+          <pre><code>{
+  "id": "queue_xyz789",
+  "organizationId": "org_123",
+  "name": "email-notifications",
+  "concurrency": 5,
+  "maxRetries": 3,
+  "retryDelay": 5000,
+  "timeout": 300000,
+  "rateLimit": null,
+  "isActive": true,
+  "isPaused": false,
+  "createdAt": "2024-01-15T10:00:00.000Z",
+  "updatedAt": "2024-01-15T10:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Cria registro na tabela <code>queues</code></li>
+            <li>Cria fila BullMQ</li>
+            <li>Log de auditoria: <code>queue.create</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/queues" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{
+    "name": "email-notifications",
+    "concurrency": 10,
+    "maxRetries": 5
+  }'</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/queues/:id — Obter Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Obtém detalhes de uma fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:read</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "queue_xyz789",
+  "organizationId": "org_123",
+  "name": "email-notifications",
+  "concurrency": 5,
+  "maxRetries": 3,
+  "retryDelay": 5000,
+  "timeout": 300000,
+  "rateLimit": null,
+  "isActive": true,
+  "isPaused": false,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-15T00:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/queues/queue_xyz789" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>PATCH /api/queues/:id — Atualizar Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Atualiza configuração de uma fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:update</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Request Body (campos opcionais)</h4>
+          <pre><code>{
+  "concurrency": 10,     // 1-100
+  "maxRetries": 5,      // 0-10
+  "retryDelay": 10000,   // 1000-3600000
+  "timeout": 600000,     // 5000-3600000
+  "rateLimit": 50,       // null para remover limite
+  "isActive": true      // ativa/desativa fila
+}</code></pre>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "queue_xyz789",
+  "organizationId": "org_123",
+  "name": "email-notifications",
+  "concurrency": 10,
+  "maxRetries": 5,
+  "retryDelay": 10000,
+  "timeout": 600000,
+  "rateLimit": null,
+  "isActive": true,
+  "isPaused": false,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-15T10:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error</td></tr>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Atualiza registro na tabela <code>queues</code></li>
+            <li>Configurações BullMQ atualizadas em memória</li>
+            <li>Log de auditoria: <code>queue.update</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X PATCH "https://api.jobsync.com/api/queues/queue_xyz789" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{ "concurrency": 10, "maxRetries": 5 }'</code></pre>
+        </div>
+      </div>
+
+      <h3>DELETE /api/queues/:id — Desativar Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/api/queues/:id</span>
+          <span class="endpoint-desc">Desativa uma fila (soft delete)</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:delete</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "message": "Queue deactivated"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Define <code>isActive = false</code> na tabela <code>queues</code></li>
+            <li>Novos jobs não podem ser criados na fila</li>
+            <li>Jobs existentes continuam processando</li>
+            <li>Log de auditoria: <code>queue.deactivate</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X DELETE "https://api.jobsync.com/api/queues/queue_xyz789" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/queues/:id/pause — Pausar Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues/:id/pause</span>
+          <span class="endpoint-desc">Pausa processamento da fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:update</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "message": "Queue paused"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Define <code>isPaused = true</code></li>
+            <li>Pausa BullMQ (jobs ficam em waiting)</li>
+            <li>Log de auditoria: <code>queue.pause</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/queues/queue_xyz789/pause" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/queues/:id/resume — Retomar Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/queues/:id/resume</span>
+          <span class="endpoint-desc">Retoma processamento da fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:update</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "message": "Queue resumed"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Define <code>isPaused = false</code></li>
+            <li>Resume BullMQ</li>
+            <li>Log de auditoria: <code>queue.resume</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/queues/queue_xyz789/resume" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/queues/:id/stats — Estatísticas da Fila</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues/:id/stats</span>
+          <span class="endpoint-desc">Obtém estatísticas da fila</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>queues:read</code>)</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "queue_xyz789",
+  "name": "email-notifications",
+  "waiting": 15,
+  "active": 3,
+  "completed": 1500,
+  "failed": 25,
+  "delayed": 5
+}</code></pre>
+
+          <h4>Descrição dos Campos</h4>
+          <table>
+            <thead>
+              <tr><th>Campo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>waiting</td><td>Jobs aguardando processamento</td></tr>
+              <tr><td>active</td><td>Jobs sendo processados atualmente</td></tr>
+              <tr><td>completed</td><td>Total de jobs concluídos</td></tr>
+              <tr><td>failed</td><td>Total de jobs falhados + dead</td></tr>
+              <tr><td>delayed</td><td>Jobs agendados para execução futura</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>Queue not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/queues/queue_xyz789/stats" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Estatísticas</h2>
+      <p>Endpoints para consultar métricas e timeline de jobs.</p>
+
+      <h3>GET /api/stats — Visão Geral</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/stats</span>
+          <span class="endpoint-desc">Retorna métricas agregadas</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>stats:read</code>)</p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "totalJobs": 2500,
+  "todayJobs": 150,
+  "processing": 5,
+  "failedToday": 3,
+  "avgDuration": 4500,
+  "queues": [
+    {
+      "id": "queue_xyz789",
+      "name": "email-notifications",
+      "waiting": 15,
+      "active": 3,
+      "completed": 1500,
+      "failed": 25,
+      "delayed": 5
+    }
+  ]
+}</code></pre>
+
+          <h4>Descrição dos Campos</h4>
+          <table>
+            <thead>
+              <tr><th>Campo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>totalJobs</td><td>Total de jobs da organização</td></tr>
+              <tr><td>todayJobs</td><td>Jobs criados hoje</td></tr>
+              <tr><td>processing</td><td>Jobs em processamento</td></tr>
+              <tr><td>failedToday</td><td>Jobs falhados hoje (FAILED + DEAD)</td></tr>
+              <tr><td>avgDuration</td><td>Duração média em ms (jobs concluídos hoje)</td></tr>
+              <tr><td>queues</td><td>Array com estatísticas de cada fila</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/stats" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/stats/timeline — Timeline de Jobs</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/stats/timeline</span>
+          <span class="endpoint-desc">Retorna timeline de jobs por hora</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT ou API Key (permissão: <code>stats:read</code>)</p>
+
+          <h4>Query Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th><th>Exemplo</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>hours</td><td>number</td><td>Horas de histórico (1-168, default: 24)</td><td><code>?hours=24</code></td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>[
+  { "hour": "2024-01-15T00:00:00Z", "total": 50, "completed": 48, "failed": 2 },
+  { "hour": "2024-01-15T01:00:00Z", "total": 45, "completed": 44, "failed": 1 },
+  { "hour": "2024-01-15T02:00:00Z", "total": 30, "completed": 30, "failed": 0 }
+]</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>hours must be between 1 and 168</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/stats/timeline?hours=48" \
+  -H "Authorization: Bearer jsk_abc123..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>API Keys</h2>
+      <p>Endpoints para gerenciar chaves de API para acesso programático.</p>
+
+      <h3>GET /api/apikeys — Listar API Keys</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/apikeys</span>
+          <span class="endpoint-desc">Lista todas as API Keys</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT (não suporta API Key para esta rota)</p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>[
+  {
+    "id": "apikey_abc123",
+    "name": "Production API",
+    "description": "API key for production integrations",
+    "permissions": ["jobs:create", "jobs:read", "queues:read"],
+    "allowedDomains": ["https://app.example.com"],
+    "allowedIps": ["203.0.113.1"],
+    "rateLimit": 1000,
+    "isActive": true,
+    "expiresAt": "2025-01-01T00:00:00.000Z",
+    "lastUsedAt": "2024-01-15T10:00:00.000Z",
+    "usageCount": 15000,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+]</code></pre>
+
+          <div class="alert warning">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+              <strong>Nota:</strong> A chave completa (<code>key</code>) só é retornada no momento da criação. Após isso, apenas os metadados são expostos.
+            </div>
+          </div>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/apikeys" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/apikeys — Criar API Key</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/apikeys</span>
+          <span class="endpoint-desc">Cria uma nova API Key</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT (não suporta API Key para esta rota)</p>
+
+          <h4>Request Body</h4>
+          <pre><code>{
+  "name": "Production API",                      // obrigatório, 1-100 chars
+  "description": "API key for production",       // opcional, max 500
+  "permissions": ["jobs:create", "jobs:read"],   // opcional, default: ['jobs:create', 'jobs:read', 'queues:read']
+  "allowedDomains": ["https://app.example.com"], // opcional
+  "allowedIps": ["203.0.113.1"],                  // opcional
+  "rateLimit": 1000,                             // opcional, requests/min
+  "expiresAt": "2025-01-01T00:00:00Z"            // opcional, ISO datetime
+}</code></pre>
+
+          <h4>Response (201 Created)</h4>
+          <pre><code>{
+  "id": "apikey_abc123",
+  "key": "jsk_a1b2c3d4e5f6...",                  // IMPORTANTE: Salve esta chave!
+  "name": "Production API",
+  "description": "API key for production",
+  "permissions": ["jobs:create", "jobs:read", "queues:read"],
+  "allowedDomains": ["https://app.example.com"],
+  "allowedIps": [],
+  "rateLimit": 1000,
+  "isActive": true,
+  "expiresAt": "2025-01-01T00:00:00.000Z",
+  "createdAt": "2024-01-15T10:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error</td></tr>
+              <tr><td>401</td><td>Organization required</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Cria registro na tabela <code>api_keys</code></li>
+            <li>Gera chave com prefixo <code>jsk_</code></li>
+            <li>Log de auditoria: <code>apikey.create</code></li>
+          </ul>
+
+          <div class="alert danger">
+            <div class="alert-icon">🔑</div>
+            <div class="alert-content">
+              <strong>Importante:</strong> A chave completa só é retornada uma vez neste momento. Guarde-a em local seguro!
+            </div>
+          </div>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/apikeys" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{
+    "name": "Production API",
+    "description": "API key for production integrations",
+    "permissions": ["jobs:create", "jobs:read", "queues:read"],
+    "expiresAt": "2025-01-01T00:00:00Z"
+  }'</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /api/apikeys/:id — Obter API Key</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Obtém detalhes de uma API Key</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da API Key</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "apikey_abc123",
+  "name": "Production API",
+  "description": "API key for production",
+  "permissions": ["jobs:create", "jobs:read", "queues:read"],
+  "allowedDomains": ["https://app.example.com"],
+  "allowedIps": [],
+  "rateLimit": 1000,
+  "isActive": true,
+  "expiresAt": "2025-01-01T00:00:00.000Z",
+  "lastUsedAt": "2024-01-15T10:00:00.000Z",
+  "usageCount": 15000,
+  "createdAt": "2024-01-01T00:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>API key not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/api/apikeys/apikey_abc123" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>PATCH /api/apikeys/:id — Atualizar API Key</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Atualiza uma API Key</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da API Key</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Request Body (campos opcionais)</h4>
+          <pre><code>{
+  "name": "New Name",
+  "description": "Updated description",
+  "permissions": ["jobs:create", "jobs:read", "queues:read"],
+  "allowedDomains": ["https://new-domain.com"],
+  "allowedIps": ["203.0.113.1", "198.51.100.1"],
+  "rateLimit": 500,           // null para remover
+  "isActive": true,
+  "expiresAt": "2025-06-01T00:00:00Z"  // null para remover
+}</code></pre>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "apikey_abc123",
+  "name": "New Name",
+  "description": "Updated description",
+  "permissions": ["jobs:create", "jobs:read", "queues:read"],
+  "allowedDomains": ["https://new-domain.com"],
+  "allowedIps": ["203.0.113.1"],
+  "rateLimit": 500,
+  "isActive": true,
+  "expiresAt": "2025-06-01T00:00:00.000Z",
+  "lastUsedAt": "2024-01-15T10:00:00.000Z",
+  "usageCount": 15000,
+  "createdAt": "2024-01-01T00:00:00.000Z"
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>400</td><td>Validation error</td></tr>
+              <tr><td>404</td><td>API key not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Atualiza registro na tabela <code>api_keys</code></li>
+            <li>Log de auditoria: <code>apikey.update</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X PATCH "https://api.jobsync.com/api/apikeys/apikey_abc123" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "Content-Type: application/json" \
+  -H "X-Organization-Id: org_123" \
+  -d '{
+    "name": "Production API v2",
+    "rateLimit": 2000
+  }'</code></pre>
+        </div>
+      </div>
+
+      <h3>DELETE /api/apikeys/:id — Deletar API Key</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/api/apikeys/:id</span>
+          <span class="endpoint-desc">Deleta uma API Key permanentemente</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da API Key</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (204 No Content)</h4>
+          <pre><code>(vazio)</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>API key not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Remove registro da tabela <code>api_keys</code> (hard delete)</li>
+            <li>Todas as requisições com esta chave param de funcionar</li>
+            <li>Log de auditoria: <code>apikey.delete</code></li>
+          </ul>
+
+          <div class="alert danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+              <strong>Atenção:</strong> Esta operação é irreversível. Considere usar <code>POST /apikeys/:id/revoke</code> para desativar a chave temporariamente.
+            </div>
+          </div>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X DELETE "https://api.jobsync.com/api/apikeys/apikey_abc123" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+
+      <h3>POST /api/apikeys/:id/revoke — Revogar API Key</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/apikeys/:id/revoke</span>
+          <span class="endpoint-desc">Revoga uma API Key (soft delete)</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> JWT</p>
+
+          <h4>Path Parameters</h4>
+          <table>
+            <thead>
+              <tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>id</td><td>string</td><td>ID da API Key</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "id": "apikey_abc123",
+  "name": "Production API",
+  "isActive": false
+}</code></pre>
+
+          <h4>Erros</h4>
+          <table>
+            <thead>
+              <tr><th>Código</th><th>Mensagem</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>404</td><td>API key not found</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Efeitos Colaterais</h4>
+          <ul>
+            <li>Define <code>isActive = false</code></li>
+            <li>Chave não pode mais ser usada para autenticação</li>
+            <li>Registro é mantido no banco</li>
+            <li>Log de auditoria: <code>apikey.revoke</code></li>
+          </ul>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl -X POST "https://api.jobsync.com/api/apikeys/apikey_abc123/revoke" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "X-Organization-Id: org_123"</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Health Checks</h2>
+      <p>Endpoints de verificação de saúde do sistema (sem autenticação).</p>
+
+      <h3>GET /health — Liveness</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/health</span>
+          <span class="endpoint-desc">Verifica se o servidor está rodando</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> Nenhuma (pública)</p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "status": "ok",
+  "uptime": 3600.5
+}</code></pre>
+
+          <h4>Uso</h4>
+          <p>Use este endpoint para verificar se o processo do servidor está vivo (Kubernetes liveness probe).</p>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/health"</code></pre>
+        </div>
+      </div>
+
+      <h3>GET /ready — Readiness</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/ready</span>
+          <span class="endpoint-desc">Verifica se o servidor está pronto</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Autenticação:</strong> Nenhuma (pública)</p>
+
+          <h4>Response (200 OK)</h4>
+          <pre><code>{
+  "status": "ready",
+  "redis": true,
+  "database": true,
+  "uptime": 3600.5
+}</code></pre>
+
+          <h4>Response (503 Service Unavailable)</h4>
+          <pre><code>{
+  "status": "not_ready",
+  "redis": true,
+  "database": false,
+  "error": "Database connection failed"
+}</code></pre>
+
+          <h4>Descrição dos Campos</h4>
+          <table>
+            <thead>
+              <tr><th>Campo</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>redis</td><td>Conexão com Redis funcionando</td></tr>
+              <tr><td>database</td><td>Conexão com PostgreSQL funcionando</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Uso</h4>
+          <p>Use este endpoint para verificar se o servidor está pronto para receber requisições (Kubernetes readiness probe). Retorna 503 se alguma dependência falhar.</p>
+
+          <h4>Exemplo cURL</h4>
+          <pre><code>curl "https://api.jobsync.com/ready"</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Códigos de Erro Comuns</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>400</code></td>
+            <td>Bad Request</td>
+            <td>Requisição inválida (schema, parâmetros, etc)</td>
+          </tr>
+          <tr>
+            <td><code>401</code></td>
+            <td>Unauthorized</td>
+            <td>Autenticação obrigatória ou inválida</td>
+          </tr>
+          <tr>
+            <td><code>403</code></td>
+            <td>Forbidden</td>
+            <td>Sem permissão para o recurso</td>
+          </tr>
+          <tr>
+            <td><code>404</code></td>
+            <td>Not Found</td>
+            <td>Recurso não encontrado</td>
+          </tr>
+          <tr>
+            <td><code>429</code></td>
+            <td>Too Many Requests</td>
+            <td>Rate limit excedido</td>
+          </tr>
+          <tr>
+            <td><code>500</code></td>
+            <td>Internal Server Error</td>
+            <td>Erro interno no servidor</td>
+          </tr>
+          <tr>
+            <td><code>503</code></td>
+            <td>Service Unavailable</td>
+            <td>Serviço temporariamente indisponível</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Rate Limiting</h2>
+      <p>O JobSync aplica rate limiting a todas as requisições autenticadas:</p>
+      <ul>
+        <li><strong>Padrão:</strong> 1000 requisições por minuto por organização</li>
+        <li><strong>API Keys:</strong> Podem ter rate limit customizado (campo <code>rateLimit</code>)</li>
+      </ul>
+      <p>O rate limit é baseado no <code>X-Organization-Id</code> header ou IP da requisição.</p>
+
+      <h4>Headers de Rate Limit</h4>
+      <table>
+        <thead>
+          <tr><th>Header</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>X-RateLimit-Limit</code></td><td>Limite de requisições</td></tr>
+          <tr><td><code>X-RateLimit-Remaining</code></td><td>Requisições restantes</td></tr>
+          <tr><td><code>X-RateLimit-Reset</code></td><td>Timestamp de reset</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="doc-footer">
+      <p>Documentação gerada automaticamente a partir do código-fonte do JobSync.</p>
+    </div>
+  </div>
+</body>
+</html>

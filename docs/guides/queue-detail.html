@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queue Detail Page - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/></svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="queue-detail.html" class="active">Queue Detail</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Queue Detail</span>
+      </div>
+      <span class="badge">Frontend</span>
+      <h1>Queue Detail Page</h1>
+      <p class="subtitle">Documentação de UI e fluxo de dados da página de detalhe de fila (QueueDetail).</p>
+    </div>
+
+    <section class="section">
+      <h2>1. URL</h2>
+      <p>A rota de detalhe da fila é:</p>
+      <pre><code>/queues/:id</code></pre>
+      <p>O <code>id</code> é o identificador da fila persistida no backend (campo <code>queue.id</code>).</p>
+    </section>
+
+    <section class="section">
+      <h2>2. Dados carregados</h2>
+      <p>O componente <code>QueueDetail</code> usa as queries do hooks para carregar dados paralelamente:</p>
+      <ul>
+        <li><code>useQueue(id)</code> — detalhes da fila (nome, descrição, configuração, status ativo/pausado)</li>
+        <li><code>useQueueStats(id)</code> — métricas em tempo real (waiting, active, completed, failed, delayed)</li>
+      </ul>
+      <p>Além disso, a lista de jobs recentes é carregada via:</p>
+      <pre><code>useJobs({ queue: queue?.name, limit: 10 })</code></pre>
+      <p>As queries renderizam placeholders de loading e fallback de fila não encontrada.</p>
+    </section>
+
+    <section class="section">
+      <h2>3. O que é exibido</h2>
+      <div class="card">
+        <h3>3.1 Informações principais</h3>
+        <ul>
+          <li>Nome da fila (<code>queue.name</code>)</li>
+          <li>Textos auxiliares e descrição de contexto</li>
+          <li>Status: <code>Active</code> / <code>Inactive</code> Badge</li>
+          <li>Botões de pausa/resume quando aplicável</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>3.2 Estatísticas atuais</h3>
+        <ul>
+          <li>Waiting</li>
+          <li>Active</li>
+          <li>Completed</li>
+          <li>Failed</li>
+          <li>Delayed</li>
+        </ul>
+        <p>Estes valores vêm de <code>useQueueStats</code> e normalmente agregam dados de BullMQ + DB para exibir a visão operativa.</p>
+      </div>
+
+      <div class="card">
+        <h3>3.3 Configuração editável</h3>
+        <ul>
+          <li>Concurrency</li>
+          <li>Max Retries</li>
+          <li>Timeout</li>
+          <li>Rate Limit (jobs/min)</li>
+        </ul>
+        <p>Os campos são inicializados no <code>useEffect</code> a partir de <code>queue</code> e enviados via <code>useUpdateQueue</code>.</p>
+      </div>
+
+      <div class="card">
+        <h3>3.4 Jobs recentes</h3>
+        <p>O card de <strong>Recent Jobs</strong> mostra até 10 jobs filtrados por nome da fila. Cada job exibe:</p>
+        <ul>
+          <li>ID parcial e link para <code>/jobs/:id</code></li>
+          <li>Status com badge colorido</li>
+          <li>Tentativas (<code>attempts/maxAttempts</code>)</li>
+          <li>Data de criação em formato relativo</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. Ações de gerenciamento</h2>
+      <p>QueueDetail expõe ações de mutação:</p>
+      <ul>
+        <li><code>useUpdateQueue()</code> — atualiza a configuração da fila (PATCH)</li>
+        <li><code>usePauseQueue()</code> — pausa a fila</li>
+        <li><code>useResumeQueue()</code> — retoma a fila</li>
+      </ul>
+      <p>O botão de salvar usa o ícone <code>Save</code> e envia dados como:</p>
+      <pre><code>{`{ concurrency, maxRetries, timeout, rateLimit }`}</code></pre>
+      <p>O status de pausa e resume é controlado via <code>queue.isPaused</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2>5. Tempo real / Refresh</h2>
+      <p>O componente depende do cache e refetch da biblioteca de queries (TanStack Query). O backend define tempos de revalidação via constantes (ex. <code>REFETCH_INTERVALS.QUEUE_STATS</code>), e a UI exibe stats atualizados periodicamente.</p>
+      <p>Isso garante que o card de métricas se mantenha perto do estado real de execução do BullMQ.</p>
+    </section>
+
+    <section class="section">
+      <h2>6. Permissões</h2>
+      <p>As permissões são aplicadas no backend. Na UI, o acesso à rota e às ações deve ser condicionado ao usuário ter permissões como:</p>
+      <ul>
+        <li><code>queues:read</code> para visualizar</li>
+        <li><code>queues:update</code> para editar configurações</li>
+        <li><code>queues:pause</code> / <code>queues:resume</code> para controlar execução</li>
+      </ul>
+      <p>Mesmo que a UI mostre botões, a validação final deve ser no endpoint.</p>
+    </section>
+
+    <section class="section">
+      <h2>7. Navegação</h2>
+      <p>Links principais na página:</p>
+      <ul>
+        <li><code>&lt;Link to="/queues"&gt;</code> — volta para a lista de filas</li>
+        <li><code>&lt;Link to={`/jobs?queue=${queue.name}`}&gt;</code> — vê todos os jobs filtrados pela fila</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>8. Estados especiais</h2>
+      <p>O QueueDetail trata os seguintes estados:</p>
+      <ul>
+        <li><strong>Loading</strong>: exibe texto de loading enquanto a query está pendente.</li>
+        <li><strong>Queue não encontrada</strong>: mostra mensagem e botão de retorno.</li>
+        <li><strong>Sem jobs recentes</strong>: exibe linha de tabela com "No jobs in this queue".</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Queue Detail - implementado em <code>frontend-job-async/src/pages/QueueDetail.tsx</code>.</p>
+      <p>Ver também: <a href="api-reference.html">API Reference</a> e <a href="sistema-filas.html">Sistema de Filas</a>.</p>
+    </div>
+  </div>
+</body>
+</html>

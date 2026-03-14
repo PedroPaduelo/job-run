@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Deadlocks - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Database Deadlocks</span></div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>Database Deadlocks</h1>
+      <p class="subtitle">Concorrência alta pode travar transações no PostgreSQL</p>
+    </div>
+
+    <div class="section">
+      <h2>🔒 O Problema</h2>
+      <p>PostgreSQL detecta ciclos de locks e aborta uma transação. Em alta concorrência de workers atualizando jobs, deadlocks podem ocorrer.</p>
+
+      <div class="alert danger">
+        <div class="alert-icon">🔄</div>
+        <div class="alert-content">
+          <strong>Deadlock Detectado</strong>
+          <p>Quando dois workers tentam UPDATE/INSERT na mesma row em ordem diferente, PostgreSQL detecta ciclo e mata uma transação.</p>
+        </div>
+      </div>
+
+      <h2>📊 Padrões de Acesso Concorrente</h2>
+      <table>
+        <thead><tr><th>Operação</th><th>Tabela</th><th>Lock</th></tr></thead>
+        <tbody>
+          <tr><td><code>prisma.job.create()</code></td><td>jobs</td><td>ROW EXCLUSIVE</td></tr>
+          <tr><td><code>prisma.job.update()</code></td><td>jobs</td><td>ROW EXCLUSIVE</td></tr>
+          <tr><td><code>prisma.jobLog.create()</code></td><td>job_logs</td><td>ROW EXCLUSIVE</td></tr>
+          <tr><td><code>prisma.queue.update()</code></td><td>queues</td><td>ROW EXCLUSIVE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>💥 Como Ocorre</h2>
+      <ol>
+        <li>Worker A: UPDATE job SET status='PROCESSING' WHERE id='job1'</li>
+        <li>Worker B: UPDATE job SET status='PROCESSING' WHERE id='job2'</li>
+        <li>Worker A: INSERT INTO job_logs (jobId, ...) VALUES ('job1', ...)</li>
+        <li>Worker B: INSERT INTO job_logs (jobId, ...) VALUES ('job2', ...)</li>
+        <li>Se as transações pegarem locks em ordem diferente (job A lock, depois log A vs job B lock, depois log B), ciclo pode ser formado</li>
+      </ol>
+
+      <h2>📈 Exemplo Real</h2>
+      <pre class="flow-diagram">
+Worker 1:              Worker 2:
+  BEGIN                 BEGIN
+  SELECT job1 FOR UPDATE   SELECT job2 FOR UPDATE
+  UPDATE job1              UPDATE job2
+  INSERT log1               INSERT log2
+  COMMIT                   COMMIT (DEADLOCK se ORDER diferente)
+  </pre>
+
+      <h2>🛡️ Prevenção no Código</h2>
+      <ul>
+        <li>Schema Prisma tem <code>@@index([queueId])</code>, <code>@@index([organizationId])</code> — OK</li>
+        <li>Transações são implícitas (cada query é auto-commit) — <strong>sem transação multi-step</strong></li>
+        <li><code>prisma.$transaction()</code> não é usado — bom, evita long-running transactions</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Retry automático</strong> — BullMQ já retry em 3 tentativas (exponential backoff)</li>
+        <li><strong>Lock por organizationId</strong> — Se jobs da mesma org são seriais, usar advisory lock</li>
+        <li><strong>MONITORAR</strong> — Log de deadlocks no PostgreSQL: <code>SELECT * FROM pg_stat_database WHERE deadlocks > 0</code></li>
+        <li><strong>Índices</strong> — Garantir que todos WHERE têm índice (já tem: id, queueId, organizationId, status, scheduledAt)</li>
+        <li><strong>Evitar UPDATEs em batch</strong> — JobService.update usa updateMany, mas com where por id + orgId — OK</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Deadlock retry配置? ✅ (BullMQ attempts + backoff)</li>
+        <li>Transações curtas? ✅ (auto-commit)</li>
+        <li>Índices suficientes? ✅</li>
+        <li>Monitoramento ativo? ❌</li>
+        <li>Teste de carga simula concorrência? ⚠️</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Concorrência e Deadlocks</p>
+    </div>
+  </div>
+</body>
+</html>

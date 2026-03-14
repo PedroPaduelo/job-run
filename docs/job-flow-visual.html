@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Run - Fluxo Completo de Jobs</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --pending: #6b7280;
+      --scheduled: #6366f1;
+      --processing: #f59e0b;
+      --completed: #10b981;
+      --failed: #ef4444;
+      --cancelled: #9ca3af;
+      --dead: #dc2626;
+      --primary: #3b82f6;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text);
+    }
+
+    /* Timeline */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      padding: 2rem 0;
+      margin: 2rem 0;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 100px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to bottom, var(--pending), var(--scheduled), var(--processing), var(--completed), var(--failed), var(--dead));
+      border-radius: 2px;
+    }
+
+    .timeline-step {
+      display: flex;
+      gap: 1.5rem;
+      position: relative;
+      padding: 1rem 0;
+    }
+
+    .step-number {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      flex-shrink: 0;
+      z-index: 1;
+      font-size: 1.25rem;
+    }
+
+    .step-content {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .step-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+    }
+
+    .code-block .comment { color: #64748b; }
+    .code-block .keyword { color: #c084fc; }
+    .code-block .string { color: #86efac; }
+    .code-block .function { color: #67e8f9; }
+
+    /* Status Boxes */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .status-box {
+      padding: 1rem;
+      border-radius: 8px;
+      border: 2px solid;
+    }
+
+    .status-box.pending { background: #f1f5f9; border-color: var(--pending); }
+    .status-box.scheduled { background: #eef2ff; border-color: var(--scheduled); }
+    .status-box.processing { background: #fef3c7; border-color: var(--processing); }
+    .status-box.completed { background: #d1fae5; border-color: var(--completed); }
+    .status-box.failed { background: #fee2e2; border-color: var(--failed); }
+    .status-box.cancelled { background: #f1f5f9; border-color: var(--cancelled); }
+    .status-box.dead { background: #fee2e2; border-color: var(--dead); }
+
+    .status-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .status-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Color Legend */
+    .color-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      padding: 1rem;
+      background: var(--card-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    /* Flow Diagram */
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 2rem;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin: 1.5rem 0;
+      overflow-x: auto;
+    }
+
+    .flow-box {
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      padding: 0.875rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    /* Bullets */
+    .bullet-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .bullet-list li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .bullet-list li::before {
+      content: '>';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    /* Info boxes */
+    .info-box {
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid;
+    }
+
+    .info-box.info {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
+
+    .info-box.warning {
+      background: #fefce8;
+      border-color: var(--processing);
+    }
+
+    .info-box.danger {
+      background: #fef2f2;
+      border-color: var(--failed);
+    }
+
+    /* Section */
+    section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-get { background: #dbeafe; color: #1d4ed8; }
+    .badge-post { background: #dcfce7; color: #16a34a; }
+    .badge-put { background: #fef3c7; color: #d97706; }
+    .badge-patch { background: #fce7f3; color: #db2777; }
+    .badge-delete { background: #fee2e2; color: #dc2626; }
+
+    /* Code annotations */
+    .annotated-code {
+      position: relative;
+    }
+
+    .annotation {
+      position: absolute;
+      right: -200px;
+      width: 180px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 1200px) {
+      .annotation {
+        position: relative;
+        right: auto;
+        width: 100%;
+        margin-top: 0.5rem;
+      }
+      .annotated-code {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    .endpoint {
+      font-family: monospace;
+      background: #f1f5f9;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .http-method {
+      display: inline-block;
+      width: 55px;
+      text-align: center;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    .http-get { background: #dbeafe; color: #1d4ed8; }
+    .http-post { background: #dcfce7; color: #16a34a; }
+    .http-delete { background: #fee2e2; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Job Run - Fluxo Completo de Jobs</h1>
+    <p class="subtitle">Documentação visual do ciclo de vida completo de um job, desde a criação até a conclusão</p>
+
+    <!-- 1. STATUS E DIAGRAMA DE CORES -->
+    <section>
+      <h2>Estados de um Job</h2>
+      <p style="margin-bottom: 1rem; color: var(--text-muted);">
+        Um job pode passar por 7 estados diferentes durante seu ciclo de vida. Cada estado tem seu propósito específico e transições bem definidas.
+      </p>
+
+      <div class="status-grid">
+        <div class="status-box pending">
+          <div class="status-name" style="color: #4b5563;">PENDING</div>
+          <div class="status-desc">Job criado, aguardando processamento</div>
+        </div>
+        <div class="status-box scheduled">
+          <div class="status-name" style="color: #4338ca;">SCHEDULED</div>
+          <div class="status-desc">Agendado para execução futura</div>
+        </div>
+        <div class="status-box processing">
+          <div class="status-name" style="color: #b45309;">PROCESSING</div>
+          <div class="status-desc">Em execução no worker</div>
+        </div>
+        <div class="status-box completed">
+          <div class="status-name" style="color: #047857;">COMPLETED</div>
+          <div class="status-desc">Processado com sucesso</div>
+        </div>
+        <div class="status-box failed">
+          <div class="status-name" style="color: #b91c1c;">FAILED</div>
+          <div class="status-desc">Falha temporária, pode ser retentado</div>
+        </div>
+        <div class="status-box cancelled">
+          <div class="status-name" style="color: #4b5563;">CANCELLED</div>
+          <div class="status-desc">Cancelado pelo usuário antes de processar</div>
+        </div>
+        <div class="status-box dead">
+          <div class="status-name" style="color: #991b1b;">DEAD</div>
+          <div class="status-desc">Esgotado número de tentativas</div>
+        </div>
+      </div>
+
+      <div class="color-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--pending);"></div>
+          <span>Aguardando (idle states)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--scheduled);"></div>
+          <span>Agendado</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--processing);"></div>
+          <span>Processando (active)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--completed);"></div>
+          <span>Concluído com sucesso</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--failed);"></div>
+          <span>Falha recuperável</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--cancelled);"></div>
+          <span>Cancelado pelo usuário</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--dead);"></div>
+          <span>Falha definitiva (dead letter)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DIAGRAMA TEMPORAL DO CICLO DE VIDA -->
+    <section>
+      <h2>Diagrama Temporal (Timeline)</h2>
+      <p style="margin-bottom: 1rem; color: var(--text-muted);">
+        O diagrama abaixo mostra a jornada completa de um job, desde sua criação no frontend até seu estado final, incluindo todas as transições possíveis.
+      </p>
+
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--pending);">1</div>
+          <div class="step-content">
+            <div class="step-title">Frontend: Usuário cria o job</div>
+            <div class="step-subtitle">Formulário de criação com payload, webhookUrl e seleção de queue</div>
+            <div class="code-block">
+<span class="comment">// POST /api/jobs</span>
+{
+  <span class="string">"queue"</span>: <span class="string">"default"</span>,
+  <span class="string">"webhookUrl"</span>: <span class="string">"https://api.externo.com/webhook"</span>,
+  <span class="string">"webhookMethod"</span>: <span class="string">"POST"</span>,
+  <span class="string">"payload"</span>: { <span class="string">"id"</span>: <span class="string">"123"</span>, ... },
+  <span class="string">"callbackUrl"</span>: <span class="string">"https://sua-app.com/callback"</span><span class="comment">// opcional</span>
+}
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--scheduled);">2</div>
+          <div class="step-content">
+            <div class="step-title">API: Validação e criação</div>
+            <div class="step-subtitle">
+              <span class="badge badge-get">GET</span> Validação JWT/API Key<br>
+              <span class="badge badge-post">POST</span> Validação Zod schema
+            </div>
+            <div class="code-block">
+<span class="comment">// POST /api/jobs (routes/jobs.ts)</span>
+<span class="keyword">const</span> result = createJobSchema.<span class="function">safeParse</span>(request.body);
+<span class="keyword">if</span> (!result.success) <span class="keyword">return</span> reply.<span class="function">status</span>(400).<span class="function">send</span>({ error: <span class="string">'Validation error'</span> });
+
+<span class="keyword">const</span> job = <span class="keyword">await</span> jobService.<span class="function">create</span>(orgId, result.data);
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--scheduled);">3</div>
+          <div class="step-content">
+            <div class="step-title">Banco: INSERT no PostgreSQL</div>
+            <div class="step-subtitle">Job salvo com status PENDING ou SCHEDULED</div>
+            <div class="code-block">
+<span class="comment">// job.service.ts - create()</span>
+<span class="keyword">const</span> job = <span class="keyword">await</span> prisma.job.<span class="function">create</span>({
+  data: {
+    organizationId,
+    queueId: queue.id,
+    webhookUrl: data.webhookUrl,
+    status: data.scheduledAt ? <span class="string">'SCHEDULED'</span> : <span class="string">'PENDING'</span>,
+    payload: data.payload,
+    maxAttempts: queue.maxRetries, <span class="comment">// padrão: 3</span>
+    scheduledAt: data.scheduledAt || null,
+  }
+});
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--scheduled);">4</div>
+          <div class="step-content">
+            <div class="step-title">BullMQ: Job enfileirado</div>
+            <div class="step-subtitle">Adicionado à fila Redis com opções de retry e delay</div>
+            <div class="code-block">
+<span class="comment">// job.service.ts - Queue.add()</span>
+<span class="keyword">await</span> bullQueue.<span class="function">add</span>(<span class="string">'process'</span>, jobData, {
+  priority: data.priority || 0,
+  attempts: queue.maxRetries, <span class="comment">// 3 tentativas</span>
+  backoff: {
+    type: <span class="string">'exponential'</span>,
+    delay: queue.retryDelay, <span class="comment">// 5000ms padrão</span>
+  },
+  delay: data.scheduledAt
+    ? new Date(data.scheduledAt).<span class="function">getTime</span>() - Date.<span class="function">now</span>()
+    : undefined
+});
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--processing);">5</div>
+          <div class="step-content">
+            <div class="step-title">Worker: Consome da fila</div>
+            <div class="step-subtitle">
+              Atualiza status para PROCESSING + startedAt + attempts++
+            </div>
+            <div class="code-block">
+<span class="comment">// worker.ts - processJob()</span>
+<span class="keyword">async function</span> <span class="function">processJob</span>(job) {
+  <span class="comment">// 1. Atualiza status no banco</span>
+  <span class="keyword">await</span> prisma.job.<span class="function">update</span>({
+    where: { id: jobId },
+    data: {
+      status: <span class="string">'PROCESSING'</span>,
+      startedAt: new Date(),
+      attempts: { increment: 1 }
+    }
+  });
+
+  <span class="comment">// 2. Fetch para webhookUrl</span>
+  <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(webhookUrl, {
+    method: webhookMethod,
+    signal: <span class="function">AbortSignal</span>.timeout(timeout),
+    body: JSON.stringify(payload)
+  });
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--completed);">6</div>
+          <div class="step-content">
+            <div class="step-title">Sucesso: webhook retorna 2xx</div>
+            <div class="step-subtitle">Atualiza COMPLETED + salva result + envia callback</div>
+            <div class="code-block">
+<span class="comment">// Sucesso no fetch</span>
+<span class="keyword">if</span> (!response.ok) <span class="keyword">throw new</span> Error(<span class="string">`Webhook failed`</span>);
+
+<span class="keyword">const</span> result = response.ok && response.headers
+  .<span class="function">get</span>(<span class="string">'content-type'</span>)
+  ?.includes(<span class="string">'application/json'</span>)
+  ? <span class="keyword">await</span> response.<span class="function">json</span>()
+  : <span class="string">'{ "text": 'await</span> response.<span class="function">text</span>() };
+
+<span class="comment">// Salva resultado</span>
+<span class="keyword">await</span> prisma.job.<span class="function">update</span>({
+  where: { id: jobId },
+  data: {
+    status: <span class="string">'COMPLETED'</span>,
+    result: result,
+    completedAt: new Date()
+  }
+});
+
+<span class="comment">// Envia callback se definido</span>
+<span class="keyword">if</span> (callbackUrl) {
+  <span class="keyword">await</span> <span class="function">fetch</span>(callbackUrl, {
+    method: <span class="string">'POST'</span>,
+    body: JSON.stringify({
+      jobId, status: <span class="string">'COMPLETED'</span>, result
+    })
+  });
+}
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--failed);">7</div>
+          <div class="step-content">
+            <div class="step-title">Falha: retry e backoff exponencial</div>
+            <div class="step-subtitle">
+              Erros de fetch/timeout disparam retry automático via BullMQ<br>
+              Backoff exponencial: 5s, 10s, 20s, 40s... (baseado em maxRetries)
+            </div>
+            <div class="code-block">
+<span class="comment">// worker.ts - catch block</span>
+} <span class="keyword">catch</span> (error) {
+  <span class="comment">// Log do erro</span>
+  <span class="keyword">await</span> prisma.jobLog.<span class="function">create</span>({
+    data: { jobId, status: <span class="string">'FAILED'</span>, message: error.message }
+  });
+
+  <span class="keyword">throw</span> error; <span class="comment">// BullMQ gerencia retry</span>
+}
+
+<span class="comment">// worker.ts - failed event</span>
+worker.<span class="function">on</span>(<span class="string">'failed'</span>, async (job, error) => {
+  <span class="keyword">if</span> (job.attemptsMade >= job.opts.attempts) {
+    <span class="comment">// Marca como DEAD</span>
+    <span class="keyword">await</span> prisma.job.<span class="function">update</span>({
+      where: { id: job.data.jobId },
+      data: { status: <span class="string">'DEAD'</span>, error: error.message }
+    });
+  }
+});
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--dead);">8</div>
+          <div class="step-content">
+            <div class="step-title">Luva (Dead Letter)</div>
+            <div class="step-subtitle">
+              Após maxAttempts (padrão: 3), job é marcado como DEAD<br>
+              Pode receber callback de falha definitiva
+            </div>
+            <div class="code-block">
+<span class="comment">// STATUS DEAD - não pode mais ser retentado automaticamente</span>
+{
+  <span class="string">"status"</span>: <span class="string">"DEAD"</span>,
+  <span class="string">"error"</span>: <span class="string">"Webhook failed: timeout"</span>,
+  <span class="string">"attempts"</span>: 3,
+  <span class="string">"canRetry"</span>: false
+}
+
+<span class="comment">// Callback enviado</span>
+POST callbackUrl
+{
+  <span class="string">"jobId"</span>: <span class="string">"job_xxx"</span>,
+  <span class="string">"status"</span>: <span class="string">"DEAD"</span>,
+  <span class="string">"error"</span>: <span class="string">"..."</span>
+}
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number" style="background: var(--processing);">9</div>
+          <div class="step-content">
+            <div class="step-title">Retry Manual (FAILED ou DEAD)</div>
+            <div class="step-subtitle">
+              Usuário pode disparar retry manualmente<br>
+              Reinicia job com status PENDING e attempts = 0
+            </div>
+            <div class="code-block">
+<span class="comment">// POST /api/jobs/:id/retry</span>
+<span class="keyword">async function</span> <span class="function">retry</span>(orgId, id) {
+  <span class="keyword">const</span> job = <span class="keyword">await</span> prisma.job.<span class="function">findFirst</span>({ where: { id } });
+
+  <span class="keyword">await</span> prisma.job.<span class="function">update</span>({
+    where: { id },
+    data: {
+      status: <span class="string">'PENDING'</span>,
+      attempts: 0,
+      error: null,
+      result: null,
+      startedAt: null,
+      completedAt: null
+    }
+  });
+
+  <span class="comment">// Re-adiciona à fila BullMQ</span>
+  <span class="keyword">await</span> bullQueue.<span class="function">add</span>(<span class="string">'process'</span>, jobData, {
+    attempts: job.queue.maxRetries
+  });
+}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ESTADOS E TRANSICOES -->
+    <section>
+      <h2>Transições de Estado</h2>
+
+      <div class="info-box info">
+        <strong>Regras de transição:</strong>
+        <ul style="margin-top: 0.5rem; padding-left: 1.25rem;">
+          <li><strong>PENDING → PROCESSING:</strong> Worker pega da fila</li>
+          <li><strong>SCHEDULED → PENDING:</strong> Timer expira (BullMQ delay)</li>
+          <li><strong>SCHEDULED → CANCELLED:</strong> Usuário cancela antes do delay</li>
+          <li><strong>PROCESSING → COMPLETED:</strong> Webhook retorna status 2xx</li>
+          <li><strong>PROCESSING → FAILED:</strong> Webhook falha (timeout, 4xx/5xx, erro de rede)</li>
+          <li><strong>FAILED → PROCESSING:</strong> Retry automático (BullMQ backoff)</li>
+          <li><strong>FAILED/DEAD → PENDING:</strong> Retry manual via API</li>
+          <li><strong>PENDING/SCHEDULED → CANCELLED:</strong> Usuário cancela</li>
+          <li><strong>FAILED (tentativas esgotadas) → DEAD:</strong> Dead letter queue</li>
+        </ul>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Estado atual</th>
+            <th>Próximo estado</th>
+            <th>Gatilho</th>
+            <th>Pode retry manual?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>PENDING</strong></td><td>PROCESSING</td><td>Worker consome da fila</td><td>Cancelar apenas</td></tr>
+          <tr><td><strong>SCHEDULED</strong></td><td>PENDING</td><td>Delay expira (BullMQ)</td><td>Cancelar apenas</td></tr>
+          <tr><td><strong>SCHEDULED</strong></td><td>CANCELLED</td><td>Usuário cancela</td><td>N/A</td></tr>
+          <tr><td><strong>PROCESSING</strong></td><td>COMPLETED</td><td>Webhook retorna 2xx</td><td>Não (já finalizado)</td></tr>
+          <tr><td><strong>PROCESSING</strong></td><td>FAILED</td><td>Erro no fetch/webhook</td><td>Não (ainda em retry automático)</td></tr>
+          <tr><td><strong>FAILED</strong></td><td>PROCESSING</td><td>Retry automático (até maxAttempts)</td><td>Sim</td></tr>
+          <tr><td><strong>FAILED</strong></td><td>DEAD</td><td>Tentativas esgotadas (attempts >= maxRetries)</td><td>Sim (da estado DEAD)</td></tr>
+          <tr><td><strong>DEAD</strong></td><td>PENDING</td><td>Retry manual</td><td>Sim (única forma de reativar)</td></tr>
+          <tr><td><strong>QUALQUER</strong></td><td>CANCELLED</td><td>Usuário cancela (não em PROCESSING)</td><td>N/A</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. FLUXO DE ERROS -->
+    <section>
+      <h2>Propagação de Erros</h2>
+
+      <h3 style="margin-top: 1.5rem;">4.1. Tipos de Erro</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Erro</th>
+            <th>Causa</th>
+            <th>Comportamento</th>
+            <th>Tentativas restantes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Timeout</strong></td>
+            <td>AbortController após X ms (padrão: 300s)</td>
+            <td>Retry automático</td>
+            <td>maxAttempts - attemptsMade</td>
+          </tr>
+          <tr>
+            <td><strong>HTTP 4xx</strong></td>
+            <td>Webhook retorna erro cliente (400-499)</td>
+            <td>Normalmente retry (exceto 429)</td>
+            <td>maxAttempts - attemptsMade</td>
+          </tr>
+          <tr>
+            <td><strong>HTTP 5xx</strong></td>
+            <td>Erro servidor externo</td>
+            <td>Retry automático com backoff</td>
+            <td>maxAttempts - attemptsMade</td>
+          </tr>
+          <tr>
+            <td><strong>Network Error</strong></td>
+            <td>DNS falha, conexão recusada</td>
+            <td>Retry automático</td>
+            <td>maxAttempts - attemptsMade</td>
+          </tr>
+          <tr>
+            <td><strong>Rate Limit (429)</strong></td>
+            <td>Muitas requisições</td>
+            <td>Retry automático (backoff lento)</td>
+            <td>maxAttempts - attemptsMade</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 1.5rem;">4.2. Lógica de Retry Automático</h3>
+      <div class="code-block">
+<span class="comment">// Configuração BullMQ no worker.ts</span>
+<span class="keyword">const</span> worker = <span class="keyword">new</span> Worker<WorkerJobData>(queueName, processJob, {
+  connection: redis,
+  concurrency: queue.concurrency || 10,
+  limiter: { max: queue.rateLimit || 100, duration: 60000 },
+  attempts: queue.maxRetries,  <span class="comment">// Padrão: 3</span>
+  backoff: {
+    type: <span class="string">'exponential'</span>,
+    delay: queue.retryDelay  <span class="comment">// Padrão: 5000ms</span>
+  }
+});
+
+<span class="comment">// worker.on('failed') - Quando esgota tentativas</span>
+<span class="keyword">if</span> (job.attemptsMade >= job.opts.attempts) {
+  <span class="comment">// Marca como DEAD no banco</span>
+}
+      </div>
+
+      <div class="info-box warning">
+        <strong>Backoff Exponencial:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1.25rem;">
+          <li>Tentativa 1: delay de 5000ms (5s)</li>
+          <li>Tentativa 2: delay de 10000ms (10s)</li>
+          <li>Tentativa 3: delay de 20000ms (20s)</li>
+          <li>Tentativa 4: delay de 40000ms (40s)</li>
+          <li>...</li>
+        </ul>
+        <small>Fórmula: delay × 2^(attemptsMade - 1)</small>
+      </div>
+    </section>
+
+    <!-- 5. CALLBACK SYSTEM -->
+    <section>
+      <h2>Sistema de Callback</h2>
+      <p style="margin-bottom: 1rem;">
+        Quando <code>callbackUrl</code> é fornecido na criação do job, o sistema envia notificações POST sobre mudanças de status.
+      </p>
+
+      <h3>Callback no COMPLETED</h3>
+      <div class="code-block">
+POST callbackUrl
+Content-Type: application/json
+
+{
+  "jobId": "job_abc123",
+  "status": "COMPLETED",
+  "result": { ... },        <span class="comment">// Resposta do webhook</span>
+  "duration": 1250,        <span class="comment">// Duracao em ms</span>
+  "attempts": 1           <span class="comment">// Numero de tentativas</span>
+}
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Callback no DEAD</h3>
+      <div class="code-block">
+POST callbackUrl
+Content-Type: application/json
+
+{
+  "jobId": "job_abc123",
+  "status": "DEAD",
+  "error": "Webhook failed: Request timeout",
+  "attempts": 3,
+  "duration": 300000
+}
+      </div>
+
+      <div class="info-box danger">
+        <strong>Importante:</strong> Falhas no callback são registradas em log mas
+        <strong>não afetam</strong> o status do job. O job já está em seu estado final
+        quando o callback é disparado.
+      </div>
+    </section>
+
+    <!-- 6. API ENDPOINTS -->
+    <section>
+      <h2>Endpoints da API</h2>
+
+      <h3>Jobs</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Método</th>
+            <th>Endpoint</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="http-method http-post">POST</span></td>
+            <td><span class="endpoint">/api/jobs</span></td>
+            <td>Cria novo job</td>
+          </tr>
+          <tr>
+            <td><span class="http-method http-post">POST</span></td>
+            <td><span class="endpoint">/api/jobs/bulk</span></td>
+            <td>Cria múltiplos jobs (batch)</td>
+          </tr>
+          <tr>
+            <td><span class="http-method http-get">GET</span></td>
+            <td><span class="endpoint">/api/jobs</span></td>
+            <td>Lista jobs com filtros</td>
+          </tr>
+          <tr>
+            <td><span class="http-method http-get">GET</span></td>
+            <td><span class="endpoint">/api/jobs/:id</span></td>
+            <td>Obtém job + logs por ID</td>
+          </tr>
+          <tr>
+            <td><span class="http-method http-delete">DELETE</span></td>
+            <td><span class="endpoint">/api/jobs/:id</span></td>
+            <td>Cancelar job (PENDING/SCHEDULED apenas)</td>
+          </tr>
+          <tr>
+            <td><span class="http-method http-post">POST</span></td>
+            <td><span class="endpoint">/api/jobs/:id/retry</span></td>
+            <td>Retry manual (FAILED/DEAD apenas)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 1.5rem;">Filtros de Lista</h3>
+      <div class="code-block">
+GET /api/jobs?status=FAILED&queue=default&from=2025-01-01&limit=20&offset=0
+      </div>
+    </section>
+
+    <!-- 7. FRONTEND STATUS POLLING -->
+    <section>
+      <h2>Frontend: Acompanhamento de Status</h2>
+
+      <h3>Lista de Jobs (useJobs hook)</h3>
+      <div class="code-block">
+<span class="comment">// hooks/useJobs.ts</span>
+<span class="keyword">export function</span> <span class="function">useJobs</span>(filters) {
+  <span class="keyword">return</span> useQuery({
+    queryKey: [<span class="string">'jobs'</span>, filters],
+    queryFn: () => jobsApi.<span class="function">list</span>(filters),
+    refetchInterval: REFETCH_INTERVALS.JOBS_LIST, <span class="comment">// 30s</span>
+  });
+}
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Detalhe do Job (useJob hook)</h3>
+      <div class="code-block">
+<span class="comment">// hooks/useJobs.ts - useJob()</span>
+refetchInterval: REFETCH_INTERVALS.JOB_DETAIL, <span class="comment">// 5s</span>
+      </div>
+
+      <div class="info-box info">
+        <strong>Como funciona:</strong>
+        <ul style="margin-top: 0.5rem; padding-left: 1.25rem;">
+          <li><strong>Lista:</strong> Polling a cada 30 segundos (REFETCH_INTERVALS.JOBS_LIST)</li>
+          <li><strong>Detalhe:</strong> Polling a cada 5 segundos para jobs ativos (PROCESSING, PENDING, SCHEDULED)</li>
+          <li>Jobs completados/errados fazem fetch único sem polling contínuo</li>
+          <li>React Query gerencia cache e invalidacao</li>
+        </ul>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Retry Manual no Frontend</h3>
+      <div class="code-block">
+<span class="comment">// Jobs.tsx</span>
+{(job.status === <span class="string">"FAILED"</span> || job.status === <span class="string">"DEAD"</span>) && (
+  <Button onClick={() => handleRetry(job.id)}>
+    <RefreshCw className="h-4 w-4 mr-2" />
+    Retry
+  </Button>
+)}
+
+{(job.status === <span class="string">"PENDING"</span> || job.status === <span class="string">"SCHEDULED"</span>) && (
+  <Button variant="<span class="string">"destructive"</span>" onClick={() => handleCancel(job.id)}>
+    <X className="h-4 w-4 mr-2" />
+    Cancel
+  </Button>
+)}
+      </div>
+
+      <div class="info-box warning">
+        <strong>Restricoes de UI:</strong>
+        <ul style="margin-top: 0.5rem; padding-left: 1.25rem;">
+          <li>Retry visivel apenas em jobs FAILED ou DEAD</li>
+          <li>Cancel visivel apenas em jobs PENDING ou SCHEDULED</li>
+          <li>Cancel bloqueado em PROCESSING (dispara erro na API)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8. JOB LOGS -->
+    <section>
+      <h2>JobLog (Logs de Execucao)</h2>
+      <p style="margin-bottom: 1rem;">
+        Cada tentativa de execucao gera um registro na tabela <code>JobLog</code> com detalhes da execucao.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>UUID</td><td>ID unico do log</td></tr>
+          <tr><td><code>jobId</code></td><td>UUID</td><td>Referencia ao Job</td></tr>
+          <tr><td><code>attempt</code></td><td>integer</td><td>Numero da tentativa (1, 2, 3...)</td></tr>
+          <tr><td><code>status</code></td><td>string</td><td>'COMPLETED' ou 'FAILED'</td></tr>
+          <tr><td><code>message</code></td><td>string</td><td>Mensagem de erro ou sucesso</td></tr>
+          <tr><td><code>duration</code></td><td>integer</td><td>Duracao em milissegundos</td></tr>
+          <tr><td><code>createdAt</code></td><td>datetime</td><td>Quando o log foi criado</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+<span class="comment">// worker.ts - criacao de logs</span>
+<span class="comment">// Na tentativa bem-sucedida:</span>
+<span class="keyword">await</span> prisma.jobLog.<span class="function">create</span>({
+  data: {
+    jobId,
+    attempt: job.attemptsMade,
+    status: <span class="string">'COMPLETED'</span>,
+    message: <span class="string">'Job completed successfully'</span>,
+    duration
+  }
+});
+
+<span class="comment">// Na tentativa falha:</span>
+<span class="keyword">await</span> prisma.jobLog.<span class="function">create</span>({
+  data: {
+    jobId,
+    attempt: job.attemptsMade,
+    status: <span class="string">'FAILED'</span>,
+    message: errorMessage,
+    duration
+  }
+});
+      </div>
+
+      <div class="info-box info">
+        <strong>Consulta no frontend:</strong> Os logs sao carregados junto com o job na endpoint <code>GET /api/jobs/:id</code>
+        com <code>include: { logs: { orderBy: { createdAt: 'desc' } } }</code>
+      </div>
+    </section>
+
+    <!-- 9. CONFIGURACAO DE QUEUE -->
+    <section>
+      <h2>Configuracao de Queue</h2>
+      <p style="margin-bottom: 1rem;">
+        Cada fila (queue) tem suas proprias configuracoes de retry, timeout e concurrency.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Propriedade</th>
+            <th>Tipo</th>
+            <th>Padrao</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>string</td><td>-</td><td>Nome unico da fila</td></tr>
+          <tr><td><code>concurrency</code></td><td>integer</td><td>5</td><td>Jobs simultaneos por worker (1-100)</td></tr>
+          <tr><td><code>maxRetries</code></td><td>integer</td><td>3</td><td>Tentativas maximas antes de DEAD</td></tr>
+          <tr><td><code>retryDelay</code></td><td>integer</td><td>5000</td><td>Delay base para backoff (ms)</td></tr>
+          <tr><td><code>timeout</code></td><td>integer</td><td>300000</td><td>Timeout do webhook (ms, padrao: 5min)</td></tr>
+          <tr><td><code>rateLimit</code></td><td>integer</td><td>100</td><td>Max jobs por minuto por worker</td></tr>
+          <tr><td><code>isActive</code></td><td>boolean</td><td>true</td><td>Se fila processa novos jobs</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+<span class="comment">// Criacao automatica se queue nao existe</span>
+<span class="keyword">if</span> (!queue) {
+  queue = <span class="keyword">await</span> queueService.<span class="function">create</span>(organizationId, {
+    name: data.queue,
+    concurrency: 5,
+    maxRetries: 3,
+    retryDelay: 5000,
+    timeout: 300000,
+  });
+}
+      </div>
+    </section>
+
+    <!-- 10. FLUXOCOMPLETO -->
+    <section>
+      <h2>Fluxo Completo em Diagrama</h2>
+
+      <div class="flow-diagram">
+        <div class="flow-box" style="background: #dbeafe; border: 2px solid #3b82f6;">Frontend Form</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fef3c7; border: 2px solid #f59e0b;">POST /api/jobs</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #e0e7ff; border: 2px solid #6366f1;">DB: INSERT</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #dcfce7; border: 2px solid #22c55e;">BullMQ Queue</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fef9c3; border: 2px solid #eab308;">Worker</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fee2e2; border: 2px solid #ef4444;">Webhook Fetch</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #d1fae5; border: 2px solid #10b981;">COMPLETED</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #f0f9ff; border: 2px solid #0ea5e9;">POST Callback</div>
+      </div>
+
+      <div class="flow-diagram" style="margin-top: 1rem;">
+        <div class="flow-box" style="background: #fee2e2; border: 2px solid #ef4444;">Erro</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fef3c7; border: 2px solid #d97706;">Retry (1/3)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fef3c7; border: 2px solid #d97706;">Retry (2/3)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #fef3c7; border: 2px solid #d97706;">Retry (3/3)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #dc2626; color: white; border: 2px solid #991b1b;">DEAD</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-box" style="background: #e0e7ff; border: 2px solid #4f46e5;">Retry Manual (API)</div>
+      </div>
+    </section>
+
+    <!-- 11. RESUMO TECNICO -->
+    <section>
+      <h2>Resumo Tecnico</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <div>
+          <h4 style="margin-bottom: 0.75rem; color: var(--primary);">Backend</h4>
+          <ul class="bullet-list">
+            <li>Fastify (porta 3001)</li>
+            <li>PostgreSQL (Prisma ORM)</li>
+            <li>Redis (BullMQ)</li>
+            <li>JWT + API Key auth</li>
+            <li>Rate limiting (1000 req/min)</li>
+            <li>Swagger docs em /docs</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin-bottom: 0.75rem; color: var(--primary);">Worker</h4>
+          <ul class="bullet-list">
+            <li>BullMQ Worker</li>
+            <li>Concurrency configurável por queue</li>
+            <li>Backoff exponencial</li>
+            <li>Auto-detecta novas queues (30s interval)</li>
+            <li>Graceful shutdown (SIGTERM/SIGINT)</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin-bottom: 0.75rem; color: var(--primary);">Frontend</h4>
+          <ul class="bullet-list">
+            <li>React + TypeScript</li>
+            <li>React Query (caching + polling)</li>
+            <li>Tailwind CSS</li>
+            <li>Polling: lista 30s, detalhe 5s</li>
+            <li>Refetch automatico apos mutacoes</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 2rem;">Arquivos Principais</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Funcao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>backend-job-assync/src/server.ts</code></td><td>Fastify server, auth, rotas</td></tr>
+          <tr><td><code>backend-job-assync/src/worker.ts</code></td><td>BullMQ worker + processJob</td></tr>
+          <tr><td><code>backend-job-assync/src/services/job.service.ts</code></td><td>Job CRUD, create, retry, cancel</td></tr>
+          <tr><td><code>backend-job-assync/src/routes/jobs.ts</code></td><td>API endpoints de jobs</td></tr>
+          <tr><td><code>backend-job-assync/src/lib/bullmq.ts</code></td><td>Queue factory (org + name)</td></tr>
+          <tr><td><code>frontend-job-async/src/hooks/useJobs.ts</code></td><td>React Query hooks</td></tr>
+          <tr><td><code>frontend-job-async/src/pages/Jobs.tsx</code></td><td>Lista + Criacao</td></tr>
+          <tr><td><code>frontend-job-async/src/pages/JobDetail.tsx</code></td><td>Detalhe + logs + retry</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer">
+      <p>Documentacao gerada automaticamente - Job Run System</p>
+      <p>Backend: Node.js + Fastify + BullMQ + PostgreSQL | Frontend: React + TanStack Query</p>
+    </div>
+  </div>
+</body>
+</html>

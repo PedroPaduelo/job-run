@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backup & Restore Procedures - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Backup & Restore Procedures</span></div>
+
+    <div class="doc-header">
+      <span class="badge ops">Ops</span>
+      <h1>Backup & Restore Procedures</h1>
+      <p class="subtitle">pg_dump, Redis RDB/AOF, testes de restore</p>
+    </div>
+
+    <div class="section">
+      <h2>🗄️ O que Backupar</h2>
+      <ul>
+        <li><strong>PostgreSQL</strong>: todos schemas</li>
+        <li><strong>Redis</strong>: dump.rdb ou AOF</li>
+        <li><strong>.env</strong>: secrets (manualmente, encriptado)</li>
+      </ul>
+
+      <h2>📦 PostgreSQL Backup</h2>
+      <pre><code>pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER $DB_NAME > backup-$(date +%F).sql
+pg_dump ... | gzip > backup-$(date +%F).sql.gz
+zcat backup.sql.gz | psql -h ... -U ... $DB_NAME</code></pre>
+
+      <h2>📦 Redis Backup</h2>
+      <pre><code>redis-cli BGSAVE
+# Restore: copy dump.rdb + restart Redis</code></pre>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Automated daily backups</strong> — cron + S3</li>
+        <li><strong>Retention 30 dias</strong></li>
+        <li><strong>Testar restore mensalmente</strong></li>
+        <li><strong>Encriptar backups</strong></li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Backup diário configurado? ❌</li>
+        <li>Retention policy? ❌</li>
+        <li>Teste de restore regular? ❌</li>
+        <li>Backups encriptados? ❌</li>
+        <li>Off-site copy? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Backup</p>
+    </div>
+  </div>
+</body>
+</html>

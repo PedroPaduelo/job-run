@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitetura do Sistema - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html" class="active">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Arquitetura</span>
+      </div>
+      <span class="badge">Infraestrutura</span>
+      <h1>Arquitetura do Sistema</h1>
+      <p class="subtitle">Entenda a arquitetura completa da plataforma JobSync de processamento assíncrono de jobs</p>
+    </div>
+
+    <div class="card-grid section">
+      <a href="arquitetura-overview.html#overview" class="card-link">
+        <div class="card">
+          <div class="card-icon purple">🎯</div>
+          <h3>Visão Geral</h3>
+          <p>Componentes principais e organização em camadas</p>
+          <span class="tag arch">Architecture</span>
+        </div>
+      </a>
+      <a href="arquitetura-overview.html#data-flow" class="card-link">
+        <div class="card">
+          <div class="card-icon blue">🔄</div>
+          <h3>Fluxo de Dados</h3>
+          <p>Como os dados fluem através do sistema</p>
+          <span class="tag flow">Flow</span>
+        </div>
+      </a>
+      <a href="arquitetura-overview.html#multi-tenant" class="card-link">
+        <div class="card">
+          <div class="card-icon green">🏢</div>
+          <h3>Multi-Tenancy</h3>
+          <p>Isolamento de dados por organização</p>
+          <span class="tag arch">Security</span>
+        </div>
+      </a>
+      <a href="frontend-techstack.html" class="card-link">
+        <div class="card">
+          <div class="card-icon yellow">⚛️</div>
+          <h3>Frontend</h3>
+          <p>React, Vite, TanStack Query e shadcn/ui</p>
+          <span class="tag frontend">Frontend</span>
+        </div>
+      </a>
+      <a href="sistema-filas.html" class="card-link">
+        <div class="card">
+          <div class="card-icon red">📋</div>
+          <h3>Sistema de Filas</h3>
+          <p>BullMQ, Redis e workers</p>
+          <span class="tag arch">Core</span>
+        </div>
+      </a>
+      <a href="postsgreSQL-integracao.html" class="card-link">
+        <div class="card">
+          <div class="card-icon purple">🗄️</div>
+          <h3>PostgreSQL</h3>
+          <p>Prisma ORM e schema de dados</p>
+          <span class="tag arch">Storage</span>
+        </div>
+      </a>
+    </div>
+
+    <section id="overview" class="section">
+      <h2>Visão Geral</h2>
+      <p>O JobSync é uma plataforma de processamento assíncrono de jobs construída com uma arquitetura moderna, escalável e multi-tenant. O sistema é dividido em duas aplicações principais:</p>
+
+      <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CLIENTE / USUÁRIO                           │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ HTTP/HTTPS (API Calls)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      FRONTEND (React + Vite)                       │
+│  • Dashboard • Jobs • Queues • Settings • Login/Callback           │
+│  • React Router DOM • TanStack Query • shadcn/ui • Tailwind CSS   │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ API Requests (Bearer Token)
+                                │ X-Organization-Id header
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BACKEND API (Fastify 4/5)                       │
+│  • /api/jobs • /api/queues • /api/stats • /api/apikeys           │
+│  • Autenticação • Autorização • Rate Limit • CORS • Sentry        │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │ Rotas (routes/)        Serviços (services/)                 │ │
+│  │ • jobs.routes.ts       • job.service.ts                     │ │
+│  │ • queues.routes.ts     • queue.service.ts                   │ │
+│  │ • stats.routes.ts      • stats.service.ts                   │ │
+│  │ • apikeys.routes.ts    • apikey.service.ts                  │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │
+                  ┌─────────────┴──────────────┐
+                  ▼                            ▼
+┌──────────────────────────────┐  ┌──────────────────────────────┐
+│   PRISMA ORM                 │  │   BULLMQ + REDIS             │
+│   PostgreSQL                 │  │   (Job Processing Queue)    │
+│                             │  │                              │
+│  models:                    │  │  Queue Namespacing:         │
+│  • User                     │  │  jobs-{orgId}-{queueName}  │
+│  • Organization             │  │                              │
+│  • OrganizationMember       │  │  Worker Pool:               │
+│  • Queue                    │  │  - Process job data         │
+│  • Job                      │  │  - HTTP webhook call        │
+│  • JobLog                   │  │  - Retry logic              │
+│  • ApiKey                   │  │  - Callback on complete     │
+│  • AuditLog                 │  │                              │
+└──────────────────────────────┘  └─────────────┬───────────────┘
+                    │                           │
+                    │ persistence               │ job dispatch
+                    ▼                           ▼
+          ┌──────────────────┐      ┌──────────────────────┐
+          │  PostgreSQL DB   │      │   Redis (Cache +    │
+          │  (job data,      │      │   BullMQ Broker)    │
+          │   audit logs)    │      └──────────────────────┘
+          └──────────────────┘
+
+      </div>
+
+      <h3>Camadas da Aplicação</h3>
+      <p><strong>Frontend (React):</strong> Interface de usuário com rotas protegidas, useQuery/useMutation para dados, componentes reutilizáveis.</p>
+      <p><strong>Backend API (Fastify):</strong> REST API com autenticação via JWT ou API Keys, rate limiting, CORS, validação Zod.</p>
+      <p><strong>Serviços (Service Layer):</strong> Lógica de negócio isolada das rotas. Cada domínio tem seu service.</p>
+      <p><strong>Repositório (Prisma):</strong> Acesso a dados via ORM. Schema define relacionamentos e constraints.</p>
+      <p><strong>Workers (BullMQ):</strong> Processam jobs de forma assíncrona, com retry automático e timeout.</p>
+    </section>
+
+    <section id="multi-tenant" class="section">
+      <h2>Multi-Tenancy</h2>
+      <p>O sistema é <strong>multi-tenant por organização</strong>. Cada organização (tenant) tem seus dados isolados no banco e no Redis.</p>
+
+      <h3>Identificação do Tenant</h3>
+      <ul>
+        <li><strong>Header X-Organization-Id:</strong> Enviado em todas as requisições API</li>
+        <li><strong>API Keys:</strong> Vinculadas a uma organização específica</li>
+        <li><strong>JWT:</strong> Pode conter organizationId no payload, ou o sistema busca a primeira organização do usuário</li>
+      </ul>
+
+      <h3>Isolamento de Dados</h3>
+      <p>Todas as queries do Prisma filtram por <code>organizationId</code>. O hook <code>onRequest</code> do Fastify valida e popula <code>request.organizationId</code>.</p>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Isolamento Forte</strong>
+          <p>O isolation é garantido em código — toda query deve filtrar por organizationId. Nunca confie apenas em constraints do banco.</p>
+        </div>
+      </div>
+
+      <h3>Namespaces no Redis</h3>
+      <p>Filas BullMQ são namespaced por organização: <code>jobs-{orgId}-{queueName}</code>. Isso garante que filas de organizações diferentes não colidam.</p>
+    </section>
+
+    <section id="permissions" class="section">
+      <h2>Sistema de Permissões (RBAC)</h2>
+      <p>Baseado em papéis (roles) e permissões granulares. Implementado em <code>src/lib/auth.ts</code>.</p>
+
+      <h3>Roles</h3>
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Descrição</th><th>Permissões</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>OWNER</code></td><td>Don da organização</td><td>Todas (<code>*</code>)</td></tr>
+          <tr><td><code>ADMIN</code></td><td>Administrador</td><td>Jobs: create/read/update/delete/retry/cancel, Queues:全部, ApiKeys: create/read/delete</td></tr>
+          <tr><td><code>MEMBER</code></td><td>Membro regular</td><td>Jobs: create/read/retry/cancel, Queues: read</td></tr>
+          <tr><td><code>VIEWER</code></td><td>Somente leitura</td><td>Jobs: read, Queues: read</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Permissões por Recurso</h3>
+      <ul>
+        <li><code>jobs:create</code> — Criar novos jobs</li>
+        <li><code>jobs:read</code> — Ver jobs e seus logs</li>
+        <li><code>jobs:update</code> — Atualizar jobs (raro)</li>
+        <li><code>jobs:delete</code> — Deletar jobs</li>
+        <li><code>jobs:retry</code> — Retriar jobs falhos</li>
+        <li><code>jobs:cancel</code> — Cancelar jobs pendentes</li>
+        <li><code>queues:create</code> — Criar filas</li>
+        <li><code>queues:read</code> — Ver filas e estatísticas</li>
+        <li><code>queues:update</code> — Modificar configurações da fila</li>
+        <li><code>queues:delete</code> — Remover filas</li>
+        <li><code>queues:pause</code> — Pausar/resumir filas</li>
+        <li><code>apikeys:create</code> — Criar API Keys</li>
+        <li><code>apikeys:read</code> — Listar API Keys</li>
+        <li><code>apikeys:delete</code> — Deletar API Keys</li>
+        <li><code>admin:*</code> — todas as permissões (wildcard)</li>
+        <li><code>org:settings</code> — Configurações da organização</li>
+      </ul>
+
+      <h3>Verificação de Permissões</h3>
+      <pre><code>// Middleware de permissão (backend)
+fastify.addHook('onRequest', async (request, reply) => {
+  const permission = 'jobs:create';
+  if (!hasPermission(request.permissions, permission)) {
+    await logAudit({
+      organizationId: request.organizationId,
+      action: 'permission.denied',
+      metadata: { required: permission },
+      status: 'DENIED',
+    });
+    return reply.status(403).send({ error: 'Forbidden' });
+  }
+});</code></pre>
+
+      <p>No frontend, use <code>usePermissions</code> da SDK ou o hook customizado para mostrar/esconder UI.</p>
+    </section>
+
+    <section id="auth" class="section">
+      <h2>Autenticação e Autorização</h2>
+
+      <h3>Fluxo OAuth 2.0 (Usuários)</h3>
+      <div class="flow-diagram">
+Cliente Web (Frontend)
+    │
+    │ 1. User clica "Login"
+    ▼
+AuthProvider.authorize() (PKCE Flow)
+    │
+    │ 2. Redirect para /oauth/authorize?client_id=job-sync
+    ▼
+Auth Service (Identity Provider)
+    │ • Login page
+    │ • Consentimento (scopes: openid profile email organizations)
+    ▼
+3. Redirect de volta com code + state
+    ▼
+Frontend: /callback
+    │
+    │ 4. Troca code por tokens (access_token, refresh_token, id_token)
+    ▼
+Tokens armazenados em localStorage (access_token) + em memória (refresh)
+    │
+    │ 5. Access Token enviado em Authorization: Bearer {token}
+    ▼
+Backend valida JWT via JWKS
+
+      </div>
+
+      <h3>API Keys (Machine-to-Machine)</h3>
+      <p>Para integrações server-to-server, use API Keys. Elas são:</p>
+      <ul>
+        <li>Geradas como <code>jsk_</code> + 32 bytes aleatórios hex</li>
+        <li>Vinculadas a uma organização</li>
+        <li>Possuem permissões específicas</li>
+        <li>Podem ter allowed_domains, allowed_ips, rate_limit</li>
+        <li>Podem ter data de expiração</li>
+        <li>Usadas como Bearer token na Authorization header</li>
+      </ul>
+
+      <pre><code>// Exemplo de autenticação com API Key
+Authorization: Bearer jsk_abc123def456...
+
+// Backend:
+const apiKey = await prisma.apiKey.findUnique({ where: { key: token } });
+if (apiKey && apiKey.isActive && !apiKey.expiresAt) {
+  request.organizationId = apiKey.organizationId;
+  request.permissions = apiKey.permissions;
+  // Não há userId associado (machine)
+}</code></pre>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Importante</strong>
+          <p>Apenas o primeiro uso da API Key mostra o valor completo. Após isso, guarde em local seguro — não é possível recuperá-la.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Segurança em Camadas</h2>
+      <ul>
+        <li><strong>HTTPS Only:</strong> All traffic encrypted in transit</li>
+        <li><strong>CORS Whitelist:</strong> Only allowed origins can call the API</li>
+        <li><strong>Rate Limiting:</strong> 1000 req/min por organização, configurável por API Key</li>
+        <li><strong>Input Validation:</strong> Zod schemas em todas as rotas</li>
+        <li><strong>SQL Injection:</strong> Prevented by Prisma parameterized queries</li>
+        <li><strong>JWT Verification:</strong> Via JWKS, com cache de 5 min</li>
+        <li><strong>Sentry Monitoring:</strong> Captura exceções e contexto de segurança</li>
+        <li><strong>Audit Log:</strong> Todas as ações críticas são logadas</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Built for clarity and operational excellence</p>
+      <p>Need help? Check the <a href="troubleshooting.html">Troubleshooting Guide</a> or <a href="api-reference.html">API Reference</a>.</p>
+    </div>
+  </div>
+</body>
+</html>

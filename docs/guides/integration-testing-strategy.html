@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integration Testing Strategy - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Integration Testing Strategy</span></div>
+
+    <div class="doc-header">
+      <span class="badge testing">Testing</span>
+      <h1>Integration Testing Strategy</h1>
+      <p class="subtitle">Testes com banco real, BullMQ, Redis</p>
+    </div>
+
+    <div class="section">
+      <h2>🧪 O que Testar</h2>
+      <ul>
+        <li><strong>Job creation flow</strong> — POST /api/jobs → DB insert → BullMQ enqueue</li>
+        <li><strong>Worker processing</strong> — job na fila → processJob → webhook mock → callback</li>
+        <li><strong>Retry logic</strong> — webhook falha 3x → status DEAD</li>
+        <li><strong>Queue pause/resume</strong> — afeta workers?</li>
+        <li><strong>Multi-tenancy</strong> — org A não vê jobs da org B</li>
+      </ul>
+
+      <h2>🔧 Setup de Testes</h2>
+      <pre><code>// vitest.config.ts
+export default defineConfig({
+  test: {
+    environment: 'node',
+    setupFiles: ['./tests/setup.ts'],
+  },
+});</code></pre>
+
+      <p>Usar banco de testes PostgreSQL separado (ou SQLite em memória).</p>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Test real DB</strong> — não mock Prisma, usar test container</li>
+        <li><strong>Test real Redis</strong> — ou mock doBullMQ usando <code>bullmq-test-utils</code></li>
+        <li><strong>Mock webhooks</strong> — usar <code>nock</code> para interceptar fetch</li>
+        <li><strong>Fixtures</strong> — criar factories para Organization, Queue, Job</li>
+        <li><strong>Coverage</strong> — mirar &gt;80% em services</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Testes unitários existentes? ⚠️</li>
+        <li>Testes de integração? ❌</li>
+        <li>Mock de外部API? ❌</li>
+        <li>Test DB configurado? ❌</li>
+        <li>CI roda testes? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Testing</p>
+    </div>
+  </div>
+</body>
+</html>

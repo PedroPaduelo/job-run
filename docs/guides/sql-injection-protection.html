@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Injection Protection - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>SQL Injection Protection</span></div>
+
+    <div class="doc-header">
+      <span class="badge security">Security</span>
+      <h1>SQL Injection Protection</h1>
+      <p class="subtitle">Prisma ORM vs raw queries, defesa em profundidade</p>
+    </div>
+
+    <div class="section">
+      <h2>🛡️ Status Atual</h2>
+      <p><strong>Protegido ✅</strong> — Sistema usa exclusivamente Prisma ORM, que usa parameterized queries por baixo dos panos.</p>
+
+      <div class="alert success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <strong>Prisma ORM</strong>
+          <p>Todas queries usam Prisma Client, que gera queries parametrizadas automaticamente.</p>
+        </div>
+      </div>
+
+      <h2>📊 Exemplos de Queries Seguras</h2>
+      <pre><code>// ✅ SEGURO - Prisma
+const job = await prisma.job.findFirst({
+  where: {
+    id,
+    organizationId  // Parâmetros são sanitizados automaticamente
+  }
+});
+
+// ✅ SEGURO - createMany com array
+await prisma.job.createMany({
+  data: jobsToCreate,
+  skipDuplicates: true
+});
+
+// ✅ SEGURO - raw com parâmetros
+await prisma.$queryRaw\`SELECT * FROM jobs WHERE id = \${jobId}\`;
+//              ↑ Prisma faz interpolação segura</code></pre>
+
+      <h2>⚠️ Possíveis Riscos</h2>
+      <ul>
+        <li><strong>$queryRaw interpolado</strong> — se usar template literals com variáveis:</li>
+      </ul>
+      <pre><code>// ❌ PERIGOSO - NÃO FAZER ISSO
+await prisma.$queryRaw\`SELECT * FROM jobs WHERE id = '\${userInput}'\`;
+//                 ↑ userInput pode conter '; DROP TABLE jobs; --
+
+// ✅ SEGURO - usar $queryRaw com parâmetros
+await prisma.$queryRaw\`SELECT * FROM jobs WHERE id = \${userInput}\`;
+                       // ↑ Prisma treata como parâmetro, não string interpolation</code></pre>
+
+      <ul>
+        <li><strong>Debug logs</strong> — não logger o input do usuário diretamente em queries</li>
+        <li><strong>JSON fields</strong> — Prisma sanitiza, mas cuidado com JSON.stringify de user input</li>
+      </ul>
+
+      <h2>📋 Checklist de Segurança</h2>
+      <ul>
+        <li>✅ <strong>Sempre usar Prisma methods</strong> (findFirst, create, update, delete)</li>
+        <li>✅ <strong>Evitar $queryRaw</strong> — usar apenas se estritamente necessário</li>
+        <li>✅ <strong>Se usar $queryRaw</strong> — usar parameterized syntax</li>
+        <li>✅ <strong>Organization ID sempre presente</strong> — isolamento multi-tenant</li>
+        <li>⚠️ <strong>Input logging</strong> — sanitizar antes de log</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>ESLint rule</strong> — bloquear $queryRaw/template literals perigoso</li>
+        <li><strong>Code review</strong> — qualquer raw query precisa de aprovação</li>
+        <li><strong>PG parameters logging</strong> — ativar para audit de queries</li>
+        <li><strong>WAF</strong> — Web Application Firewall pode bloquear SQLi patterns</li>
+      </ol>
+
+      <h2>🔍 Verificação</h2>
+      <pre><code>// Busca por $queryRaw no código
+grep -r "\$queryRaw" src/</code></pre>
+
+      <p>Se output incluir <code>${</code> (template interpolation), revisar urgente.</p>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Usa Prisma exclusively? ✅</li>
+        <li>$queryRaw reviewed? ⚠️ (verificar)</li>
+        <li>Template literals safe? ✅</li>
+        <li>WAF com SQLi rules? ❌</li>
+        <li>Audit logging de queries? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — SQL Injection Protection</p>
+    </div>
+  </div>
+</body>
+</html>

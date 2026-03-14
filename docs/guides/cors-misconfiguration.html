@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORS Misconfiguration - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>CORS Misconfiguration</span></div>
+
+    <div class="doc-header">
+      <span class="badge risk">Risco</span>
+      <h1>CORS Misconfiguration</h1>
+      <p class="subtitle">Configuração permissiva permite ataques cross-origin</p>
+    </div>
+
+    <div class="section">
+      <h2>🔓 O Problema</h2>
+      <p>CORS config usa origem dinâmica:</p>
+      <pre><code>const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',').map(o => o.trim());
+
+await fastify.register(cors, {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);  // ← permite null origin (apps移动, curl)
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'), false);
+  },
+  credentials: true,
+});</code></pre>
+
+      <div class="alert danger">
+        <div class="alert-icon">🌐</div>
+        <div class="alert-content">
+          <strong>Permissivo demais</strong>
+          <p><code>if (!origin) return callback(null, true)</code> permite requisições sem Origin (curl, mobile apps, server-to-server). Isso pode ser explorado.</p>
+        </div>
+      </div>
+
+      <h2>💥 Riscos</h2>
+      <ul>
+        <li><strong>CSRF via CORS</strong> — attacker faz fetch de API de site malicioso se credentials são enviados</li>
+        <li><strong>Leak de dados</strong> — se ALLOWED_ORIGINS não está configurado, attacker pode ler responses</li>
+        <li><strong>Wildcard + credentials</strong> — <code>Access-Control-Allow-Origin: *</code> com <code>credentials: true</code> é bloqueado pelo browser, mas se códigoallow all origin em dev, pode afetar production</li>
+        <li><strong>Subdomain takeover</strong> — se allowedOrigins inclui subdomains curinga (<code>*.exemplo.com</code>), attacker pode registrar <code>evil.exemplo.com</code></li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Não permitir null origin em produção</strong>:
+          <pre><code>origin: (origin, cb) => {
+  if (!origin && process.env.NODE_ENV === 'production') {
+    return cb(new Error('Origin required'), false);
+  }
+  // ... resto
+}</code></pre>
+        </li>
+        <li><strong>ValidarALLOWED_ORIGINS strictamente</strong> — sem wildcards, lista explícita HTTPS only</li>
+        <li><strong>Separar allowedOrigins por ambiente</strong> — produção vs staging</li>
+        <li><strong>Log rejected origins</strong> — para detectar scan/attack</li>
+        <li><strong>credentials: true</strong> apenas se necessário (API keys em headers, não cookies) — pode setar false se usar Bearer apenas</li>
+        <li><strong>HSTS</strong> — garantir HTTPS apenas</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>ALLOWED_ORIGINS tem HTTPS? ⚠️</li>
+        <li>null origin bloqueado em prod? ❌</li>
+        <li>Wildcards usados? ❌</li>
+        <li>credentials: true necessário? ⚠️ (Bearer token não precisa de credentials)</li>
+        <li>Rejected origins são logados? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Configuração CORS</p>
+    </div>
+  </div>
+</body>
+</html>

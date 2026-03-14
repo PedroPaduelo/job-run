@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Troubleshooting - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">JobSync Docs</a>
+      <div class="nav-links"><a href="arquitetura-overview.html">Arquitetura</a><a href="api-reference.html">API</a><a href="frontend-techstack.html">Frontend</a><a href="deploy-configuracao.html">Deploy</a></div>
+    </div>
+  </nav>
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <span>Troubleshooting</span></div>
+      <span class="badge">Suporte</span>
+      <h1>Troubleshooting</h1>
+      <p class="subtitle">Resolução de problemas comuns no JobSync</p>
+    </div>
+
+    <section class="section">
+      <h2>1. Worker não está processando jobs</h2>
+      <ul>
+        <li>Verifique se o processo worker está rodando: <code>pm2 list</code> ou <code>ps aux | grep worker</code></li>
+        <li>Verifique logs: <code>pm2 logs job-assync-backend</code> ou worker logs específicos</li>
+        <li>Confirme que a queue está <strong>active</strong> e <strong>not paused</strong> no DB</li>
+        <li>Verifique Redis: <code>redis-cli ping</code> deve retornar PONG</li>
+        <li>Verifique conectividade com webhookUrl (firewall, TLS, auth)</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>2. Jobs ficam em PROCESSING e nunca completam</h2>
+      <ul>
+        <li>Timeout muito baixo? Aumente timeout na queue (default 300000ms)</li>
+        <li>Webhook URL lento ou não responde — verifique logs do worker para erros HTTP</li>
+        <li>Verifique se callbackUrl é acessível (se definido)</li>
+        <li>Se callback falha, o worker ainda marca como COMPLETED (callback falha não reverte status)</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>3. API retorna 401 unauthorized</h2>
+      <ul>
+        <li>JWT expirado? Verifique token no localStorage, chame refresh ou refaça login</li>
+        <li>API Key correta? Verifique se está ativa, não expirada, IP em allowlist (se definido)</li>
+        <li>Header <code>X-Organization-Id</code> está presente? O backend pode tentar buscar org do JWT, mas é melhor enviar explicitamente.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>4. Rate limit errors (429)</h2>
+      <ul>
+        <li>Limite global: 1000 req/min por organização</li>
+        <li>Limite de API Key (se configurado) também conta</li>
+        <li>Verifique se algum cliente está fazendo polling muito agressivo</li>
+        <li>Considere aumentar limites em configuração se necessário</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>5. Jobs são criados mas não aparecem na lista</h2>
+      <ul>
+        <li>Query usa filtros? Remova filtros e tente novamente</li>
+        <li>Cache do TanStack Query pode estar desatualizado — force refresh</li>
+        <li>Verifique se o job realmente foi criado no banco: <code>SELECT * FROM jobs WHERE organization_id = ?</code></li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>6. Redis connection errors</h2>
+      <ul>
+        <li>Redis está rodando? <code>systemctl status redis</code> ou <code>redis-cli ping</code></li>
+        <li>REDIS_URL correta? Default: <code>redis://localhost:6379</code></li>
+        <li>Firewall bloqueando? Porta 6379 acessível</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>7. Erro 500 interno</h2>
+      <ul>
+        <li>Verifique logs do Sentry (se configurado)</li>
+        <li>Verifique logs do PM2: <code>pm2 logs</code></li>
+        <li>Cheque se PostgreSQL está acessível: <code>DATABASE_URL</code> correta, credenciais válidas</li>
+        <li>Verifique se as migrations (prisma db push) estão aplicadas</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>8. CORS errors no frontend</h2>
+      <ul>
+        <li>ALLOWED_ORIGINS deve conter a URL do frontend (ex: <code>http://localhost:5173</code>)</li>
+        <li>Se em produção, adicione o domínio público (ex: <code>https://app.ddw1sl.easypanel.host</code>)</li>
+        <li>Desenvolvimento ignora CORS (NODE_ENV=development) — mas em produção é estrito</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>9. Callback não é chamado</h2>
+      <ul>
+        <li>Callback URL deve ser acessível a partir do worker (firewall/TLS)</li>
+        <li>Callback é fire-and-forget; se falhar, o erro é logado mas não reverte o job status</li>
+        <li>Verifique logs do worker para mensagens de callback failure</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">Voltar para <a href="../index.html">Home</a>. Reporte bugs no repositório.</div>
+  </div>
+</body>
+</html>

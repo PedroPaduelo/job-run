@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workers e Escalabilidade - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+        <a href="workers-escalabilidade.html" class="active">Workers</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <span class="sep">/</span>
+        <span>Workers e Escalabilidade</span>
+      </div>
+      <span class="badge">Infraestrutura</span>
+      <h1>Workers e Escalabilidade</h1>
+      <p class="subtitle">Como o JobSync processa jobs de forma distribuida, escala horizontalmente e garante alta disponibilidade com BullMQ e Redis</p>
+    </div>
+
+    <!-- Quick nav cards -->
+    <div class="card-grid section">
+      <a href="#worker-process" class="card-link">
+        <div class="card">
+          <div class="card-icon purple">&#9881;</div>
+          <h3>Processo Worker</h3>
+          <p>Inicializacao, descoberta de filas e ciclo de vida do worker</p>
+          <span class="tag arch">Core</span>
+        </div>
+      </a>
+      <a href="#job-processing" class="card-link">
+        <div class="card">
+          <div class="card-icon blue">&#9654;</div>
+          <h3>Processamento de Jobs</h3>
+          <p>Funcao processJob, webhook, retry e backoff exponencial</p>
+          <span class="tag flow">Flow</span>
+        </div>
+      </a>
+      <a href="#dynamic-discovery" class="card-link">
+        <div class="card">
+          <div class="card-icon green">&#128269;</div>
+          <h3>Descoberta Dinamica</h3>
+          <p>Polling de novas filas a cada 30 segundos</p>
+          <span class="tag arch">Architecture</span>
+        </div>
+      </a>
+      <a href="#scalability" class="card-link">
+        <div class="card">
+          <div class="card-icon yellow">&#128200;</div>
+          <h3>Escalabilidade</h3>
+          <p>Horizontal, vertical e isolamento por fila</p>
+          <span class="tag ops">Ops</span>
+        </div>
+      </a>
+      <a href="#monitoring" class="card-link">
+        <div class="card">
+          <div class="card-icon blue">&#128202;</div>
+          <h3>Monitoramento</h3>
+          <p>Eventos BullMQ, logs e endpoint de estatisticas</p>
+          <span class="tag flow">Monitoring</span>
+        </div>
+      </a>
+      <a href="#high-availability" class="card-link">
+        <div class="card">
+          <div class="card-icon red">&#128737;</div>
+          <h3>Alta Disponibilidade</h3>
+          <p>Resiliencia, persistencia e supervisao de processos</p>
+          <span class="tag security">HA</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- =========================================================== -->
+    <!-- DIAGRAMA DO WORKER POOL -->
+    <!-- =========================================================== -->
+    <section id="worker-pool-diagram" class="section">
+      <h2>Diagrama: Worker Pool e Filas</h2>
+      <p>Visao geral de como o pool de workers se conecta as filas Redis e processa jobs para multiplas organizacoes.</p>
+
+      <div class="flow-diagram">
+                            +-----------------------------------------+
+                            |          WORKER PROCESS (worker.ts)     |
+                            |                                         |
+                            |  +-- Startup -----------------------+   |
+                            |  | 1. Conecta ao Redis              |   |
+                            |  | 2. Busca filas ativas no DB      |   |
+                            |  | 3. Cria Worker por fila          |   |
+                            |  | 4. Inicia polling (30s)          |   |
+                            |  +----------------------------------+   |
+                            |                                         |
+                            |  +-- Worker Pool -------------------+   |
+                            |  |                                  |   |
+                            |  |  Worker A  (concurrency: 5)      |   |
+                            |  |  Worker B  (concurrency: 10)     |   |
+                            |  |  Worker C  (concurrency: 20)     |   |
+                            |  |  Worker D  (concurrency: 10)     |   |
+                            |  |  ...                             |   |
+                            |  +----------------------------------+   |
+                            +-----------+-----------------------------+
+                                        |
+                 processJob(job)        |         Polling 30s
+                  para cada job         |         novas filas
+                                        |
+              +-------------------------+---------------------------+
+              |                         |                           |
+              v                         v                           v
++---------------------------+ +---------------------------+ +------------------+
+| Redis Queue               | | Redis Queue               | | PostgreSQL       |
+| jobs-{orgA}-emails        | | jobs-{orgB}-webhooks      | |                  |
+|                           | |                           | | queues table     |
+|  +-----+  +-----+        | |  +-----+  +-----+        | | (active queues)  |
+|  | Job |  | Job |  ...    | |  | Job |  | Job |  ...    | |                  |
+|  +-----+  +-----+        | |  +-----+  +-----+        | +------------------+
++---------------------------+ +---------------------------+
+              |                         |
+              v                         v
++---------------------------+ +---------------------------+
+| processJob(job)           | | processJob(job)           |
+|                           | |                           |
+| 1. Status -> PROCESSING   | | 1. Status -> PROCESSING   |
+| 2. HTTP POST webhookUrl   | | 2. HTTP POST webhookUrl   |
+| 3. Sucesso -> COMPLETED   | | 3. Sucesso -> COMPLETED   |
+|    + callback             | |    + callback             |
+| 4. Falha -> retry (exp.)  | | 4. Falha -> retry (exp.)  |
+| 5. maxAttempts -> DEAD    | | 5. maxAttempts -> DEAD    |
++---------------------------+ +---------------------------+
+
+
+ESCALABILIDADE HORIZONTAL:
+
++-------------------+     +-------------------+     +-------------------+
+| Maquina 1         |     | Maquina 2         |     | Maquina 3         |
+| Worker Process    |     | Worker Process    |     | Worker Process    |
+| (worker.ts)       |     | (worker.ts)       |     | (worker.ts)       |
++--------+----------+     +--------+----------+     +--------+----------+
+         |                          |                          |
+         +------------+-------------+-------------+------------+
+                      |                           |
+                      v                           v
+             +----------------+          +----------------+
+             |   Redis        |          |  PostgreSQL    |
+             |   (BullMQ)     |          |  (Prisma)      |
+             +----------------+          +----------------+
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 1. PROCESSO WORKER -->
+    <!-- =========================================================== -->
+    <section id="worker-process" class="section">
+      <h2>1. Processo Worker (worker.ts)</h2>
+      <p>O processo worker e o coracao do sistema de processamento do JobSync. Ele e responsavel por consumir jobs das filas Redis e executa-los de forma assincrona.</p>
+
+      <h3>Ciclo de Inicializacao</h3>
+      <p>Quando o processo worker e iniciado, ele executa a seguinte sequencia:</p>
+
+      <ol>
+        <li><strong>Conexao Redis:</strong> Estabelece conexao com o servidor Redis configurado via variaveis de ambiente.</li>
+        <li><strong>Busca de filas ativas:</strong> Consulta o banco de dados (PostgreSQL via Prisma) para obter todas as filas com status <code>active = true</code>.</li>
+        <li><strong>Criacao de Workers BullMQ:</strong> Para cada fila ativa encontrada, cria uma instancia de <code>Worker</code> do BullMQ.</li>
+        <li><strong>Inicio do polling:</strong> Configura um <code>setInterval</code> de 30 segundos para descobrir novas filas (veja <a href="#dynamic-discovery">Descoberta Dinamica</a>).</li>
+      </ol>
+
+      <pre><code>// worker.ts - Inicializacao simplificada
+import { Worker } from 'bullmq';
+import { prisma } from './lib/prisma';
+import { redisConnection } from './lib/redis';
+
+const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '10');
+const workers: Map&lt;string, Worker&gt; = new Map();
+
+async function startWorkers() {
+  // 1. Buscar todas as filas ativas
+  const queues = await prisma.queue.findMany({
+    where: { active: true }
+  });
+
+  // 2. Criar um Worker para cada fila
+  for (const queue of queues) {
+    const queueName = `jobs-${queue.organizationId}-${queue.name}`;
+    const concurrency = queue.concurrency || CONCURRENCY;
+
+    const worker = new Worker(queueName, processJob, {
+      connection: redisConnection,
+      concurrency,
+      limiter: queue.rateLimit
+        ? { max: queue.rateLimit, duration: 60_000 }
+        : undefined,
+    });
+
+    workers.set(queueName, worker);
+    console.log(`Worker iniciado: ${queueName} (concurrency: ${concurrency})`);
+  }
+}
+
+startWorkers();</code></pre>
+
+      <h3>Configuracao de Concorrencia</h3>
+      <p>Cada worker possui sua propria configuracao de concorrencia, que determina quantos jobs podem ser processados simultaneamente:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Parametro</th>
+            <th>Origem</th>
+            <th>Valor Padrao</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>queue.concurrency</code></td>
+            <td>Banco de dados (por fila)</td>
+            <td><code>null</code></td>
+            <td>Concorrencia especifica da fila; sobrescreve o valor global</td>
+          </tr>
+          <tr>
+            <td><code>WORKER_CONCURRENCY</code></td>
+            <td>Variavel de ambiente</td>
+            <td><code>10</code></td>
+            <td>Concorrencia global padrao para todas as filas</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert info">
+        <span class="alert-icon">&#8505;</span>
+        <div class="alert-content">
+          <strong>Prioridade de Concorrencia</strong>
+          <p>Se a fila possui <code>concurrency</code> definido no banco, esse valor e usado. Caso contrario, o valor da variavel de ambiente <code>WORKER_CONCURRENCY</code> (padrao 10) e aplicado.</p>
+        </div>
+      </div>
+
+      <h3>Rate Limiter</h3>
+      <p>O rate limiter controla a taxa maxima de processamento de jobs por fila:</p>
+      <ul>
+        <li><strong>max:</strong> Valor de <code>queue.rateLimit</code> definido no banco (padrao: <code>null</code> = sem limite)</li>
+        <li><strong>duration:</strong> Janela de tempo fixa de <strong>60.000ms (1 minuto)</strong></li>
+        <li>Se <code>rateLimit</code> for <code>null</code>, nenhum limitador e aplicado</li>
+      </ul>
+
+      <h3>Naming Convention das Filas Redis</h3>
+      <p>Cada fila no Redis segue o padrao de nomenclatura:</p>
+      <pre><code>jobs-{organizationId}-{queueName}
+
+// Exemplos:
+jobs-org_abc123-email-notifications
+jobs-org_def456-webhook-delivery
+jobs-org_abc123-data-processing</code></pre>
+
+      <p>Esse namespacing garante <strong>isolamento total entre organizacoes</strong> no Redis, prevenindo colisoes e facilitando monitoramento por tenant.</p>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 2. FUNCAO DE PROCESSAMENTO -->
+    <!-- =========================================================== -->
+    <section id="job-processing" class="section">
+      <h2>2. Funcao de Processamento: processJob(job)</h2>
+      <p>A funcao <code>processJob</code> e o handler central executado pelo BullMQ para cada job consumido da fila. Ela implementa o ciclo completo de vida de um job.</p>
+
+      <h3>Fluxo de Execucao</h3>
+      <div class="flow-diagram">
+  processJob(job)
+       |
+       v
+  +---------------------------+
+  | 1. Atualiza status no DB  |
+  |    status = PROCESSING    |
+  +-------------+-------------+
+                |
+                v
+  +---------------------------+
+  | 2. HTTP POST webhookUrl   |
+  |    - body: job.data       |
+  |    - timeout configuravel |
+  |    - headers customizados |
+  +-------------+-------------+
+                |
+       +--------+--------+
+       |                  |
+   Sucesso             Falha
+   (2xx)            (erro/timeout)
+       |                  |
+       v                  v
+  +-----------+    +-------------------+
+  | 3a. DB:   |    | 3b. throw Error   |
+  | COMPLETED |    |                   |
+  +-----------+    | BullMQ captura e  |
+       |           | agenda retry com  |
+       v           | backoff exp.      |
+  +-----------+    +--------+----------+
+  | 4. Chama  |             |
+  | callback  |    Tentativas esgotadas?
+  | (se def.) |        |          |
+  +-----------+       Nao        Sim
+                       |          |
+                       v          v
+                   [Retry]   +---------+
+                             | DB:     |
+                             | DEAD    |
+                             +---------+
+      </div>
+
+      <h3>Implementacao</h3>
+      <pre><code>// processJob - Handler do BullMQ Worker
+async function processJob(job: Job) {
+  const { jobId, webhookUrl, callbackUrl, headers, timeout } = job.data;
+
+  // 1. Marcar como PROCESSING
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { status: 'PROCESSING', startedAt: new Date() }
+  });
+
+  try {
+    // 2. Requisicao HTTP para o webhook
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(job.data.payload),
+      signal: AbortSignal.timeout(timeout || 30_000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook retornou status ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // 3a. Sucesso - Marcar como COMPLETED
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        result: result,
+      }
+    });
+
+    // 4. Chamar callback (se configurado)
+    if (callbackUrl) {
+      await fetch(callbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId, status: 'COMPLETED', result }),
+      });
+    }
+
+  } catch (error) {
+    // 3b. Falha - Atualizar tentativas e lancar erro
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        lastError: error.message,
+        attempts: { increment: 1 },
+      }
+    });
+
+    // Se esgotou tentativas, marcar como DEAD
+    if (job.attemptsMade >= job.opts.attempts - 1) {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'DEAD', failedAt: new Date() }
+      });
+      return; // Nao relanca - job considerado morto
+    }
+
+    // Relanca o erro para BullMQ agendar retry
+    throw error;
+  }
+}</code></pre>
+
+      <h3>Estrategia de Retry</h3>
+      <p>Quando <code>processJob</code> lanca um erro, o BullMQ automaticamente agenda uma nova tentativa usando <strong>backoff exponencial</strong>:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Tentativa</th>
+            <th>Delay (backoff exponencial)</th>
+            <th>Tempo Aproximado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1a</td><td>1s * 2^0 = 1s</td><td>+1 segundo</td></tr>
+          <tr><td>2a</td><td>1s * 2^1 = 2s</td><td>+2 segundos</td></tr>
+          <tr><td>3a</td><td>1s * 2^2 = 4s</td><td>+4 segundos</td></tr>
+          <tr><td>4a</td><td>1s * 2^3 = 8s</td><td>+8 segundos</td></tr>
+          <tr><td>5a</td><td>1s * 2^4 = 16s</td><td>+16 segundos</td></tr>
+          <tr><td>...</td><td>...</td><td>...</td></tr>
+          <tr><td>maxAttempts</td><td>--</td><td>Status: <span class="status error">DEAD</span></td></tr>
+        </tbody>
+      </table>
+
+      <div class="alert warning">
+        <span class="alert-icon">&#9888;</span>
+        <div class="alert-content">
+          <strong>Jobs Mortos (DEAD)</strong>
+          <p>Quando um job atinge o numero maximo de tentativas (<code>maxAttempts</code>), ele recebe o status <strong>DEAD</strong>. Jobs mortos nao sao mais processados automaticamente, mas podem ser retriados manualmente via API ou dashboard.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 3. DESCOBERTA DINAMICA -->
+    <!-- =========================================================== -->
+    <section id="dynamic-discovery" class="section">
+      <h2>3. Descoberta Dinamica de Filas</h2>
+      <p>O sistema de descoberta dinamica permite que novos workers sejam criados <strong>sem necessidade de reiniciar o processo</strong>. A cada 30 segundos, o worker verifica se ha novas filas ativas no banco de dados.</p>
+
+      <h3>Mecanismo de Polling</h3>
+      <pre><code>// Polling para novas filas a cada 30 segundos
+const POLL_INTERVAL = 30_000; // 30 segundos
+
+setInterval(async () => {
+  const activeQueues = await prisma.queue.findMany({
+    where: { active: true }
+  });
+
+  for (const queue of activeQueues) {
+    const queueName = `jobs-${queue.organizationId}-${queue.name}`;
+
+    // Se ja existe um worker para essa fila, ignora
+    if (workers.has(queueName)) continue;
+
+    // Nova fila detectada - criar worker
+    const concurrency = queue.concurrency || CONCURRENCY;
+    const worker = new Worker(queueName, processJob, {
+      connection: redisConnection,
+      concurrency,
+      limiter: queue.rateLimit
+        ? { max: queue.rateLimit, duration: 60_000 }
+        : undefined,
+    });
+
+    workers.set(queueName, worker);
+    console.log(`Novo worker criado: ${queueName} (concurrency: ${concurrency})`);
+  }
+}, POLL_INTERVAL);</code></pre>
+
+      <h3>Comportamento</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Cenario</th>
+            <th>Acao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nova fila ativa criada no banco</td>
+            <td>Worker e criado automaticamente no proximo ciclo de polling (ate 30s)</td>
+          </tr>
+          <tr>
+            <td>Fila existente ja possui worker</td>
+            <td>Ignorada (sem duplicacao)</td>
+          </tr>
+          <tr>
+            <td>Fila desativada (<code>active = false</code>)</td>
+            <td>Worker <strong>nao e removido</strong> automaticamente. O worker continua ativo ate o processo ser reiniciado.</td>
+          </tr>
+          <tr>
+            <td>Fila deletada do banco</td>
+            <td>Worker existente continua ativo (mas sem novos jobs). Removido no restart.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert info">
+        <span class="alert-icon">&#8505;</span>
+        <div class="alert-content">
+          <strong>Design Decision: Sem Remocao Automatica</strong>
+          <p>Workers nao sao removidos automaticamente ao desativar uma fila. Isso evita condicoes de corrida onde jobs em processamento poderiam ser interrompidos. Para remover workers, reinicie o processo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 4. DIMENSOES DE ESCALABILIDADE -->
+    <!-- =========================================================== -->
+    <section id="scalability" class="section">
+      <h2>4. Dimensoes de Escalabilidade</h2>
+      <p>O JobSync foi projetado para escalar em multiplas dimensoes, aproveitando a arquitetura distribuida do BullMQ e Redis.</p>
+
+      <h3>Escalabilidade Horizontal</h3>
+      <div class="card">
+        <h3>Multiplos Processos Worker</h3>
+        <p>Execute multiplos processos <code>worker.ts</code> em <strong>maquinas diferentes</strong>, todos conectando ao <strong>mesmo Redis e mesmo PostgreSQL</strong>. O BullMQ distribui os jobs automaticamente entre os workers disponiveis.</p>
+        <ul>
+          <li>Cada processo worker busca filas ativas e cria seus proprios workers BullMQ</li>
+          <li>O BullMQ usa locks atomicos no Redis para garantir que cada job e processado por <strong>exatamente um worker</strong></li>
+          <li>Adicionar mais maquinas = mais throughput, sem alteracao de codigo</li>
+          <li>Todos os processos compartilham o mesmo estado (Redis + PostgreSQL)</li>
+        </ul>
+      </div>
+
+      <pre><code># Executar workers em diferentes maquinas (ou containers)
+
+# Maquina 1
+REDIS_URL=redis://redis-server:6379 \
+DATABASE_URL=postgresql://user:pass@db-server/jobsync \
+WORKER_CONCURRENCY=10 \
+node dist/worker.js
+
+# Maquina 2
+REDIS_URL=redis://redis-server:6379 \
+DATABASE_URL=postgresql://user:pass@db-server/jobsync \
+WORKER_CONCURRENCY=20 \
+node dist/worker.js
+
+# Maquina 3 (alta capacidade)
+REDIS_URL=redis://redis-server:6379 \
+DATABASE_URL=postgresql://user:pass@db-server/jobsync \
+WORKER_CONCURRENCY=50 \
+node dist/worker.js</code></pre>
+
+      <h3>Escalabilidade Vertical</h3>
+      <div class="card">
+        <h3>Aumento de Recursos por Instancia</h3>
+        <p>Aumente a capacidade de processamento de cada instancia individual:</p>
+        <ul>
+          <li><strong>Concorrencia da fila:</strong> Aumente o valor de <code>queue.concurrency</code> no banco para filas especificas</li>
+          <li><strong>Concorrencia global:</strong> Aumente <code>WORKER_CONCURRENCY</code> (variavel de ambiente) para o processo inteiro</li>
+          <li><strong>Recursos Redis:</strong> Aumente memoria, CPU e conexoes do servidor Redis</li>
+          <li><strong>CPU/Memoria do worker:</strong> Aloque mais recursos para o container/maquina do worker</li>
+        </ul>
+      </div>
+
+      <h3>Isolamento por Fila</h3>
+      <div class="card">
+        <h3>Controle Granular</h3>
+        <p>Cada fila opera de forma independente com suas proprias configuracoes:</p>
+        <ul>
+          <li><strong>Concorrencia propria:</strong> Uma fila pode processar 5 jobs por vez enquanto outra processa 50</li>
+          <li><strong>Rate limit proprio:</strong> Limite de taxa independente por fila (ex: 100 jobs/minuto para emails, 10 jobs/minuto para webhooks pesados)</li>
+          <li><strong>Sem interferencia:</strong> Uma fila lenta ou congestionada nao afeta o processamento de outras filas</li>
+        </ul>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">N</div>
+          <div class="metric-label">Maquinas Worker</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">10</div>
+          <div class="metric-label">Concorrencia Padrao</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">30s</div>
+          <div class="metric-label">Polling Novas Filas</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">1min</div>
+          <div class="metric-label">Janela Rate Limit</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 5. MONITORAMENTO -->
+    <!-- =========================================================== -->
+    <section id="monitoring" class="section">
+      <h2>5. Monitoramento</h2>
+      <p>O JobSync oferece multiplas formas de monitorar o estado dos workers e do processamento de jobs.</p>
+
+      <h3>Eventos BullMQ</h3>
+      <p>Cada worker emite eventos que podem ser capturados para monitoramento:</p>
+
+      <pre><code>// Listeners de eventos do Worker
+worker.on('completed', (job, result) => {
+  console.log(`Job ${job.id} completado na fila ${job.queueName}`);
+});
+
+worker.on('failed', (job, error) => {
+  console.error(`Job ${job.id} falhou na fila ${job.queueName}: ${error.message}`);
+});
+
+worker.on('error', (error) => {
+  console.error(`Erro no worker: ${error.message}`);
+});</code></pre>
+
+      <h3>Logs de Progresso</h3>
+      <p>O sistema registra via <code>console.log</code> os seguintes eventos:</p>
+      <ul>
+        <li>Inicializacao de cada worker (nome da fila, concorrencia)</li>
+        <li>Descoberta de novas filas (polling)</li>
+        <li>Inicio do processamento de cada job</li>
+        <li>Conclusao (sucesso ou falha) de cada job</li>
+        <li>Tentativas de retry e transicoes de status</li>
+      </ul>
+
+      <h3>Endpoint de Estatisticas</h3>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/queues/:id/stats</span>
+          <span class="endpoint-desc">Estatisticas de uma fila especifica</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Retorna metricas em tempo real de uma fila:</p>
+          <pre><code>{
+  "queueId": "queue_abc123",
+  "name": "email-notifications",
+  "stats": {
+    "waiting": 42,        // Jobs aguardando processamento
+    "active": 8,          // Jobs sendo processados agora
+    "completed": 15230,   // Total de jobs completados
+    "failed": 127,        // Total de jobs que falharam
+    "delayed": 3,         // Jobs agendados para retry
+    "paused": 0           // Jobs em fila pausada
+  }
+}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 6. LIMITES -->
+    <!-- =========================================================== -->
+    <section id="limits" class="section">
+      <h2>6. Limites do Sistema</h2>
+      <p>Entenda os limites praticos do sistema e como o backpressure e gerenciado.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Recurso</th>
+            <th>Limite</th>
+            <th>Fator Limitante</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Jobs por fila</td>
+            <td><span class="status info">Ilimitado</span></td>
+            <td>Memoria disponivel no Redis</td>
+          </tr>
+          <tr>
+            <td>Workers por processo</td>
+            <td>Variavel</td>
+            <td>Numero de cores de CPU e memoria disponivel</td>
+          </tr>
+          <tr>
+            <td>Filas por organizacao</td>
+            <td><span class="status info">Ilimitado</span></td>
+            <td>Limite pratico de gerenciamento</td>
+          </tr>
+          <tr>
+            <td>Concorrencia por fila</td>
+            <td>Configuravel</td>
+            <td>CPU, memoria e capacidade do endpoint de webhook</td>
+          </tr>
+          <tr>
+            <td>Rate limit por fila</td>
+            <td>Configuravel</td>
+            <td>Definido em jobs/minuto no banco de dados</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Estrategias de Backpressure</h3>
+      <p>Para evitar sobrecarga do sistema, utilize as seguintes estrategias:</p>
+
+      <div class="card">
+        <h3>Controles Disponiveis</h3>
+        <ul>
+          <li><strong>Concorrencia da fila:</strong> Limite quantos jobs sao processados simultaneamente por fila. Filas com webhooks pesados devem ter concorrencia baixa (ex: 2-5).</li>
+          <li><strong>Rate limit:</strong> Defina um teto de jobs/minuto para proteger APIs externas de sobrecarga (ex: <code>rateLimit: 60</code> = max 60 jobs por minuto).</li>
+          <li><strong>Pausa de fila:</strong> Pause uma fila temporariamente via API quando detectar problemas no endpoint de destino.</li>
+          <li><strong>Monitoramento:</strong> Use o endpoint <code>/api/queues/:id/stats</code> para detectar acumulo de jobs <code>waiting</code> ou <code>delayed</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 7. ALTA DISPONIBILIDADE -->
+    <!-- =========================================================== -->
+    <section id="high-availability" class="section">
+      <h2>7. Alta Disponibilidade</h2>
+      <p>O JobSync e projetado para ser resiliente a falhas, garantindo que nenhum job seja perdido mesmo em caso de crash.</p>
+
+      <h3>Resiliencia a Falhas</h3>
+      <div class="card">
+        <h3>Crash do Worker</h3>
+        <ul>
+          <li>Se um processo worker crashar, os jobs <strong>nao sao perdidos</strong></li>
+          <li>O Redis <strong>persiste todos os jobs</strong> na fila</li>
+          <li>Outro processo worker (na mesma ou em outra maquina) <strong>assume o processamento</strong></li>
+          <li>Jobs que estavam em <code>PROCESSING</code> no momento do crash sao automaticamente movidos de volta para a fila pelo BullMQ (stalled job recovery)</li>
+        </ul>
+      </div>
+
+      <h3>Supervisor de Processos</h3>
+      <div class="alert success">
+        <span class="alert-icon">&#10004;</span>
+        <div class="alert-content">
+          <strong>Recomendacao: Use PM2</strong>
+          <p>Para producao, utilize o <strong>PM2</strong> como supervisor de processos. Ele reinicia automaticamente workers que crasham e permite gerenciar multiplas instancias.</p>
+        </div>
+      </div>
+
+      <pre><code># ecosystem.config.js (PM2)
+module.exports = {
+  apps: [{
+    name: 'jobsync-worker',
+    script: 'dist/worker.js',
+    instances: 'max',           // 1 processo por core
+    exec_mode: 'cluster',
+    autorestart: true,
+    max_restarts: 10,
+    restart_delay: 5000,        // 5s entre restarts
+    env: {
+      NODE_ENV: 'production',
+      WORKER_CONCURRENCY: '10',
+      REDIS_URL: 'redis://redis-server:6379',
+    },
+  }]
+};
+
+# Comandos PM2
+pm2 start ecosystem.config.js   # Iniciar workers
+pm2 status                      # Ver status dos processos
+pm2 logs jobsync-worker         # Ver logs em tempo real
+pm2 reload jobsync-worker       # Zero-downtime reload
+pm2 scale jobsync-worker +2     # Adicionar 2 instancias</code></pre>
+
+      <h3>Checklist de Producao</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Status Recomendado</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PM2 ou similar</td>
+            <td><span class="status success">Obrigatorio</span></td>
+            <td>Supervisor de processos para auto-restart</td>
+          </tr>
+          <tr>
+            <td>Redis persistence</td>
+            <td><span class="status success">Obrigatorio</span></td>
+            <td>AOF ou RDB para nao perder jobs em crash do Redis</td>
+          </tr>
+          <tr>
+            <td>Redis Sentinel/Cluster</td>
+            <td><span class="status pending">Recomendado</span></td>
+            <td>Failover automatico do Redis</td>
+          </tr>
+          <tr>
+            <td>Health checks</td>
+            <td><span class="status pending">Recomendado</span></td>
+            <td>Endpoint /health para load balancers e orquestradores</td>
+          </tr>
+          <tr>
+            <td>Logs centralizados</td>
+            <td><span class="status pending">Recomendado</span></td>
+            <td>Enviar logs para servico externo (Datadog, Sentry, etc.)</td>
+          </tr>
+          <tr>
+            <td>Multiplas maquinas</td>
+            <td><span class="status pending">Recomendado</span></td>
+            <td>Distribuir workers em diferentes maquinas para resiliencia</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- 8. CONFIGURACAO -->
+    <!-- =========================================================== -->
+    <section id="configuration" class="section">
+      <h2>8. Configuracao</h2>
+      <p>Todas as opcoes de configuracao do worker e seus valores padrao.</p>
+
+      <h3>Variaveis de Ambiente</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Variavel</th>
+            <th>Padrao</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>WORKER_CONCURRENCY</code></td>
+            <td><code>10</code></td>
+            <td>Numero maximo de jobs processados simultaneamente por worker (valor global)</td>
+          </tr>
+          <tr>
+            <td><code>REDIS_URL</code></td>
+            <td><code>redis://localhost:6379</code></td>
+            <td>URL de conexao com o Redis</td>
+          </tr>
+          <tr>
+            <td><code>DATABASE_URL</code></td>
+            <td>--</td>
+            <td>URL de conexao com o PostgreSQL (Prisma)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Configuracao por Fila (Banco de Dados)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Padrao</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>concurrency</code></td>
+            <td><code>Int?</code></td>
+            <td><code>null</code></td>
+            <td>Concorrencia especifica da fila. Se definido, sobrescreve <code>WORKER_CONCURRENCY</code></td>
+          </tr>
+          <tr>
+            <td><code>rateLimit</code></td>
+            <td><code>Int?</code></td>
+            <td><code>null</code></td>
+            <td>Maximo de jobs processados por minuto. <code>null</code> = sem limite</td>
+          </tr>
+          <tr>
+            <td><code>active</code></td>
+            <td><code>Boolean</code></td>
+            <td><code>true</code></td>
+            <td>Se a fila esta ativa e deve ter um worker criado</td>
+          </tr>
+          <tr>
+            <td><code>maxAttempts</code></td>
+            <td><code>Int</code></td>
+            <td><code>3</code></td>
+            <td>Numero maximo de tentativas antes de marcar como DEAD</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Hierarquia de Configuracao</h3>
+      <div class="flow-diagram">
+  Prioridade de Concorrencia:
+
+  +------------------------------------------+
+  |  queue.concurrency (banco de dados)      |  &lt;-- Maior prioridade
+  |  Valor especifico por fila               |
+  +------------------------------------------+
+                    |
+                    | fallback (se null)
+                    v
+  +------------------------------------------+
+  |  WORKER_CONCURRENCY (env var)            |  &lt;-- Prioridade media
+  |  Valor global para o processo            |
+  +------------------------------------------+
+                    |
+                    | fallback (se nao definido)
+                    v
+  +------------------------------------------+
+  |  Padrao: 10                              |  &lt;-- Menor prioridade
+  |  Valor hardcoded no codigo               |
+  +------------------------------------------+
+      </div>
+
+      <div class="alert info">
+        <span class="alert-icon">&#8505;</span>
+        <div class="alert-content">
+          <strong>Dica de Configuracao</strong>
+          <p>Para workloads com webhooks lentos (ex: APIs externas com alta latencia), use concorrencia alta (20-50) pois os workers ficam esperando I/O. Para workloads CPU-bound, mantenha a concorrencia baixa (2-5) para evitar saturacao da CPU.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== -->
+    <!-- FOOTER -->
+    <!-- =========================================================== -->
+    <div class="doc-footer">
+      <p>JobSync Documentation -- Workers e Escalabilidade</p>
+      <p>Consulte tambem: <a href="arquitetura-overview.html">Arquitetura do Sistema</a> | <a href="dados-fluxo.html">Fluxo de Dados</a> | <a href="integracoes.html">Integracoes</a></p>
+    </div>
+  </div>
+</body>
+</html>

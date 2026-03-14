@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagination Strategies - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Pagination Strategies</span></div>
+
+    <div class="doc-header">
+      <span class="badge performance">Performance</span>
+      <h1>Pagination Strategies</h1>
+      <p class="subtitle">Offset vs cursor, deep pagination, performance em listas grandes</p>
+    </div>
+
+    <div class="section">
+      <h2>📄 Situação Atual</h2>
+      <p>JobService.list usa <code>skip/limit</code> (offset-based pagination):</p>
+      <pre><code>const [jobs, total] = await Promise.all([
+  prisma.job.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: filters.limit,
+    skip: filters.offset,
+  }),
+  prisma.job.count({ where }),
+]);</code></pre>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <strong>Offset Pagination Problem</strong>
+          <p>Em tabelas grandes, <code>OFFSET 100000</code> requer escanear 100k rows → performance degrade指数.</p>
+        </div>
+      </div>
+
+      <h2>📊 Comparação de Estratégias</h2>
+      <table>
+        <thead><tr><th>Estratégia</th><th>Vantagens</th><th>Desvantagens</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Offset/Limit</strong></td>
+            <td>Simples, random access (vai para página 50)</td>
+            <td>Slow em offset alto, instável com inserts/deletes</td>
+          </tr>
+          <tr>
+            <td><strong>Cursor (keyset)</strong></td>
+            <td>Constante performance, estável</td>
+            <td>Só permite next/prev, não random page</td>
+          </tr>
+          <tr>
+            <td><strong>Seek Method</strong></td>
+            <td>Otimizado com WHERE id &gt; lastId</td>
+            <td>Requer ordenação por indexed column</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>💥 Problemas Atuais</h2>
+      <ul>
+        <li><code>orderBy: { createdAt: 'desc' }</code> — createdAt tem índice, mas offset grande força seq scan</li>
+        <li><code>count()</code> é expensive em tabelas grandes (sem cache)</li>
+        <li>Usuário pode pedir offset 100k → query lenta</li>
+        <li>Concorrência: jobs sendo inseridos mudam offset results (missing/duplicados)</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Implementar cursor-based pagination</strong>:
+          <pre><code>// Ao invés de offset, passar lastCreatedAt (timestamp do último job da página anterior)
+where: {
+  organizationId,
+  createdAt: { lt: lastCreatedAt }  // jobs anteriores ao último
+}
+orderBy: { createdAt: 'desc' }
+take: limit</code></pre>
+        </li>
+        <li><strong>Frontend mudança</strong>:
+          <ul>
+            <li>Remover <code>offset</code> do estado</li>
+            <li>Guardar <code>nextCursor</code> = último job.createdAt da página</li>
+            <li>Botão "Carregar mais" em vez de page numbers</li>
+          </ul>
+        </li>
+        <li><strong>Cache de count</strong> — salvar total em Redis (TTL 60s) em vez de COUNT every request</li>
+        <li><strong>Infinite scroll</strong> — UX melhore, carrega dinamicamente</li>
+        <li><strong>Busca por ID específico</strong> — manter GET /jobs/:id (by primary key, instant)</li>
+        <li><strong>Export full list</strong> — se usuário precisa de todos jobs, oferecer CSV async job</li>
+      </ol>
+
+      <h2>📈 Diagrama</h2>
+      <pre class="flow-diagram">
+Offset Pagination (BAD):
+  page 1: LIMIT 20 OFFSET 0      → fast
+  page 2: LIMIT 20 OFFSET 20     → OK
+  page 10: LIMIT 20 OFFSET 180   → scans 180 rows
+  page 100: LIMIT 20 OFFSET 1980 → scans 1980 rows
+
+Cursor Pagination (GOOD):
+  page 1: WHERE createdAt < NOW() ORDER BY createdAt DESC LIMIT 20
+  page 2: WHERE createdAt < last_cursor1 ORDER BY ... LIMIT 20
+  → Sempre index seek, constante O(log n)
+  </pre>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Offset-based em uso? ✅</li>
+        <li>Cursor-based implementado? ❌</li>
+        <li>Cache de count? ❌</li>
+        <li>Teste de carga com offset alto? ❌</li>
+        <li>Frontend suporta infinite scroll? ❌</li>
+        <li>Export CSV como job? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Paginação</p>
+    </div>
+  </div>
+</body>
+</html>

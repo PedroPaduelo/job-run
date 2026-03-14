@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stack Tech Frontend - JobSync</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="frontend-techstack.html" class="active">Frontend</a>
+        <a href="sistema-filas.html">Filas</a>
+        <a href="api-keys.html">API Keys</a>
+        <a href="auth-flow.html">Auth</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <span class="badge">Frontend</span>
+      <h1>Stack Tech Frontend</h1>
+      <p class="subtitle">Visão completa das tecnologias, ferramentas e arquiteturas utilizadas no frontend do JobSync</p>
+    </div>
+
+    <div class="breadcrumb">
+      <a href="arquitetura-overview.html">Docs</a>
+      <span class="sep">/</span>
+      <span>Frontend Tech Stack</span>
+    </div>
+
+    <!-- Seção: Stack Principal -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">1.</span> Stack Principal (Core Stack)
+      </h2>
+      <p class="section-desc">
+        O frontend do JobSync é construído com React 19 e Vite, utilizando TypeScript para tipagem estática. A seguir, apresentamos todas as dependências principais extraídas do package.json.
+      </p>
+
+      <div class="card">
+        <h3>Dependências de Produção</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Pacote</th>
+              <th>Versão</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>react</code></td>
+              <td><span class="status info">19.2.0</span></td>
+              <td>Biblioteca principal para construção de interfaces</td>
+            </tr>
+            <tr>
+              <td><code>react-dom</code></td>
+              <td><span class="status info">19.2.0</span></td>
+              <td>Manipulação do DOM para React</td>
+            </tr>
+            <tr>
+              <td><code>react-router-dom</code></td>
+              <td><span class="status info">7.11.0</span></td>
+              <td>Roteamento SPA (v7 com features de framework)</td>
+            </tr>
+            <tr>
+              <td><code>@tanstack/react-query</code></td>
+              <td><span class="status info">5.90.16</span></td>
+              <td>Gerenciamento de estado servidor (caching, refetch)</td>
+            </tr>
+            <tr>
+              <td><code>recharts</code></td>
+              <td><span class="status info">3.6.0</span></td>
+              <td>Biblioteca de gráficos React</td>
+            </tr>
+            <tr>
+              <td><code>date-fns</code></td>
+              <td><span class="status info">4.1.0</span></td>
+              <td>Manipulação de datas</td>
+            </tr>
+            <tr>
+              <td><code>lucide-react</code></td>
+              <td><span class="status info">0.562.0</span></td>
+              <td>Ícones SVG</td>
+            </tr>
+            <tr>
+              <td><code>clsx</code></td>
+              <td><span class="status info">2.1.1</span></td>
+              <td>Manipulação de classes condicionais</td>
+            </tr>
+            <tr>
+              <td><code>tailwind-merge</code></td>
+              <td><span class="status info">3.4.0</span></td>
+              <td>Merge de classes Tailwind</td>
+            </tr>
+            <tr>
+              <td><code>@nomad/ui</code></td>
+              <td><span class="status active">GitHub</span></td>
+              <td>Sistema de design Nomad (componentes + theming)</td>
+            </tr>
+            <tr>
+              <td><code>@nommand/auth-sdk</code></td>
+              <td><span class="status active">Git SSH</span></td>
+              <td>SDK de autenticação OAuth</td>
+            </tr>
+            <tr>
+              <td><code>@sentry/react</code></td>
+              <td><span class="status info">10.32.1</span></td>
+              <td>Monitoramento de erros</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Dependências de Desenvolvimento</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Pacote</th>
+              <th>Versão</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>typescript</code></td>
+              <td><span class="status info">~5.9.3</span></td>
+              <td>Tipagem estática</td>
+            </tr>
+            <tr>
+              <td><code>vite</code></td>
+              <td><span class="status info">7.2.4</span></td>
+              <td>Build tool e dev server</td>
+            </tr>
+            <tr>
+              <td><code>tailwindcss</code></td>
+              <td><span class="status info">4.1.18</span></td>
+              <td>Framework CSS utilitário</td>
+            </tr>
+            <tr>
+              <td><code>postcss</code></td>
+              <td><span class="status info">8.5.6</span></td>
+              <td>Processador de CSS</td>
+            </tr>
+            <tr>
+              <td><code>autoprefixer</code></td>
+              <td><span class="status info">10.4.23</span></td>
+              <td>Prefixos automáticos para CSS</td>
+            </tr>
+            <tr>
+              <td><code>@tailwindcss/postcss</code></td>
+              <td><span class="status info">4.1.18</span></td>
+              <td>Integração Tailwind v4 com PostCSS</td>
+            </tr>
+            <tr>
+              <td><code>@vitejs/plugin-react</code></td>
+              <td><span class="status info">5.1.1</td>
+              <td>Plugin Vite para React (Fast Refresh)</td>
+            </tr>
+            <tr>
+              <td><code>eslint</code></td>
+              <td><span class="status info">9.39.1</span></td>
+              <td>Linter</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Nota sobre dependências</strong>
+          <p>O projeto não utiliza Axios. Toda a comunicação HTTP é feita através de um cliente fetch customizado definido em <code>src/lib/api.ts</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Configuração Vite -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">2.</span> Configuração Vite
+      </h2>
+      <p class="section-desc">O Vite é utilizado como build tool principal. Abaixo está a configuração atual do projeto.</p>
+
+      <div class="card">
+        <h3>vite.config.ts</h3>
+        <pre><code>import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>Scripts npm</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Script</th>
+              <th>Comando</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>dev</code></td>
+              <td><code>vite</code></td>
+              <td>Inicia o servidor de desenvolvimento</td>
+            </tr>
+            <tr>
+              <td><code>build</code></td>
+              <td><code>tsc -b && vite build</code></td>
+              <td>TypeScript checking + build de produção</td>
+            </tr>
+            <tr>
+              <td><code>lint</code></td>
+              <td><code>eslint .</code></td>
+              <td>Executa o linter</td>
+            </tr>
+            <tr>
+              <td><code>preview</code></td>
+              <td><code>vite preview</code></td>
+              <td>Visualiza build de produção localmente</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>Build</strong>
+          <p>O build de produção gera arquivos em <code>dist/</code>. O comando <code>tsc -b</code> executa verificação de tipos antes do build.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Configuração TypeScript -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">3.</span> Configuração TypeScript
+      </h2>
+      <p class="section-desc">O projeto utiliza TypeScript 5.9 com configurações estritas para maior segurança de tipos.</p>
+
+      <div class="card">
+        <h3>tsconfig.app.json</h3>
+        <pre><code>{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- Seção: Componentes UI -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">4.</span> Componentes UI
+      </h2>
+      <p class="section-desc">
+        O JobSync utiliza componentes do shadcn/ui estilizados com Tailwind CSS, integrados com o ThemeProvider do @nomad/ui para suporte a dark mode.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon purple">🎨</div>
+          <h3>Componentes shadcn/ui</h3>
+          <p>Button, Badge, Input, Select, Table, Card, Label, Textarea, Switch</p>
+          <span class="tag frontend">UI</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon green">🎭</div>
+          <h3>Dark Mode</h3>
+          <p>Obrigatório via ThemeProvider com defaultTheme="system"</p>
+          <span class="tag frontend">Theming</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon blue">🛡️</div>
+          <h3>ProtectedRoute</h3>
+          <p>Componente wrapper para rotas autenticadas</p>
+          <span class="tag arch">Auth</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon yellow">📐</div>
+          <h3>Layout</h3>
+          <p>Layout principal com sidebar, header e content area</p>
+          <span class="tag arch">Layout</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Arquitetura de Arquivos -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">5.</span> Arquitetura de Arquivos
+      </h2>
+      <p class="section-desc">
+        Organização do código fonte em diretórios funcionais.
+      </p>
+
+      <div class="card">
+        <h3>Estrutura src/</h3>
+        <pre><code>src/
+├── App.tsx                    # Componente principal + rotas
+├── main.tsx                   # Entry point + providers
+├── index.css                  # Tailwind + variáveis CSS (Deep Ocean)
+├── assets/                    # Recursos estáticos
+├── components/
+│   ├── ProtectedRoute.tsx     # Rota protegida
+│   └── Layout.tsx             # Layout principal
+├── contexts/
+│   └── AuthContext.tsx        # Auth + Organization context
+├── hooks/
+│   ├── useJobs.ts             # Hook React Query para jobs
+│   ├── useQueues.ts           # Hook React Query para filas
+│   ├── useStats.ts            # Hook React Query para estatísticas
+│   ├── useApiKeys.ts          # Hook React Query para API keys
+│   └── useDebounce.ts         # Hook utilitário para debounce
+├── pages/
+│   ├── Dashboard.tsx           # Página inicial com estatísticas
+│   ├── Jobs.tsx               # Lista de jobs
+│   ├── JobDetail.tsx          # Detalhe de um job
+│   ├── Queues.tsx             # Lista de filas
+│   ├── QueueDetail.tsx        # Detalhe de uma fila
+│   ├── Settings.tsx           # Configurações + API Keys
+│   ├── Login.tsx              # Página de login OAuth
+│   └── Callback.tsx           # Callback OAuth
+└── lib/
+    ├── api.ts                 # Cliente fetch + endpoints
+    ├── toast.ts               # Utilitário de toast notifications
+    ├── constants.ts           # Constantes da aplicação
+    └── sentry.ts              # Configuração Sentry</code></pre>
+      </div>
+    </section>
+
+    <!-- Seção: Gerenciamento de Estado -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">6.</span> Gerenciamento de Estado
+      </h2>
+      <p class="section-desc">
+        O JobSync utiliza uma estratégia híbrida de gerenciamento de estado, combinando TanStack Query para estado servidor e React useState para estado cliente.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon purple">🖥️</div>
+          <h3>Estado Servidor</h3>
+          <p><strong>TanStack Query</strong> - Cache, refetch automático, paginação</p>
+          <ul>
+            <li>staleTime: 1000ms</li>
+            <li>retry: 1</li>
+            <li>Custom hooks: useJobs, useQueues, useStats, useApiKeys</li>
+          </ul>
+          <span class="tag arch">Server State</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon green">🎯</div>
+          <h3>Estado Cliente</h3>
+          <p><strong>React useState</strong> - Forms, toggles, UI state</p>
+          <ul>
+            <li>Filtros de busca</li>
+            <li>Modais e dialogs</li>
+            <li>Estado de loading local</li>
+          </ul>
+          <span class="tag frontend">Client State</span>
+        </div>
+
+        <div class="card">
+          <div class="card-icon blue">🔐</div>
+          <h3>Autenticação</h3>
+          <p><strong>@nommand/auth-sdk</strong> - OAuth 2.0</p>
+          <ul>
+            <li>User + Token</li>
+            <li>Lista de organizações</li>
+            <li>Permissões</li>
+            <li>Refresh automático de token</li>
+          </ul>
+          <span class="tag security">Auth</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Sistema de Rotas -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">7.</span> Sistema de Rotas
+      </h2>
+      <p class="section-desc">
+        O roteamento é feito com React Router v7. Todas as rotas (exceto /login e /callback) são protegidas por um wrapper de autenticação.
+      </p>
+
+      <div class="card">
+        <h3>Mapa de Rotas</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Rota</th>
+              <th>Componente</th>
+              <th>Protegida</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/</code></td>
+              <td>Dashboard</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/jobs</code></td>
+              <td>Jobs</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/jobs/:id</code></td>
+              <td>JobDetail</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/queues</code></td>
+              <td>Queues</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/queues/:id</code></td>
+              <td>QueueDetail</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/settings</code></td>
+              <td>Settings</td>
+              <td><span class="status active">Sim</span></td>
+            </tr>
+            <tr>
+              <td><code>/login</code></td>
+              <td>Login</td>
+              <td><span class="status info">Não</span></td>
+            </tr>
+            <tr>
+              <td><code>/callback</code></td>
+              <td>Callback</td>
+              <td><span class="status info">Não</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>ProtectedRoute</strong>
+          <p>O componente ProtectedRoute envolve todas as rotas autenticadas. Ele verifica o status de autenticação e redireciona para /login se necessário.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Cliente API -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">8.</span> Cliente API
+      </h2>
+      <p class="section-desc">
+        O frontend utiliza um cliente fetch customizado em vez de Axios. Toda a comunicação HTTP passa por <code>src/lib/api.ts</code>.
+      </p>
+
+      <div class="card">
+        <h3>Características do Cliente API</h3>
+        <ul>
+          <li><strong>Token injection</strong>: Automaticamente injeta o token de acesso (nommand_access_token ou token)</li>
+          <li><strong>Header X-Organization-Id</strong>: Inclui o ID da organização selecionada</li>
+          <li><strong>Error handling</strong>: Lança erro em responses não-ok</li>
+          <li><strong>URL base</strong>: VITE_API_URL (padrão: http://localhost:3001)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Exemplo de Uso</h3>
+        <pre><code>// GET /api/jobs
+const { jobs, total } = await jobsApi.list({ status: 'FAILED', limit: 10 });
+
+// GET /api/jobs/:id
+const job = await jobsApi.get('job-123');
+
+// POST /api/jobs
+const newJob = await jobsApi.create({
+  queue: 'my-queue',
+  webhookUrl: 'https://example.com/webhook',
+  payload: { key: 'value' }
+});
+
+// GET /api/queues
+const queues = await queuesApi.list();</code></pre>
+      </div>
+    </section>
+
+    <!-- Seção: Tailwind CSS -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">9.</span> Tailwind CSS & Theming
+      </h2>
+      <p class="section-desc">
+        O projeto utiliza Tailwind CSS v4 com postcss e um tema customizado "Deep Ocean" baseado nas variáveis do @nomad/ui.
+      </p>
+
+      <div class="card">
+        <h3>Variáveis CSS (index.css)</h3>
+        <pre><code>:root {
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --muted: 210 40% 93%;
+  --accent: 217 91% 60%;
+  --success: 160 84% 39%;
+  --warning: 38 92% 50%;
+  --destructive: 0 84% 60%;
+  --border: 214 32% 91%;
+}
+
+.dark {
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 9%;
+  --primary: 217 91% 60%;
+  --border: 222 47% 16%;
+}</code></pre>
+      </div>
+
+      <div class="alert success">
+        <span class="alert-icon">✅</span>
+        <div class="alert-content">
+          <strong>Dark Mode</strong>
+          <p>O dark mode é <strong>obrigatório</strong> e configurado via ThemeProvider do @nomad/ui com <code>defaultTheme="system"</code>. O tema utiliza o seletor <code>.dark</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Auth Flow -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">10.</span> Fluxo de Autenticação
+      </h2>
+      <p class="section-desc">
+        O JobSync utiliza OAuth 2.0 com o @nommand/auth-sdk. O AuthContext combina a SDK com contexto de organização local.
+      </p>
+
+      <div class="flow-diagram">
+┌─────────────────┐      ┌──────────────────┐      ┌─────────────────┐
+│   /login        │ ───► │  Auth Service    │ ───► │   /callback     │
+│   (redirect)    │      │  (OAuth)         │      │  (token exchange) │
+└─────────────────┘      └──────────────────┘      └─────────────────┘
+                                                            │
+                                                            ▼
+                                              ┌─────────────────────────┐
+                                              │  AuthContext            │
+                                              │  - user                 │
+                                              │  - token                │
+                                              │  - organization         │
+                                              │  - organizations list   │
+                                              └─────────────────────────┘</pre>
+      </div>
+
+      <div class="card">
+        <h3>AuthContext - Provider Hierarchy</h3>
+        <pre><code>ThemeProvider (defaultTheme="system")
+└── AuthProvider (@nommand/auth-sdk)
+    └── OrganizationProvider
+        └── QueryClientProvider
+            └── BrowserRouter
+                └── Routes
+                    ├── /login (público)
+                    ├── /callback (público)
+                    └── /* (protegido via ProtectedRoute)
+                        └── Layout
+                            └── Routes aninhadas</code></pre>
+      </div>
+    </section>
+
+    <!-- Seção: Custom Hooks -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">11.</span> Custom Hooks
+      </h2>
+      <p class="section-desc">
+        Hooks personalizados que encapsulam a lógica de comunicação com a API usando TanStack Query.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon purple">📋</div>
+          <h3>useJobs</h3>
+          <p>Listagem, detalhe, criação, cancelamento e retry de jobs</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">📬</div>
+          <h3>useQueues</h3>
+          <p>CRUD de filas, pause, resume, estatísticas</p>
+        </div>
+        <div class="card">
+          <div class="card-icon blue">📊</div>
+          <h3>useStats</h3>
+          <p>Estatísticas gerais e timeline</p>
+        </div>
+        <div class="card">
+          <div class="card-icon yellow">🔑</div>
+          <h3>useApiKeys</h3>
+          <p>Gerenciamento de API Keys</p>
+        </div>
+        <div class="card">
+          <div class="card-icon red">⏱️</div>
+          <h3>useDebounce</h3>
+          <p>Utilitário para debounce de valores</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção: Build & Deploy -->
+    <section class="section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">12.</span> Build & Deploy
+      </h2>
+      <p class="section-desc">
+        Processo de build e deploy do frontend.
+      </p>
+
+      <div class="card">
+        <h3>Build Process</h3>
+        <div class="flow-diagram">1. tsc -b          ─► TypeScript type checking
+2. vite build    ─► Gera bundle em dist/
+3. (Deploy)      ─► Servido via Nginx</div>
+      </div>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Docker</strong>
+          <p>O frontend é containerizado com Dockerfile e servindo via Nginx. Voir arquivo <code>nginx.conf</code> para configuração.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      <p>JobSync Documentation &copy; 2024 | Frontend Tech Stack</p>
+    </footer>
+  </div>
+</body>
+</html>

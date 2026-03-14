@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Setup - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Monitoring Setup</span></div>
+
+    <div class="doc-header">
+      <span class="badge ops">Ops</span>
+      <h1>Monitoring Setup</h1>
+      <p class="subtitle">Sentry, métricas customizadas, dashboards Grafana</p>
+    </div>
+
+    <div class="section">
+      <h2>📊 O que Monitorar</h2>
+      <ul>
+        <li><strong>Application Metrics</strong>: throughput, latency, error rate</li>
+        <li><strong>Infrastructure</strong>: CPU, memória, Redis, DB</li>
+        <li><strong>Business</strong>: jobs criados, completed, failed, retry rate</li>
+      </ul>
+
+      <h2>📈 Sentry</h2>
+      <p>Já configurado. Melhorias:</p>
+      <ul>
+        <li>Adicionar <code>beforeSend</code> para redact dados sensíveis</li>
+        <li>Capturar user context quando autenticado</li>
+        <li>Criar alerts no Sentry dashboard</li>
+      </ul>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li><strong>Prometheus endpoint</strong> — adicionar /metrics</li>
+        <li><strong>Grafana dashboard</strong> — painel com graphs de throughput e SLOs</li>
+        <li><strong>Health checks</strong> — já tem /health e /ready</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Sentry configurado? ✅</li>
+        <li>Métricas customizadas? ❌</li>
+        <li>Prometheus endpoint? ❌</li>
+        <li>Dashboards? ⚠️</li>
+        <li>Alertas definidos? ❌</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Monitoring</p>
+    </div>
+  </div>
+</body>
+</html>

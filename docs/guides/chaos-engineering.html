@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaos Engineering - JobSync Docs</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links"><a href="../index.html">Home</a></div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span>Chaos Engineering</span></div>
+
+    <div class="doc-header">
+      <span class="badge testing">Testing</span>
+      <h1>Chaos Engineering</h1>
+      <p class="subtitle">Experimentos: kill Redis, slow DB, network latency</p>
+    </div>
+
+    <div class="section">
+      <h2>🎯 Objetivo</h2>
+      <p>Testar resiliência do sistema sob condições adversas.</p>
+
+      <h2>🧪 Experimentos</h2>
+      <table>
+        <thead><tr><th>Experimento</th><th>Impacto</th><th>Resultado Esperado</th></tr></thead>
+        <tbody>
+          <tr><td>Kill Redis</td><td>Alta</td><td>Workers falham, reconnect, jobs retry</td></tr>
+          <tr><td>DB latency +500ms</td><td>Média</td><td>API responses lentas, timeout bubbles</td></tr>
+          <tr><td>Worker crash random</td><td>Média</td><td>PM2 restart, jobs reassignados</td></tr>
+          <tr><td>Network partition</td><td>Alta</td><td>Partial outage, circuit breaker</td></tr>
+        </tbody>
+      </table>
+
+      <h2>✅ Recomendações</h2>
+      <ol>
+        <li>Começar small — matar um worker por vez</li>
+        <li>Blast radius control — não afetar produção inteira</li>
+        <li>Runbook atualizado — saber como recuperar</li>
+        <li>Post-mortem — documentar lições aprendidas</li>
+      </ol>
+
+      <h2>🔍 Checklist</h2>
+      <ul class="checklist">
+        <li>Chaos tool configurado? ❌</li>
+        <li>Experiments planejados? ❌</li>
+        <li>Blast radius control? ❌</li>
+        <li>Post-mortem process? ⚠️</li>
+      </ul>
+    </div>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Chaos Engineering</p>
+    </div>
+  </div>
+</body>
+</html>

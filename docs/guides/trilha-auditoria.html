@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trilha de Auditoria - Guia Técnico</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    .flow-block {
+      background: #1a1a2e;
+      border: 1px solid #3a3a5c;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+    .flow-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0.5rem;
+    }
+    .action-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    .action-table th,
+    .action-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #3a3a5c;
+    }
+    .action-table th {
+      background: #16213e;
+      font-weight: 600;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag-success { background: #22c55e33; color: #22c55e; }
+    .tag-danger { background: #ef444433; color: #ef4444; }
+    .tag-warning { background: #f59e0b33; color: #f59e0b; }
+    .tag-info { background: #3b82f633; color: #3b82f6; }
+    .risk-box {
+      border-left: 4px solid;
+      padding: 1rem;
+      margin: 1rem 0;
+      background: #1a1a2e;
+    }
+    .risk-high { border-color: #ef4444; }
+    .risk-medium { border-color: #f59e0b; }
+    .risk-low { border-color: #22c55e; }
+    .recommendation {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin: 1rem 0;
+    }
+    .rec-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+    }
+    .rec-icon {
+      font-size: 1.25rem;
+    }
+    .schema-diagram {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      background: #0d1117;
+      padding: 1.5rem;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    .index-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .index-card {
+      background: #1a1a2e;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #3a3a5c;
+    }
+    .index-card h4 {
+      margin: 0 0 0.5rem 0;
+      color: #60a5fa;
+    }
+    .index-card code {
+      background: #0d1117;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
+        </svg>
+        JobSync Docs
+      </a>
+      <div class="nav-links">
+        <a href="arquitetura-overview.html">Arquitetura</a>
+        <a href="api-reference.html">API</a>
+        <a href="frontend-techstack.html">Frontend</a>
+        <a href="deploy-configuracao.html">Deploy</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="doc-header">
+      <div class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="arquitetura-overview.html">Guia de Arquitetura</a>
+        <span class="sep">/</span>
+        <span>Trilha de Auditoria</span>
+      </div>
+      <span class="badge">Segurança</span>
+      <h1>Trilha de Auditoria - Análise Técnica</h1>
+      <p class="subtitle">Análise detalhada do modelo AuditLog, uso no código, riscos e recomendações</p>
+    </div>
+
+    <section class="section">
+      <h2>1. Modelo AuditLog no Prisma</h2>
+      <p>O modelo principal de auditoria define a estrutura de armazenamento de logs:</p>
+
+      <div class="schema-diagram">
+<pre>
+model AuditLog {
+  id            String   @id @default(cuid())
+
+  // ┌─────────────────────────────────────────────┐
+  // │  CONTEXTO DE IDENTIFICAÇÃO                 │
+  // └─────────────────────────────────────────────┘
+  userId         String?       // Usuário que realizou ação
+  user           User?         @relation(fields: [userId], onDelete: SetNull)
+  organizationId String?       // Organização (tenant)
+  organization   Organization? @relation(fields: [organizationId], onDelete: SetNull)
+
+  // ┌─────────────────────────────────────────────┐
+  // │  O QUE FOI FEITO                            │
+  // └─────────────────────────────────────────────┘
+  action     String           // Ex: "job.created", "apikey.revoked"
+  entityType String?          // Ex: "Job", "Queue", "ApiKey"
+  entityId   String?          // ID da entidade afetada
+
+  // ┌─────────────────────────────────────────────┐
+  // │  DETALHES                                  │
+  // └─────────────────────────────────────────────┘
+  metadata  Json?             // Dados extras (JSON flexível)
+  ipAddress String?           // IP do cliente
+  userAgent String?           // User-Agent do navegador/API
+
+  // ┌─────────────────────────────────────────────┐
+  // │  RESULTADO                                 │
+  // └─────────────────────────────────────────────┘
+  status AuditStatus @default(SUCCESS)  // SUCCESS | FAILURE | DENIED
+
+  createdAt DateTime @default(now())
+}
+
+enum AuditStatus {
+  SUCCESS   // Ação completada com sucesso
+  FAILURE   // Erro ocorreu durante a ação
+  DENIED    // Usuário não tinha permissão
+}
+</pre>
+      </div>
+
+      <h3>Observações sobre o Modelo</h3>
+      <ul>
+        <li><strong>userId opcional:</strong> Permite logs de ações system/API Key sem usuário</li>
+        <li><strong>organizationId opcional:</strong> Ações no contexto da aplicação podem não ter org</li>
+        <li><strong>metadata JSONB:</strong> Flexível mas sem validação de schema</li>
+        <li><strong>SetNull em cascata:</strong> Se usuário/org for deletado, logs mantêm-se com null</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>2. Fluxo de Auditoria (Diagrama)</h2>
+      <p>O sistema captura logs em três momentos críticos da requisição HTTP:</p>
+
+      <div class="flow-diagram" style="font-size: 0.8rem; overflow-x: auto;">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    middleware.onRequest (server.ts)                         │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ 1. EXTRAI organizationId, userId, permissions dos headers/claims     │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ 2. Tenta autenticação                                               │   │
+│  │    • API Key lookup (prisma.apiKey.findUnique)                      │   │
+│  │      ├─ ✔️ Válida? → request.organizationId = apiKey.orgId         │   │
+│  │      │           → request.apiKeyId = apiKey.id                     │   │
+│  │      │                                                              │   │
+│  │      ├─ ❌ inactive? → logAudit("apikey.auth.failed",               │   │
+│  │      │                metadata:{reason:"inactive"}, status:DENIED)  │   │
+│  │      │           → return 401                                        │   │
+│  │      │                                                              │   │
+│  │      ├─ ❌ expired? → logAudit("apikey.auth.failed",                │   │
+│  │      │                metadata:{reason:"expired"}, status:DENIED)   │   │
+│  │      │           → return 401                                        │   │
+│  │      │                                                              │   │
+│  │      ├─ ❌ ip_not_allowed? → logAudit(..., metadata:{...})          │   │
+│  │      │                    → return 401                                │   │
+│  │      │                                                              │   │
+│  │      └─ ✔️ Success → update apiKey(lastUsedAt, usageCount+1)       │   │
+│  │                                                                     │   │
+│  │ 3. Se não API Key, tenta JWT                                      │   │
+│  │    • verifyJWT(token) via JWKS                                     │   │
+│  │    • buildAuthenticatedUser() → sync user/org/membership          │   │
+│  │    • logAudit("user.auth.success", status:SUCCESS)                │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                          request.tlauthUserInfo                             │
+│                          request.organizationId                            │
+│                          request.permissions                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ROTA / ENDPOINT                                      │
+│  (jobs.ts, queues.ts, apikeys.ts)                                          │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ • Validação de schema (zod)                                        │   │
+│  │ • Verificação de permissões (requirePermission())                  │   │
+│  │   └─ Se faltar → logAudit("permission.denied",                     │   │
+│  │                      metadata:{required, had}, status:DENIED)      │   │
+│  │                                                                     │   │
+│  │ • Executa operação no serviço/BD                                   │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                          Banco de Dados                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                     ┌──────────────┴──────────────┐
+                     ▼                             ▼
+        ┌──────────────────────┐   ┌──────────────────────────────┐
+        │   SUCCESS            │   │   ERRO (any error handler)  │
+        │                      │   │                              │
+        │  200/201 Response    │   │  setErrorHandler() em      │
+        │                      │   │  server.ts                  │
+        │                      │   │  └─ logAudit(               │
+        │                      │   │        "error.occurred",    │
+        │                      │   │        metadata:{url,       │
+        │                      │   │                method,     │
+        │                      │   │                message},   │
+        │                      │   │        status:FAILURE)     │
+        │                      │   │                              │
+        │                      │   │  → status code (4xx/5xx)    │
+        └──────────────────────┘   └──────────────────────────────┘
+</pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. Ações Auditadas - Tabela Completa</h2>
+
+      <h3>Autenticação & Autorização</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Ação</th><th>entityType</th><th>Quando Dispara</th><th>status</th><th>metadata inclui</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>user.auth.success</code></td>
+            <td><code>User</code></td>
+            <td>JWT válido, usuário autenticado</td>
+            <td><span class="tag tag-success">SUCCESS</span></td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td><code>apikey.auth.failed</code></td>
+            <td><code>ApiKey</code></td>
+            <td>API Key inativa/expirada/IP bloqueado</td>
+            <td><span class="tag tag-danger">DENIED</span></td>
+            <td><code>reason</code>: "inactive" | "expired" | "ip_not_allowed"</td>
+          </tr>
+          <tr>
+            <td><code>permission.denied</code></td>
+            <td>-</td>
+            <td>Usuário sem permissão para endpoint</td>
+            <td><span class="tag tag-danger">DENIED</span></td>
+            <td><code>required</code>: permissão necessária, <code>had</code>: array permissões usuário</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Ações de Jobs</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Ação</th><th>entityType</th><th>Quando Dispara</th><th>Observação</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>job.created</code></td>
+            <td><code>Job</code></td>
+            <td>POST /api/jobs</td>
+            <td><strong>NÃO implementado atualmente</strong> — logAudit não chamado em jobService.create()</td>
+          </tr>
+          <tr>
+            <td><code>job.bulk.created</code></td>
+            <td><code>Job</code></td>
+            <td>POST /api/jobs/bulk</td>
+            <td><strong>NÃO implementado</strong> — ausente em jobService.createBulk()</td>
+          </tr>
+          <tr>
+            <td><code>job.cancelled</code></td>
+            <td><code>Job</code></td>
+            <td>DELETE /api/jobs/:id</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>job.retried</code></td>
+            <td><code>Job</code></td>
+            <td>POST /api/jobs/:id/retry</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>job.failed</code></td>
+            <td><code>Job</code></td>
+            <td>Worker processa job com erro</td>
+            <td><strong>NÃO implementado</strong> — precisaria de integração no worker.ts</td>
+          </tr>
+          <tr>
+            <td><code>job.completed</code></td>
+            <td><code>Job</code></td>
+            <td>Worker processa job com sucesso</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Ações de Queues</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Ação</th><th>entityType</th><th>Quando Dispara</th><th>Observação</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>queue.created</code></td>
+            <td><code>Queue</code></td>
+            <td>POST /api/queues</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>queue.updated</code></td>
+            <td><code>Queue</code></td>
+            <td>PATCH /api/queues/:id</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>queue.deleted</code></td>
+            <td><code>Queue</code></td>
+            <td>DELETE /api/queues/:id</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>queue.paused</code></td>
+            <td><code>Queue</code></td>
+            <td>POST /api/queues/:id/pause</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>queue.resumed</code></td>
+            <td><code>Queue</code></td>
+            <td>POST /api/queues/:id/resume</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Ações de API Keys</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Ação</th><th>entityType</th><th>Quando Dispara</th><th>Observação</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>apikey.created</code></td>
+            <td><code>ApiKey</code></td>
+            <td>POST /api/apikeys</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>apikey.updated</code></td>
+            <td><code>ApiKey</code></td>
+            <td>PATCH /api/apikeys/:id</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>apikey.revoked</code></td>
+            <td><code>ApiKey</code></td>
+            <td>POST /api/apikeys/:id/revoke</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+          <tr>
+            <td><code>apikey.deleted</code></td>
+            <td><code>ApiKey</code></td>
+            <td>DELETE /api/apikeys/:id</td>
+            <td><strong>NÃO implementado</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Ações Genéricas</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Ação</th><th>Quando Dispara</th><th>Observação</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>error.occurred</code></td>
+            <td>Qualquer erro não tratado (error handler)</td>
+            <td>Implementado no setErrorHandler() do server.ts</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert danger">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong>GAP Crítico Identificado</strong>
+          <p>Apenas eventos de autenticação/autorização são auditados. Operações CRUD em Jobs, Queues e API Keys <strong>não geram logs de auditoria</strong>. Isso reduz drasticamente a visibilidade para forensic e compliance.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. Índices do Banco de Dados</h2>
+
+      <div class="index-grid">
+        <div class="index-card">
+          <h4>Índice por Usuário</h4>
+          <code>@@index([userId])</code>
+          <p>Uso: Buscar todas as ações de um usuário específico</p>
+        </div>
+        <div class="index-card">
+          <h4>Índice por Organização</h4>
+          <code>@@index([organizationId])</code>
+          <p>Uso: Filtrar logs de uma organização (multi-tenancy)</p>
+        </div>
+        <div class="index-card">
+          <h4>Índice por Ação</h4>
+          <code>@@index([action])</code>
+          <p>Uso: Agrupar eventos por tipo (ex: count de logins)</p>
+        </div>
+        <div class="index-card">
+          <h4>Índice Composto</h4>
+          <code>@@index([entityType, entityId])</code>
+          <p>Uso: Rastrear histórico completo de uma entidade específica</p>
+        </div>
+        <div class="index-card">
+          <h4>Índice Temporal</h4>
+          <code>@@index([createdAt])</code>
+          <p>Uso: Consultas por período (ex: últimos 90 dias)</p>
+        </div>
+      </div>
+
+      <h3>Índices Criados (SQL migration)</h3>
+      <div class="schema-diagram">
+<pre>
+CREATE INDEX "audit_logs_user_id_idx" ON "audit_logs"("user_id");
+CREATE INDEX "audit_logs_organization_id_idx" ON "audit_logs"("organization_id");
+CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
+CREATE INDEX "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
+CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs"("created_at");
+</pre>
+      </div>
+
+      <h3>Análise de Cobertura de Índices</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Query Pattern</th><th>Índice Usado</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>WHERE organizationId = ? ORDER BY createdAt DESC</code></td>
+            <td><code>organizationId</code> + filesort</td>
+            <td><span class="tag tag-warning">Parcial</span> — precisa de include createdAt no índice para ORDER BY otimizado</td>
+          </tr>
+          <tr>
+            <td><code>WHERE userId = ?</code></td>
+            <td><code>userId</code></td>
+            <td><span class="tag tag-success">OK</span></td>
+          </tr>
+          <tr>
+            <td><code>WHERE action = ?</code></td>
+            <td><code>action</code></td>
+            <td><span class="tag tag-success">OK</span></td>
+          </tr>
+          <tr>
+            <td><code>WHERE entityType = ? AND entityId = ?</code></td>
+            <td><code>(entityType, entityId)</code></td>
+            <td><span class="tag tag-success">OK</span></td>
+          </tr>
+          <tr>
+            <td><code>WHERE createdAt >= ?</code></td>
+            <td><code>createdAt</code></td>
+            <td><span class="tag tag-success">OK</span></td>
+          </tr>
+          <tr>
+            <td><code>WHERE organizationId = ? AND createdAt >= ?</code></td>
+            <td><code>organizationId</code> + filter</td>
+            <td><span class="tag tag-warning">Parcial</span> — considerar índice composto (organizationId, createdAt)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>5. Consultas de Auditoria</h2>
+
+      <h3>Buscar Logs por Organização (últimos N dias)</h3>
+      <pre><code>-- Período configurável
+SELECT
+  id,
+  userId,
+  action,
+  entityType,
+  entityId,
+  metadata,
+  ipAddress,
+  userAgent,
+  status,
+  createdAt
+FROM audit_logs
+WHERE organizationId = 'org_12345'
+  AND createdAt >= NOW() - INTERVAL '90 days'
+ORDER BY createdAt DESC
+LIMIT 1000;</code></pre>
+
+      <h3>Histórico Completo de uma Entidade</h3>
+      <pre><code>-- Rastrear todas as mudanças em um Job específico
+SELECT
+  action,
+  userId,
+  ipAddress,
+  userAgent,
+  metadata,
+  status,
+  createdAt
+FROM audit_logs
+WHERE entityType = 'Job'
+  AND entityId = 'job_abc123'
+ORDER BY createdAt ASC;</code></pre>
+
+      <h3>Logins por Período (Dashboard)</h3>
+      <pre><code>-- Estatística diária de autenticações
+SELECT
+  DATE(createdAt) as date,
+  COUNT(*) FILTER (WHERE status = 'SUCCESS') as successful_logins,
+  COUNT(*) FILTER (WHERE status = 'DENIED') as failed_logins,
+  COUNT(DISTINCT userId) as unique_users
+FROM audit_logs
+WHERE action = 'user.auth.success'
+  AND createdAt >= NOW() - INTERVAL '30 days'
+GROUP BY DATE(createdAt)
+ORDER BY date DESC;</code></pre>
+
+      <h3>Auditoria de Permissões Negadas</h3>
+      <pre><code>-- Identificar usuários/permissões problemáticas
+SELECT
+  userId,
+  organizationId,
+  COUNT(*) as denial_count,
+  jsonb_array_elements_text(metadata->'required') as missing_permission
+FROM audit_logs
+WHERE action = 'permission.denied'
+  AND createdAt >= NOW() - INTERVAL '7 days'
+GROUP BY userId, organizationId, missing_permission
+ORDER BY denial_count DESC
+LIMIT 50;</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>6. Riscos Identificados</h2>
+
+      <div class="risk-box risk-high">
+        <h3>🔴 Risco Alto: Logs Sensíveis em metadata</h3>
+        <p><strong>Problema:</strong> O campo metadata é JSONB sem validação. Desenvolvedores podem (involuntariamente) logar:</p>
+        <ul>
+          <li>Senhas ou tokens de autenticação</li>
+          <li>Dados pessoais (email, CPF, dados de cartão)</li>
+          <li>Chaves API completas</li>
+          <li>Payloads de jobs com dados sensíveis</li>
+        </ul>
+        <p><strong>Impacto:</strong> Vazamento de dados em logs permanentes; não compliance com GDPR/LGPD.</p>
+      </div>
+
+      <div class="risk-box risk-high">
+        <h3>🔴 Risco Alto: Volume Cresce Indefinidamente</h3>
+        <p><strong>Problema:</strong> Sem política de retenção, a tabela cresce linearmente:</p>
+        <ul>
+          <li>1.000 req/dia → ~365 mil logs/ano</li>
+          <li>10.000 req/dia → ~3.65 milhões logs/ano (~5-10GB)</li>
+          <li>100.000 req/dia → ~36 milhões logs/ano (~50-100GB)</li>
+        </ul>
+        <p><strong>Impacto:</strong> Queries lentas, custo de storage alto, manutenção de índices onerosa.</p>
+      </div>
+
+      <div class="risk-box risk-medium">
+        <h3>🟡 Risco Médio: GAP de Logging</h3>
+        <p><strong>Problema:</strong> Apenas autenticação/autorização são auditados. Operações CRUD de Jobs, Queues, API Keys não possuem logs.</p>
+        <ul>
+          <li>Impossível rastrear quem criou/cancelou um job</li>
+          <li>Sem evidência de modificações em queues</li>
+          <li>API key creations/revokes invisíveis na trilha</li>
+        </ul>
+        <p><strong>Impacto:</strong> Forensic incompleta; accountability reduzida; compliance falha.</p>
+      </div>
+
+      <div class="risk-box risk-medium">
+        <h3>🟡 Risco Médio: Fire-and-Forget Silencioso</h3>
+        <p><strong>Problema:</strong> logAudit() captura erros apenas no console:</p>
+        <pre><code>try { await prisma.auditLog.create(...) } catch (e) { console.error(e) }</code></pre>
+        <p><strong>Impacto:</strong> Se PostgreSQL estiver down/sobrecarregado, logs são perdidos sem alerta. Não há fallback (fila Redis, arquivo local).</p>
+      </div>
+
+      <div class="risk-box risk-low">
+        <h3>🟢 Risco Baixo: Índices Subótimos</h3>
+        <p><strong>Problema:</strong> Consultas comuns como <code>WHERE organizationId = ? ORDER BY createdAt DESC</code> usam filesort.</p>
+        <p><strong>Sugestão:</strong> Índices compostos adicionais:</p>
+        <ul>
+          <li><code>CREATE INDEX audit_logs_org_created ON audit_logs(organizationId, createdAt DESC);</code></li>
+          <li><code>CREATE INDEX audit_logs_user_created ON audit_logs(userId, createdAt DESC);</code></li>
+        </ul>
+      </div>
+
+      <div class="risk-box risk-medium">
+        <h3>🟡 Risco Médio: Sem Particionamento</h3>
+        <p><strong>Problema:</strong> Tabela únicaGrowing = operações pesadas para DELETE/ARCHIVE.</p>
+        <p><strong>Sugestão:</strong> Particionar por mês (PostgreSQL RANGE partition):</p>
+        <ul>
+          <li>Partição ativa: <code>audit_logs_2026_03</code></li>
+          <li>Arquivo morto: <code>audit_logs_2025_01</code> (somente leitura)</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>7. Recomendações de Retenção e Masking</h2>
+
+      <div class="recommendation">
+        <h3>📅 Politica de Retenção Recomendada</h3>
+        <div class="rec-item">
+          <span class="rec-icon">🗑️</span>
+          <div>
+            <strong>Logs de Sucesso (SUCCESS):</strong> Manter 90 dias na tabela ativa. Após isso, mover para tabela de arquivo morto (<code>audit_logs_archive</code>) ou data warehouse (S3/ClickHouse). Manter indexação reduzida.
+          </div>
+        </div>
+        <div class="rec-item">
+          <span class="rec-icon">⚠️</span>
+          <div>
+            <strong>Logs de Falha/Denied (FAILURE/DENIED):</strong> Manter 365 dias (1 ano) — informações de segurança são mais sensíveis. Justificativa para forensic.
+          </div>
+        </div>
+        <div class="rec-item">
+          <span class="rec-icon">🔐</span>
+          <div>
+            <strong>Logs de Erro (error.occurred):</strong> Manter 180 dias, mas <em>redigir</em> mensagens de erro que possam conter dados sensíveis (ex: stack traces com tokens).
+          </div>
+        </div>
+      </div>
+
+      <div class="recommendation">
+        <h3>🎭 Data Masking / Sanitização</h3>
+        <p>Modificar logAudit() para filtrar campos sensíveis antes de salvar:</p>
+        <pre><code>const SENSITIVE_KEYS = ['password', 'token', 'apiKey', 'secret', 'authorization'];
+
+function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = { ...metadata };
+
+  for (const key of SENSITIVE_KEYS) {
+    if (sanitized[key]) {
+      sanitized[key] = '[REDACTED]';
+    }
+  }
+
+  // Sanitizar recursivamente em arrays/objects aninhados
+  if (sanitized.payload && typeof sanitized.payload === 'object') {
+    sanitized.payload = deepRedact(sanitized.payload);
+  }
+
+  return sanitized;
+}</code></pre>
+      </div>
+
+      <div class="recommendation">
+        <h3>🔄 Implementação de Retenção Automática</h3>
+        <p>Job agendado para limpeza/arquivamento:</p>
+        <pre><code>// Usar pg_cron ou worker externo
+// Exemplo de migration SQL:
+CREATE OR REPLACE FUNCTION archive_old_audit_logs()
+RETURNS void AS $$
+DECLARE
+  cutoff_date timestamptz := NOW() - INTERVAL '90 days';
+BEGIN
+  -- Mover logs antigos para tabela archive
+  INSERT INTO audit_logs_archive
+  SELECT * FROM audit_logs
+  WHERE createdAt < cutoff_date
+    AND status = 'SUCCESS';
+
+  DELETE FROM audit_logs
+  WHERE createdAt < cutoff_date
+    AND status = 'SUCCESS';
+END;
+$$ LANGUAGE plpgsql;</code></pre>
+      </div>
+
+      <div class="recommendation">
+        <h3>📊 Estratégia de Particionamento</h3>
+        <pre><code>-- Criar particoes mensais automaticamente
+CREATE TABLE audit_logs (
+  id TEXT NOT NULL,
+  userId TEXT,
+  organizationId TEXT,
+  action TEXT NOT NULL,
+  entityType TEXT,
+  entityId TEXT,
+  metadata JSONB,
+  ipAddress TEXT,
+  userAgent TEXT,
+  status AuditStatus NOT NULL DEFAULT 'SUCCESS',
+  createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+) PARTITION BY RANGE (createdAt);
+
+-- Partição atual (escrita)
+CREATE TABLE audit_logs_2026_03 PARTITION OF audit_logs
+FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+-- Partições passadas (apenas leitura)
+CREATE TABLE audit_logs_2026_02 PARTITION OF audit_logs
+FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');</code></pre>
+      </div>
+
+      <div class="recommendation">
+        <h3>🚨 Alertas e Monitoramento</h3>
+        <ul>
+          <li><strong>Taxa de crescimento:</strong> Alerta se tabela cresce &gt; 10% ao mês</li>
+          <li><strong>Logs faltando:</strong> Alertar se falhas na função logAudit() (Sentry já captura, mas criar métrica)</li>
+          <li><strong>Conformidade:</strong> Dashboard periodicamente mostrando % de entidades auditadas</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>8. Compliance: Reconstrução Histórico Completo</h2>
+
+      <h3>Capacidade de Reconstrução</h3>
+      <p><strong>Estado atual:</strong> <span class="tag tag-warning">Parcial</span></p>
+      <ul>
+        <li>✅ Trilha de autenticação completa (login, falhas API key, permissões negadas)</li>
+        <li>❌ Quem criou/cancelou um job? <strong>Não rastreado</strong></li>
+        <li>❌ Mudanças em configuração de queues? <strong>Não rastreado</strong></li>
+        <li>❌ Quem gerou/revogou uma API key? <strong>Não rastreado</strong></li>
+        <li>❌ Resultados de jobs executados? <strong>Não rastreado</strong></li>
+      </ul>
+
+      <h3>Para Full Compliance (GDPR/SOX/ISO 27001):</h3>
+      <table class="action-table">
+        <thead>
+          <tr><th>Requisito</th><th>Cobertura Atual</th><th>Ação Necessária</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Quem acessou dados X?</td>
+            <td><span class="tag tag-danger">Não</span></td>
+            <td>Logar entidade afetada em cada operação</td>
+          </tr>
+          <tr>
+            <td>Quem modificou configuração?</td>
+            <td><span class="tag tag-danger">Não</span></td>
+            <td>Adicionar logs em endpoints de update</td>
+          </tr>
+          <tr>
+            <td>Quando ocorreu acesso não autorizado?</td>
+            <td><span class="tag tag-success">Sim</span></td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>Data retention/retention policy?</td>
+            <td><span class="tag tag-danger">Não</span></td>
+            <td>Implementar limpeza automática</td>
+          </tr>
+          <tr>
+            <td>Integridade dos logs (tamper-proof)?</td>
+            <td><span class="tag tag-warning">Parcial</span></td>
+            <td>Considerar append-only tables ou hash chain</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-content">
+          <strong>Recomendação Final</strong>
+          <p>Para reconstruir histórico completo, é necessário:</p>
+          <ol>
+            <li>Adicionar <code>logAudit()</code> em todos os endpoints CRUD</li>
+            <li>Incluir <code>userId</code> em <code>jobService.create()</code> (já existe campo no Job)</li>
+            <li>Criar logs de transição de status de jobs (PENDING → PROCESSING, etc)</li>
+            <li>Implementar política de retention com backup/archive</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>9. Referências de Código</h2>
+      <ul>
+        <li><strong>Schema Prisma:</strong> <code>/backend-job-assync/prisma/schema.prisma</code> (linhas 258-295)</li>
+        <li><strong>Função logAudit:</strong> <code>/backend-job-assync/src/lib/auth.ts</code> (linhas 476-504)</li>
+        <li><strong>Hooks de autenticação:</strong> <code>/backend-job-assync/src/server.ts</code> (linhas 71-122)</li>
+        <li><strong>Error handler:</strong> <code>/backend-job-assync/src/server.ts</code> (linhas 124-133)</li>
+        <li><strong>Services (sem audit):</strong> <code>/backend-job-assync/src/services/job.service.ts</code>, <code>queue.service.ts</code>, <code>apikey.service.ts</code></li>
+        <li><strong>Migration SQL:</strong> <code>/backend-job-assync/prisma/migrations/20260106045025_init/migration.sql</code> (linhas 140-262)</li>
+      </ul>
+    </section>
+
+    <div class="doc-footer">
+      <p>JobSync Documentation — Análise Técnica de Trilha de Auditoria</p>
+      <p>Próximo: <a href="error-handling.html">Tratamento de Erros</a></p>
+    </div>
+  </div>
+</body>
+</html>
