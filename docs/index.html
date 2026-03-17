@@ -3,611 +3,714 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobSync — Documentação Completa</title>
-  <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>JobSync — Documentação</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface2: #27272a;
+      --border: #3f3f46;
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.12);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+      --yellow: #eab308;
+      --yellow-dim: rgba(234,179,8,0.12);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
+      --purple: #a855f7;
+      --purple-dim: rgba(168,85,247,0.12);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(9,9,11,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-logo svg {
+      width: 22px;
+      height: 22px;
+      color: var(--blue);
+    }
+
+    .nav-badge {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(59,130,246,0.3);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .nav-right a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.15s;
+    }
+
+    .nav-right a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      padding: 5rem 2rem 3rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .hero-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--blue);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--blue);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .hero-cta:hover { opacity: 0.9; }
+
+    /* STATS BAR */
+    .stats-bar {
+      max-width: 800px;
+      margin: 0 auto 3rem;
+      padding: 0 2rem;
+      display: flex;
+      gap: 1px;
+      background: var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .stat-item {
+      flex: 1;
+      background: var(--surface);
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+
+    .stat-item:first-child { border-radius: 11px 0 0 11px; }
+    .stat-item:last-child { border-radius: 0 11px 11px 0; }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* MAIN LAYOUT */
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+
+    /* SECTION */
+    .section { margin-bottom: 3rem; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* FEATURED CARD */
+    .featured-card {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: var(--surface);
+      border: 1px solid rgba(59,130,246,0.4);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 40px rgba(59,130,246,0.08);
+    }
+
+    .featured-card:hover {
+      border-color: var(--blue);
+      background: rgba(59,130,246,0.05);
+    }
+
+    .featured-icon {
+      width: 52px;
+      height: 52px;
+      background: var(--blue-dim);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .featured-content { flex: 1; }
+
+    .featured-content h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .featured-content p {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .featured-arrow {
+      color: var(--blue);
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    /* GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .grid-lg {
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.125rem 1.25rem;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+
+    .card:hover {
+      border-color: var(--blue);
+      background: rgba(59,130,246,0.04);
+      transform: translateY(-1px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-emoji {
+      font-size: 1.25rem;
+    }
+
+    .tag {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .tag-blue { background: var(--blue-dim); color: var(--blue); }
+    .tag-green { background: var(--green-dim); color: var(--green); }
+    .tag-yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .tag-red { background: var(--red-dim); color: var(--red); }
+    .tag-purple { background: var(--purple-dim); color: var(--purple); }
+    .tag-gray { background: rgba(161,161,170,0.12); color: var(--muted); }
+
+    .card h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .card p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    footer a { color: var(--blue); text-decoration: none; }
+
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.75rem; }
+      .stats-bar { flex-direction: column; gap: 0; }
+      .featured-card { flex-direction: column; text-align: center; }
+      .nav-right { display: none; }
+    }
+  </style>
 </head>
 <body>
-  <nav class="top-nav">
-    <div class="nav-inner">
-      <a href="index.html" class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="2" width="20" height="20" rx="4"/>
-          <path d="M7 7h10v2H7zM7 11h7v2H7zM7 15h4v2H7z"/>
-        </svg>
-        JobSync Docs
-      </a>
-      <div class="nav-links">
-        <a href="guides/arquitetura-overview.html">Arquitetura</a>
-        <a href="guides/api-reference.html">API</a>
-        <a href="guides/frontend-techstack.html">Frontend</a>
-        <a href="guides/deploy-configuracao.html">Deploy</a>
-      </div>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      JobSync Docs
+    </a>
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <span class="nav-badge">v1.0</span>
+    </div>
+    <div class="nav-right">
+      <a href="guides/como-usar-jobsync.html">Guia de Uso</a>
+      <a href="guides/api-reference.html">API Ref</a>
+      <a href="guides/arquitetura-overview.html">Arquitetura</a>
+      <a href="guides/deploy-configuracao.html">Deploy</a>
     </div>
   </nav>
 
-  <div class="page-wrapper">
-    <div class="doc-header">
-      <span class="badge">v1.0</span>
-      <h1>JobSync — Sistema de Processamento Assíncrono</h1>
-      <p class="subtitle">Documentação completa de ponta a ponta: arquitetura, integrações, frontend e operações</p>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
     </div>
+    <h1>JobSync</h1>
+    <p>Sistema de processamento assíncrono de jobs via webhooks. Documentação completa de ponta a ponta.</p>
+    <a href="guides/como-usar-jobsync.html" class="hero-cta">
+      Começar por aqui →
+    </a>
+  </div>
 
-    <div class="card-grid section">
-      <a href="guides/arquitetura-overview.html" class="card-link">
-        <div class="card">
-          <div class="card-icon purple">🎯</div>
-          <h3>Arquitetura</h3>
-          <p>Visão geral, camadas, fluxo de dados e multi-tenancy</p>
-          <span class="tag arch">Core</span>
-        </div>
-      </a>
-      <a href="guides/dados-fluxo.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">🔄</div>
-          <h3>Fluxo de Dados</h3>
-          <p>Job creation, processing, callbacks em detalhe</p>
-          <span class="tag flow">Flow</span>
-        </div>
-      </a>
-      <a href="guides/modelo-dados.html" class="card-link">
-        <div class="card">
-          <div class="card-icon purple">🗄️</div>
-          <h3>Modelo de Dados</h3>
-          <p>Schema Prisma completo, entidades e ER</p>
-          <span class="tag arch">DB</span>
-        </div>
-      </a>
-      <a href="guides/schema-prisma.html" class="card-link">
-        <div class="card">
-          <div class="card-icon purple">📐</div>
-          <h3>Schema Prisma</h3>
-          <p>Documentação de tabelas, relations e constraints</p>
-          <span class="tag db">DB</span>
-        </div>
-      </a>
-      <a href="guides/sistema-filas.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">📋</div>
-          <h3>Sistema de Filas</h3>
-          <p>BullMQ, workers, retry, rate limit</p>
-          <span class="tag arch">Core</span>
-        </div>
-      </a>
-      <a href="guides/bullmq-pipeline.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">🔄</div>
-          <h3>BullMQ Pipeline</h3>
-          <p>Fluxo visual completo: API → Redis → Worker → Webhook</p>
-          <span class="tag arch">Core</span>
-        </div>
-      </a>
-      <a href="guides/webhooks-callbacks.html" class="card-link">
-        <div class="card">
-          <div class="card-icon green">🔗</div>
-          <h3>Webhooks & Callbacks</h3>
-          <p>Integração com endpoints externos</p>
-          <span class="tag api">Integration</span>
-        </div>
-      </a>
-      <a href="guides/auth-flow.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🔐</div>
-          <h3>Autenticação</h3>
-          <p>OAuth PKCE, JWT, API Keys</p>
-          <span class="tag security">Auth</span>
-        </div>
-      </a>
-      <a href="guides/apikeys.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🔑</div>
-          <h3>API Keys</h3>
-          <p>Criação, permissions, segurança M2M</p>
-          <span class="tag security">Auth</span>
-        </div>
-      </a>
-      <a href="guides/permissions.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">🛡️</div>
-          <h3>Permissões</h3>
-          <p>RBAC, roles, recursos e ações</p>
-          <span class="tag security">Security</span>
-        </div>
-      </a>
-      <a href="guides/multitenancy.html" class="card-link">
-        <div class="card">
-          <div class="card-icon green">🏢</div>
-          <h3>Multi-Tenancy</h3>
-          <p>Isolamento por organização</p>
-          <span class="tag security">Isolation</span>
-        </div>
-      </a>
-      <a href="guides/multitenancy-analysis.html" class="card-link">
-        <div class="card">
-          <div class="card-icon green">🔍</div>
-          <h3>Multi-Tenancy Analysis</h3>
-          <p>Análise profunda: RBAC, falhas críticas, payroll</p>
-          <span class="tag security">Deep Dive</span>
-        </div>
-      </a>
-      <a href="guides/rate-limiting.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">⚡</div>
-          <h3>Rate Limiting</h3>
-          <p>Proteção contra abuso em múltiplas camadas</p>
-          <span class="tag security">Security</span>
-        </div>
-      </a>
-      <a href="guides/autenticacao-api-keys.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🔑</div>
-          <h3>Autenticação & API Keys</h3>
-          <p>JWT, API Key M2M, algoritmo RS256</p>
-          <span class="tag security">Auth</span>
-        </div>
-      </a>
-      <a href="guides/error-handling.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">⚠️</div>
-          <h3>Error Handling</h3>
-          <p>Sentry, logs, graceful shutdown</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/audit-logging.html" class="card-link">
-        <div class="card">
-          <div class="card-icon purple">📜</div>
-          <h3>Audit Logging</h3>
-          <p>Compliance, trilha de auditoria</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/integracoes.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">🔌</div>
-          <h3>Integrações</h3>
-          <p>Auth Service, Redis, PostgreSQL, Sentry</p>
-          <span class="tag api">Infra</span>
-        </div>
-      </a>
-      <a href="guides/integracao-redis.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">📦</div>
-          <h3>Redis</h3>
-          <p>Cache, BullMQ, namespaces</p>
-          <span class="tag api">Infra</span>
-        </div>
-      </a>
-      <a href="guides/integracao-postgres.html" class="card-link">
-        <div class="card">
-          <div class="card-icon purple">🗃️</div>
-          <h3>PostgreSQL</h3>
-          <p>Prisma ORM, schema, indexes</p>
-          <span class="tag api">Infra</span>
-        </div>
-      </a>
-      <a href="guides/integracao-sentry.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">📈</div>
-          <h3>Sentry</h3>
-          <p>Error tracking, performance, context</p>
-          <span class="tag api">Infra</span>
-        </div>
-      </a>
-      <a href="guides/integracao-authservice.html" class="card-link">
-        <div class="card">
-          <div class="card-icon green">🔗</div>
-          <h3>Auth Service</h3>
-          <p>Integração com provedor de identidade</p>
-          <span class="tag api">Infra</span>
-        </div>
-      </a>
-      <a href="guides/healthchecks.html" class="card-link">
-        <div class="card">
-          <div class="card-icon green">💓</div>
-          <h3>Health Checks</h3>
-          <p>/health e /ready para Kubernetes</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/config-env.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">⚙️</div>
-          <h3>Configuração</h3>
-          <p>Variáveis de ambiente e .env</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/frontend-techstack.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">⚛️</div>
-          <h3>Frontend Tech Stack</h3>
-          <p>React, Vite, TanStack Query, shadcn/ui</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/frontend-architecture.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🏛️</div>
-          <h3>Frontend Architecture</h3>
-          <p>Organização de código, components, hooks</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/components-hooks.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🧩</div>
-          <h3>Componentes & Hooks</h3>
-          <p>Referência completa da library UI e hooks customizados</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/dashboard.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">📊</div>
-          <h3>Dashboard</h3>
-          <p>Página principal com stats e charts</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/jobs-page.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">📝</div>
-          <h3>Jobs Page</h3>
-          <p>Lista, criação, filtros, paginação</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/job-detail.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">🔍</div>
-          <h3>Job Detail</h3>
-          <p>Detalhes e logs de um job</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/queues-page.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">📋</div>
-          <h3>Queues Page</h3>
-          <p>Gerenciamento de filas</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/queue-detail.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">📈</div>
-          <h3>Queue Detail</h3>
-          <p>Estatísticas da fila</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/settings.html" class="card-link">
-        <div class="card">
-          <div class="card-icon yellow">⚙️</div>
-          <h3>Settings</h3>
-          <p>Configurações e API Keys</p>
-          <span class="tag frontend">Frontend</span>
-        </div>
-      </a>
-      <a href="guides/workers-escalabilidade.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">⚙️</div>
-          <h3>Workers</h3>
-          <p>Processamento, concorrência, escalabilidade</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/deploy-configuracao.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">🚀</div>
-          <h3>Deploy</h3>
-          <p>Build, configuração, PM2, produção</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/troubleshooting.html" class="card-link">
-        <div class="card">
-          <div class="card-icon red">🔧</div>
-          <h3>Troubleshooting</h3>
-          <p>Guia de resolução de problemas</p>
-          <span class="tag ops">Ops</span>
-        </div>
-      </a>
-      <a href="guides/api-reference.html" class="card-link">
-        <div class="card">
-          <div class="card-icon blue">📚</div>
-          <h3>API Reference</h3>
-          <p>Referência completa dos endpoints</p>
-          <span class="tag api">API</span>
-        </div>
-      </a>
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value">70+</div>
+      <div class="stat-label">Páginas de docs</div>
     </div>
-
-    <section class="section">
-      <h2>🔬 Deep Dive — Análise Profunda de Riscos & Operações</h2>
-      <p>30 páginas de análise detalhada cobrindo riscos, performance, segurança, operações e compliance.</p>
-
-      <div class="card-grid section">
-        <!-- Riscos -->
-        <a href="guides/callback-failure-handling.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">⚠️</div>
-            <h3>Callback Failure</h3>
-            <p>O que acontece se o callback do cliente falha</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/redis-connection-exhaustion.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">📦</div>
-            <h3>Redis Connection Exhaustion</h3>
-            <p>Vazamento de conexões em alta carga</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/database-deadlocks.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🔒</div>
-            <h3>Database Deadlocks</h3>
-            <p>Concorrência alta trava transações</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/memory-leak-logs.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">💾</div>
-            <h3>Memory Leak: JobLogs</h3>
-            <p>Crescimento indefinido de logs</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/timeout-cascade.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">⏰</div>
-            <h3>Timeout Cascade</h3>
-            <p>Timeout de webhook não respeitado</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/rate-limit-bypass.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🔓</div>
-            <h3>Rate Limit Bypass</h3>
-            <p>Vetores de contorno da proteção</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/api-key-leakage.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🚨</div>
-            <h3>API Key Leakage</h3>
-            <p>Vazamento em logs e errors</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/cors-misconfiguration.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🌐</div>
-            <h3>CORS Misconfiguration</h3>
-            <p>Permissividade perigosa</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/sensitive-data-in-metadata.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🛡️</div>
-            <h3>Sensitive Data in Metadata</h3>
-            <p>Metadados com PII sem criptografia</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-        <a href="guides/worker-crash-loop.html" class="card-link">
-          <div class="card">
-            <div class="card-icon red">🔁</div>
-            <h3>Worker Crash Loop</h3>
-            <p>Worker sem restart automático</p>
-            <span class="tag risk">Risco</span>
-          </div>
-        </a>
-
-        <!-- Performance -->
-        <a href="guides/database-indexes.html" class="card-link">
-          <div class="card">
-            <div class="card-icon blue">📈</div>
-            <h3>Database Indexes</h3>
-            <p>Índices para alta performance</p>
-            <span class="tag performance">Performance</span>
-          </div>
-        </a>
-        <a href="guides/redis-memory-optimization.html" class="card-link">
-          <div class="card">
-            <div class="card-icon blue">💾</div>
-            <h3>Redis Memory Optimization</h3>
-            <p>Configuração de memória e TTL</p>
-            <span class="tag performance">Performance</span>
-          </div>
-        </a>
-        <a href="guides/bullmq-queue-tuning.html" class="card-link">
-          <div class="card">
-            <div class="card-icon blue">⚙️</div>
-            <h3>BullMQ Queue Tuning</h3>
-            <p>Concorrência, backoff, prioridades</p>
-            <span class="tag performance">Performance</span>
-          </div>
-        </a>
-        <a href="guides/pagination-strategies.html" class="card-link">
-          <div class="card">
-            <div class="card-icon blue">📄</div>
-            <h3>Pagination Strategies</h3>
-            <p>Offset vs cursor, deep pagination</p>
-            <span class="tag performance">Performance</span>
-          </div>
-        </a>
-        <a href="guides/connection-pooling.html" class="card-link">
-          <div class="card">
-            <div class="card-icon blue">🔌</div>
-            <h3>Connection Pooling</h3>
-            <p>Prisma e Redis pool tuning</p>
-            <span class="tag performance">Performance</span>
-          </div>
-        </a>
-
-        <!-- Security -->
-        <a href="guides/owasp-top10-coverage.html" class="card-link">
-          <div class="card">
-            <div class="card-icon yellow">🛡️</div>
-            <h3>OWASP Top 10 Coverage</h3>
-            <p>Cobertura de vulnerabilidades</p>
-            <span class="tag security">Security</span>
-          </div>
-        </a>
-        <a href="guides/jwt-security-best-practices.html" class="card-link">
-          <div class="card">
-            <div class="card-icon yellow">🔐</div>
-            <h3>JWT Security Best Practices</h3>
-            <p>Algoritmo, expiração, validação</p>
-            <span class="tag security">Security</span>
-          </div>
-        </a>
-        <a href="guides/input-validation-boundaries.html" class="card-link">
-          <div class="card">
-            <div class="card-icon yellow">✅</div>
-            <h3>Input Validation Boundaries</h3>
-            <p>Zod, defesa em profundidade</p>
-            <span class="tag security">Security</span>
-          </div>
-        </a>
-        <a href="guides/sql-injection-protection.html" class="card-link">
-          <div class="card">
-            <div class="card-icon yellow">💉</div>
-            <h3>SQL Injection Protection</h3>
-            <p>Prisma vs raw queries</p>
-            <span class="tag security">Security</span>
-          </div>
-        </a>
-        <a href="guides/secrets-management.html" class="card-link">
-          <div class="card">
-            <div class="card-icon yellow">🔑</div>
-            <h3>Secrets Management</h3>
-            <p>.env, vault, K8s secrets</p>
-            <span class="tag security">Security</span>
-          </div>
-        </a>
-
-        <!-- Operations -->
-        <a href="guides/monitoring-setup.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">📊</div>
-            <h3>Monitoring Setup</h3>
-            <p>Sentry, métricas, Grafana</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-        <a href="guides/alerting-rules.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">🚨</div>
-            <h3>Alerting Rules</h3>
-            <p>Thresholds PagerDuty</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-        <a href="guides/backup-restore-procedures.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">🗄️</div>
-            <h3>Backup & Restore</h3>
-            <p>pg_dump, Redis RDB</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-        <a href="guides/zero-downtime-deployments.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">🔄</div>
-            <h3>Zero-Downtime Deployments</h3>
-            <p>Blue-green, rolling</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-        <a href="guides/capacity-planning.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">📈</div>
-            <h3>Capacity Planning</h3>
-            <p>SLOs, dimensionamento</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-        <a href="guides/troubleshooting-runbook.html" class="card-link">
-          <div class="card">
-            <div class="card-icon purple">🔧</div>
-            <h3>Troubleshooting Runbook</h3>
-            <p>Decision tree para incidentes</p>
-            <span class="tag ops">Ops</span>
-          </div>
-        </a>
-
-        <!-- Data & Testing -->
-        <a href="guides/data-retention-policies.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">🗂️</div>
-            <h3>Data Retention Policies</h3>
-            <p>TTL, archival, cleanup</p>
-            <span class="tag data">Data</span>
-          </div>
-        </a>
-        <a href="guides/gdpr-compliance.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">🇪🇺</div>
-            <h3>GDPR Compliance</h3>
-            <p>Direito ao esquecimento</p>
-            <span class="tag data">Data</span>
-          </div>
-        </a>
-        <a href="guides/audit-log-masking.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">🎭</div>
-            <h3>Audit Log Masking</h3>
-            <p>Redação de PII</p>
-            <span class="tag data">Data</span>
-          </div>
-        </a>
-        <a href="guides/integration-testing-strategy.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">🧪</div>
-            <h3>Integration Testing</h3>
-            <p>Testes com banco real</p>
-            <span class="tag testing">Testing</span>
-          </div>
-        </a>
-        <a href="guides/load-testing-approach.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">⚡</div>
-            <h3>Load Testing Approach</h3>
-            <p>k6, 10k jobs/s</p>
-            <span class="tag testing">Testing</span>
-          </div>
-        </a>
-        <a href="guides/chaos-engineering.html" class="card-link">
-          <div class="card">
-            <div class="card-icon green">🎯</div>
-            <h3>Chaos Engineering</h3>
-            <p>Testar resiliência</p>
-            <span class="tag testing">Testing</span>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="section">
-      <h2>Sobre este Projeto</h2>
-      <p>O JobSync é uma plataforma centralizada para processamento assíncrono de jobs via webhooks. Construída com Fastify, React, BullMQ e PostgreSQL.</p>
-      <p>Esta documentação cobre de ponta a ponta: arquitetura, fluxos de dados, integrações, frontend e operações.</p>
-      <p><strong>Deep Dive:</strong> 30 páginas adicionais analisando riscos, performance, segurança e operações em profundidade.</p>
-    </section>
-
-    <div class="doc-footer">
-      <p>JobSync Documentation — Gerado automaticamente.</p>
-      <p>Precisa de ajuda? Consulte <a href="guides/troubleshooting.html">Troubleshooting</a> ou <a href="guides/api-reference.html">API Reference</a>.</p>
+    <div class="stat-item">
+      <div class="stat-value">REST</div>
+      <div class="stat-label">API completa</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">BullMQ</div>
+      <div class="stat-label">Sistema de filas</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">v1.0</div>
+      <div class="stat-label">Produção</div>
     </div>
   </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- GUIA PRINCIPAL -->
+    <a href="guides/como-usar-jobsync.html" class="featured-card">
+      <div class="featured-icon">🚀</div>
+      <div class="featured-content">
+        <h3>Guia Completo — Como Usar o JobSync</h3>
+        <p>Dashboard, jobs, filas, recorrências, integração via API com exemplos reais de código. Comece aqui.</p>
+      </div>
+      <div class="featured-arrow">→</div>
+    </a>
+
+    <!-- CORE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--blue);"></div>
+        <h2>Core — Arquitetura & Fluxos</h2>
+      </div>
+      <div class="grid grid-lg">
+        <a href="guides/arquitetura-overview.html" class="card">
+          <div class="card-top"><span class="card-emoji">🎯</span><span class="tag tag-blue">Core</span></div>
+          <h3>Arquitetura</h3>
+          <p>Visão geral, camadas, fluxo de dados e multi-tenancy</p>
+        </a>
+        <a href="guides/dados-fluxo.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔄</span><span class="tag tag-blue">Flow</span></div>
+          <h3>Fluxo de Dados</h3>
+          <p>Job creation, processing e callbacks em detalhe</p>
+        </a>
+        <a href="guides/modelo-dados.html" class="card">
+          <div class="card-top"><span class="card-emoji">🗄️</span><span class="tag tag-blue">DB</span></div>
+          <h3>Modelo de Dados</h3>
+          <p>Schema Prisma completo, entidades e ER</p>
+        </a>
+        <a href="guides/sistema-filas.html" class="card">
+          <div class="card-top"><span class="card-emoji">📋</span><span class="tag tag-blue">Core</span></div>
+          <h3>Sistema de Filas</h3>
+          <p>BullMQ, workers, retry, rate limit</p>
+        </a>
+        <a href="guides/bullmq-pipeline.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚡</span><span class="tag tag-blue">Core</span></div>
+          <h3>BullMQ Pipeline</h3>
+          <p>Fluxo completo: API → Redis → Worker → Webhook</p>
+        </a>
+        <a href="guides/webhooks-callbacks.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔗</span><span class="tag tag-green">Integration</span></div>
+          <h3>Webhooks & Callbacks</h3>
+          <p>Integração com endpoints externos</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- AUTH & SECURITY -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--yellow);"></div>
+        <h2>Autenticação & Segurança</h2>
+      </div>
+      <div class="grid">
+        <a href="guides/auth-flow.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔐</span><span class="tag tag-yellow">Auth</span></div>
+          <h3>Autenticação</h3>
+          <p>OAuth PKCE, JWT, API Keys</p>
+        </a>
+        <a href="guides/apikeys.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔑</span><span class="tag tag-yellow">Auth</span></div>
+          <h3>API Keys</h3>
+          <p>Criação, permissions, segurança M2M</p>
+        </a>
+        <a href="guides/permissions.html" class="card">
+          <div class="card-top"><span class="card-emoji">🛡️</span><span class="tag tag-red">Security</span></div>
+          <h3>Permissões (RBAC)</h3>
+          <p>Roles, recursos e ações</p>
+        </a>
+        <a href="guides/multitenancy.html" class="card">
+          <div class="card-top"><span class="card-emoji">🏢</span><span class="tag tag-green">Isolation</span></div>
+          <h3>Multi-Tenancy</h3>
+          <p>Isolamento por organização</p>
+        </a>
+        <a href="guides/rate-limiting.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚡</span><span class="tag tag-red">Security</span></div>
+          <h3>Rate Limiting</h3>
+          <p>Proteção contra abuso em múltiplas camadas</p>
+        </a>
+        <a href="guides/autenticacao-api-keys.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔒</span><span class="tag tag-yellow">Auth</span></div>
+          <h3>Auth & API Keys Deep</h3>
+          <p>JWT, API Key M2M, algoritmo RS256</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- API REFERENCE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--green);"></div>
+        <h2>API Reference</h2>
+      </div>
+      <div class="grid grid-lg">
+        <a href="guides/api-reference.html" class="card">
+          <div class="card-top"><span class="card-emoji">📚</span><span class="tag tag-green">API</span></div>
+          <h3>Referência Completa</h3>
+          <p>Todos os endpoints, parâmetros, respostas e exemplos</p>
+        </a>
+        <a href="guides/como-usar-jobsync.html#api" class="card">
+          <div class="card-top"><span class="card-emoji">💻</span><span class="tag tag-green">Código</span></div>
+          <h3>Exemplos de Integração</h3>
+          <p>curl, Node.js, exemplos reais com respostas</p>
+        </a>
+        <a href="guides/error-handling.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚠️</span><span class="tag tag-gray">Ops</span></div>
+          <h3>Error Handling</h3>
+          <p>Sentry, logs, graceful shutdown</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- FRONTEND -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--yellow);"></div>
+        <h2>Frontend</h2>
+      </div>
+      <div class="grid">
+        <a href="guides/frontend-techstack.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚛️</span><span class="tag tag-yellow">Frontend</span></div>
+          <h3>Tech Stack</h3>
+          <p>React, Vite, TanStack Query, shadcn/ui</p>
+        </a>
+        <a href="guides/frontend-architecture.html" class="card">
+          <div class="card-top"><span class="card-emoji">🏛️</span><span class="tag tag-yellow">Frontend</span></div>
+          <h3>Arquitetura</h3>
+          <p>Organização de código, components, hooks</p>
+        </a>
+        <a href="guides/dashboard.html" class="card">
+          <div class="card-top"><span class="card-emoji">📊</span><span class="tag tag-yellow">Página</span></div>
+          <h3>Dashboard</h3>
+          <p>Stats, gráficos e visão geral</p>
+        </a>
+        <a href="guides/jobs-page.html" class="card">
+          <div class="card-top"><span class="card-emoji">📝</span><span class="tag tag-yellow">Página</span></div>
+          <h3>Jobs</h3>
+          <p>Lista, criação, filtros, paginação</p>
+        </a>
+        <a href="guides/queues-page.html" class="card">
+          <div class="card-top"><span class="card-emoji">📋</span><span class="tag tag-yellow">Página</span></div>
+          <h3>Queues</h3>
+          <p>Gerenciamento de filas</p>
+        </a>
+        <a href="guides/settings.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚙️</span><span class="tag tag-yellow">Página</span></div>
+          <h3>Settings</h3>
+          <p>Configurações e API Keys</p>
+        </a>
+        <a href="guides/components-hooks.html" class="card">
+          <div class="card-top"><span class="card-emoji">🧩</span><span class="tag tag-yellow">Ref</span></div>
+          <h3>Componentes & Hooks</h3>
+          <p>Library UI e hooks customizados</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- INFRAESTRUTURA -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--purple);"></div>
+        <h2>Infraestrutura & Integrações</h2>
+      </div>
+      <div class="grid">
+        <a href="guides/integracao-redis.html" class="card">
+          <div class="card-top"><span class="card-emoji">📦</span><span class="tag tag-purple">Infra</span></div>
+          <h3>Redis</h3>
+          <p>Cache, BullMQ, namespaces</p>
+        </a>
+        <a href="guides/integracao-postgres.html" class="card">
+          <div class="card-top"><span class="card-emoji">🗃️</span><span class="tag tag-purple">Infra</span></div>
+          <h3>PostgreSQL</h3>
+          <p>Prisma ORM, schema, indexes</p>
+        </a>
+        <a href="guides/integracao-sentry.html" class="card">
+          <div class="card-top"><span class="card-emoji">📈</span><span class="tag tag-purple">Infra</span></div>
+          <h3>Sentry</h3>
+          <p>Error tracking, performance</p>
+        </a>
+        <a href="guides/integracao-authservice.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔗</span><span class="tag tag-purple">Infra</span></div>
+          <h3>Auth Service</h3>
+          <p>Integração com provedor de identidade</p>
+        </a>
+        <a href="guides/healthchecks.html" class="card">
+          <div class="card-top"><span class="card-emoji">💓</span><span class="tag tag-green">Ops</span></div>
+          <h3>Health Checks</h3>
+          <p>/health e /ready para Kubernetes</p>
+        </a>
+        <a href="guides/config-env.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚙️</span><span class="tag tag-gray">Ops</span></div>
+          <h3>Configuração</h3>
+          <p>Variáveis de ambiente e .env</p>
+        </a>
+        <a href="guides/deploy-configuracao.html" class="card">
+          <div class="card-top"><span class="card-emoji">🚀</span><span class="tag tag-blue">Ops</span></div>
+          <h3>Deploy</h3>
+          <p>Build, PM2, produção</p>
+        </a>
+        <a href="guides/workers-escalabilidade.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔧</span><span class="tag tag-gray">Ops</span></div>
+          <h3>Workers & Escala</h3>
+          <p>Processamento, concorrência, escalabilidade</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- RISCOS & PERFORMANCE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-dot" style="background: var(--red);"></div>
+        <h2>Riscos, Performance & Compliance</h2>
+      </div>
+      <div class="grid">
+        <a href="guides/callback-failure-handling.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚠️</span><span class="tag tag-red">Risco</span></div>
+          <h3>Callback Failure</h3>
+          <p>O que acontece se o callback do cliente falha</p>
+        </a>
+        <a href="guides/redis-connection-exhaustion.html" class="card">
+          <div class="card-top"><span class="card-emoji">📦</span><span class="tag tag-red">Risco</span></div>
+          <h3>Redis Exhaustion</h3>
+          <p>Vazamento de conexões em alta carga</p>
+        </a>
+        <a href="guides/database-deadlocks.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔒</span><span class="tag tag-red">Risco</span></div>
+          <h3>Database Deadlocks</h3>
+          <p>Concorrência alta trava transações</p>
+        </a>
+        <a href="guides/memory-leak-logs.html" class="card">
+          <div class="card-top"><span class="card-emoji">💾</span><span class="tag tag-red">Risco</span></div>
+          <h3>Memory Leak Logs</h3>
+          <p>Crescimento indefinido de logs</p>
+        </a>
+        <a href="guides/api-key-leakage.html" class="card">
+          <div class="card-top"><span class="card-emoji">🚨</span><span class="tag tag-red">Risco</span></div>
+          <h3>API Key Leakage</h3>
+          <p>Vazamento em logs e errors</p>
+        </a>
+        <a href="guides/worker-crash-loop.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔁</span><span class="tag tag-red">Risco</span></div>
+          <h3>Worker Crash Loop</h3>
+          <p>Worker sem restart automático</p>
+        </a>
+        <a href="guides/database-indexes.html" class="card">
+          <div class="card-top"><span class="card-emoji">📈</span><span class="tag tag-blue">Perf</span></div>
+          <h3>Database Indexes</h3>
+          <p>Índices para alta performance</p>
+        </a>
+        <a href="guides/bullmq-queue-tuning.html" class="card">
+          <div class="card-top"><span class="card-emoji">⚙️</span><span class="tag tag-blue">Perf</span></div>
+          <h3>BullMQ Tuning</h3>
+          <p>Concorrência, backoff, prioridades</p>
+        </a>
+        <a href="guides/owasp-top10-coverage.html" class="card">
+          <div class="card-top"><span class="card-emoji">🛡️</span><span class="tag tag-yellow">Security</span></div>
+          <h3>OWASP Top 10</h3>
+          <p>Cobertura de vulnerabilidades</p>
+        </a>
+        <a href="guides/gdpr-compliance.html" class="card">
+          <div class="card-top"><span class="card-emoji">🇪🇺</span><span class="tag tag-green">Data</span></div>
+          <h3>GDPR Compliance</h3>
+          <p>Direito ao esquecimento, PII</p>
+        </a>
+        <a href="guides/monitoring-setup.html" class="card">
+          <div class="card-top"><span class="card-emoji">📊</span><span class="tag tag-purple">Ops</span></div>
+          <h3>Monitoring</h3>
+          <p>Sentry, métricas, Grafana</p>
+        </a>
+        <a href="guides/troubleshooting.html" class="card">
+          <div class="card-top"><span class="card-emoji">🔧</span><span class="tag tag-gray">Ops</span></div>
+          <h3>Troubleshooting</h3>
+          <p>Guia de resolução de problemas</p>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>
+      JobSync Docs — v1.0 &nbsp;·&nbsp;
+      <a href="guides/como-usar-jobsync.html">Guia de Uso</a> &nbsp;·&nbsp;
+      <a href="guides/api-reference.html">API Reference</a> &nbsp;·&nbsp;
+      <a href="guides/troubleshooting.html">Troubleshooting</a>
+    </p>
+  </footer>
+
 </body>
 </html>
