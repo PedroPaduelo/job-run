@@ -1,16 +1,34 @@
 {
   "projectName": "job-run",
   "createdAt": "2026-03-17T04:00:00Z",
-  "updatedAt": "2026-03-17T04:42:00Z",
+  "updatedAt": "2026-03-17T06:10:00Z",
   "services": [
     {
       "name": "backend",
       "port": 3003,
       "pm2Name": "job-assync-backend",
-      "domain": null,
-      "url": null,
+      "domain": "job-assync-api.ddw1sl.easypanel.host",
+      "url": "https://job-assync-api.ddw1sl.easypanel.host",
       "type": "api",
       "startCommand": "cd /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/backend-job-assync && npx pm2 start npm --name job-assync-backend -- run start"
+    },
+    {
+      "name": "worker",
+      "port": null,
+      "pm2Name": "job-assync-worker",
+      "domain": null,
+      "url": null,
+      "type": "worker",
+      "startCommand": "cd /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/backend-job-assync && npx pm2 start npm --name job-assync-worker -- run start:worker"
+    },
+    {
+      "name": "frontend",
+      "port": 4173,
+      "pm2Name": "job-async-frontend",
+      "domain": "job-async.ddw1sl.easypanel.host",
+      "url": "https://job-async.ddw1sl.easypanel.host",
+      "type": "frontend",
+      "startCommand": "cd /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/frontend-job-async && npx pm2 start npx --name job-async-frontend -- serve dist/ -l 4173 --no-clipboard"
     }
   ]
 }
