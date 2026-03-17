@@ -1,7 +1,7 @@
 {
   "projectName": "job-run",
   "createdAt": "2026-03-17T04:00:00Z",
-  "updatedAt": "2026-03-17T06:10:00Z",
+  "updatedAt": "2026-03-17T07:30:00Z",
   "services": [
     {
       "name": "backend",
@@ -28,7 +28,16 @@
       "domain": "job-async.ddw1sl.easypanel.host",
       "url": "https://job-async.ddw1sl.easypanel.host",
       "type": "frontend",
-      "startCommand": "cd /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/frontend-job-async && npx pm2 start npx --name job-async-frontend -- serve dist/ -l 4173 --no-clipboard"
+      "startCommand": "npx pm2 start npx --name job-async-frontend -- serve /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/frontend-job-async/dist -l 4173 --no-clipboard --single"
+    },
+    {
+      "name": "docs",
+      "port": 4174,
+      "pm2Name": "docs-job-async",
+      "domain": "docs-job-async.ddw1sl.easypanel.host",
+      "url": "https://docs-job-async.ddw1sl.easypanel.host",
+      "type": "docs",
+      "startCommand": "npx pm2 start npx --name docs-job-async -- serve /workspace/temp-orquestrador/users/5aaf347f-952f-4355-8513-ac3f4024b43e/projetos/job-run/docs -l 4174 --no-clipboard --single"
     }
   ]
 }
