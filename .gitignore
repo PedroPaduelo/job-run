@@ -30,5 +30,5 @@ Thumbs.db
 *.tmp
 
 # Git submodule directories (tracked separately)
-backend-job-assync/
-frontend-job-async/
+# backend-job-assync/
+# frontend-job-async/
