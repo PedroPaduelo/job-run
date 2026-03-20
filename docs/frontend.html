@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend — JobSync Documentação</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-link.active { background: rgba(59,130,246,0.1); color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .sidebar-link:hover { background: rgba(255,255,255,0.05); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); }
+        .tree-line { border-left: 2px solid #334155; margin-left: 12px; padding-left: 12px; }
+        .tree-item { position: relative; }
+        .tree-item::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; height: 2px; background: #334155; }
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+        .badge-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-green { background: rgba(16,185,129,0.15); color: #34d399; }
+        .badge-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .badge-slate { background: rgba(100,116,139,0.15); color: #94a3b8; }
+        .code-block { background: #0f172a; border: 1px solid #1e293b; border-radius: 0.5rem; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.82rem; overflow-x: auto; }
+        .code-block .kw { color: #7dd3fc; }
+        .code-block .fn { color: #a5f3fc; }
+        .code-block .str { color: #86efac; }
+        .code-block .cm { color: #64748b; }
+        .code-block .tp { color: #fde68a; }
+        .flow-box { background: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.75rem 1rem; text-align: center; font-size: 0.82rem; }
+        .flow-arrow { color: #3b82f6; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .page-mockup { background: #0f172a; border: 1px solid #1e293b; border-radius: 0.75rem; overflow: hidden; }
+        .mockup-bar { background: #1e293b; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+        .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .tab-btn { padding: 6px 16px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+        .tab-btn:not(.active) { background: transparent; color: #64748b; border: 1px solid transparent; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; padding: 1rem; }
+        .sidebar-mobile { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 50; }
+        .sidebar-mobile.open { display: block; }
+        .sidebar-panel { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; background: #0f172a; z-index: 51; transform: translateX(-100%); transition: transform 0.3s; }
+        .sidebar-panel.open { transform: translateX(0); }
+        .highlight { background: rgba(59,130,246,0.08); border-left: 3px solid #3b82f6; padding: 0.75rem 1rem; border-radius: 0 0.375rem 0.375rem 0; margin: 0.5rem 0; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar (desktop) -->
+        <nav class="w-64 bg-slate-900 flex-shrink-0 overflow-y-auto hidden md:flex flex-col border-r border-slate-800">
+            <div class="p-4 border-b border-slate-800">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <span class="text-blue-400">⚡</span> JobSync
+                </h1>
+                <p class="text-xs text-slate-400 mt-1">Documentação Visual do Sistema</p>
+            </div>
+            <div class="p-2 flex-1">
+                <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2 mt-2">Navegação</h2>
+                <a href="index.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🏠</span> Visão Geral
+                </a>
+                <a href="arquitetura.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🏗️</span> Arquitetura
+                </a>
+                <a href="fluxo-dados.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🔄</span> Fluxo de Dados
+                </a>
+                <a href="database.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🗄️</span> Banco de Dados
+                </a>
+                <a href="integracoes.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🔗</span> Integrações
+                </a>
+                <a href="riscos.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>⚠️</span> Riscos
+                </a>
+                <a href="backend.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🔧</span> Backend
+                </a>
+                <a href="frontend.html" class="sidebar-link active flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm">
+                    <span>💻</span> Frontend
+                </a>
+                <a href="operacao.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🚀</span> Operação
+                </a>
+                <a href="seguranca.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">
+                    <span>🔒</span> Segurança
+                </a>
+            </div>
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+                <p>Versão: 2.0.0</p>
+                <p>Atualizado: 20/03/2026</p>
+            </div>
+        </nav>
+
+        <!-- Mobile sidebar overlay -->
+        <div id="mobileOverlay" class="sidebar-mobile" onclick="closeMobileMenu()"></div>
+        <div id="mobilePanel" class="sidebar-panel flex flex-col">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <span class="text-blue-400">⚡</span> JobSync
+                </h1>
+                <button onclick="closeMobileMenu()" class="p-1 rounded hover:bg-slate-800 text-slate-400">✕</button>
+            </div>
+            <div class="p-2 flex-1 overflow-y-auto">
+                <a href="index.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🏠 Visão Geral</a>
+                <a href="arquitetura.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🏗️ Arquitetura</a>
+                <a href="fluxo-dados.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🔄 Fluxo de Dados</a>
+                <a href="database.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🗄️ Banco de Dados</a>
+                <a href="integracoes.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🔗 Integrações</a>
+                <a href="riscos.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">⚠️ Riscos</a>
+                <a href="backend.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🔧 Backend</a>
+                <a href="frontend.html" class="sidebar-link active flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm">💻 Frontend</a>
+                <a href="operacao.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🚀 Operação</a>
+                <a href="seguranca.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded mb-1 transition-colors text-sm text-slate-300">🔒 Segurança</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-slate-950">
+            <!-- Top Bar -->
+            <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-10">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button id="menuBtn" class="p-2 rounded hover:bg-slate-800 text-slate-400 md:hidden" onclick="openMobileMenu()">☰</button>
+                        <div>
+                            <h2 class="text-base font-semibold">Frontend — React + Vite + Tailwind</h2>
+                            <p class="text-xs text-slate-400 hidden md:block">Estrutura, páginas, hooks e fluxo de dados do painel de controle</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="https://job-assync.ddw1sl.easypanel.host" target="_blank"
+                           class="hidden sm:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded transition-colors">
+                            <span>🌐</span> Abrir App
+                        </a>
+                        <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded hover:bg-slate-800 text-slate-400">🌓</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-4 md:p-8 max-w-6xl mx-auto">
+
+                <!-- Hero -->
+                <section class="mb-8">
+                    <div class="bg-gradient-to-r from-indigo-700 to-blue-700 rounded-xl p-6 md:p-8 text-white shadow-lg">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                            <div class="flex-1">
+                                <h1 class="text-2xl md:text-3xl font-bold mb-2">Frontend — job-assync</h1>
+                                <p class="text-indigo-200 text-sm md:text-base max-w-2xl">
+                                    Painel de controle para monitoramento de jobs assíncronos, gerenciamento de filas,
+                                    jobs recorrentes e API keys. Single Page Application construída com React 18 + Vite 6.
+                                </p>
+                                <div class="flex flex-wrap gap-2 mt-4">
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">React 18</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">Vite 6</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">TypeScript</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">Tailwind 3.4</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">React Query 5</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">shadcn/ui</span>
+                                    <span class="bg-white/20 px-2.5 py-1 rounded-full text-xs">Recharts</span>
+                                </div>
+                            </div>
+                            <div class="bg-white/10 rounded-lg p-4 text-sm space-y-2 flex-shrink-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    <span class="text-indigo-100">URL: job-assync.ddw1sl.easypanel.host</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-blue-300 rounded-full"></span>
+                                    <span class="text-indigo-100">Porta: 5173</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-amber-300 rounded-full"></span>
+                                    <span class="text-indigo-100">Build: dist/ (estático)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-purple-300 rounded-full"></span>
+                                    <span class="text-indigo-100">Demo mode ativo</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Stack -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-blue-400">📦</span> Stack Tecnológica
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">⚛️</div>
+                            <div class="font-semibold text-sm">React 18</div>
+                            <div class="text-xs text-slate-400 mt-1">Concurrent Mode, Suspense</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">⚡</div>
+                            <div class="font-semibold text-sm">Vite 6</div>
+                            <div class="text-xs text-slate-400 mt-1">HMR, build para dist/</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">🎨</div>
+                            <div class="font-semibold text-sm">Tailwind 3.4</div>
+                            <div class="text-xs text-slate-400 mt-1">dark mode class</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">🔄</div>
+                            <div class="font-semibold text-sm">React Query 5</div>
+                            <div class="text-xs text-slate-400 mt-1">TanStack, cache + refetch</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">🛣️</div>
+                            <div class="font-semibold text-sm">React Router 7</div>
+                            <div class="text-xs text-slate-400 mt-1">SPA routing</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">🧩</div>
+                            <div class="font-semibold text-sm">shadcn/ui</div>
+                            <div class="text-xs text-slate-400 mt-1">Radix UI + Tailwind</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">📊</div>
+                            <div class="font-semibold text-sm">Recharts</div>
+                            <div class="text-xs text-slate-400 mt-1">Timeline, bar charts</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 card-hover transition-all">
+                            <div class="text-2xl mb-2">📝</div>
+                            <div class="font-semibold text-sm">React Hook Form</div>
+                            <div class="text-xs text-slate-400 mt-1">+ Zod validation</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- File Tree -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-green-400">🗂️</span> Estrutura de Arquivos — src/
+                    </h3>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 font-mono text-sm">
+                        <!-- Root -->
+                        <div class="flex items-center gap-2 text-yellow-300 font-semibold mb-1">
+                            <span>📁</span> src/
+                        </div>
+
+                        <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+
+                            <!-- main.tsx -->
+                            <div class="flex items-center gap-2 py-0.5">
+                                <span class="text-slate-500">├──</span>
+                                <span class="text-blue-300">main.tsx</span>
+                                <span class="badge badge-blue ml-2">entry point</span>
+                                <span class="text-slate-500 text-xs ml-2">React.createRoot, StrictMode</span>
+                            </div>
+
+                            <!-- App.tsx -->
+                            <div class="flex items-center gap-2 py-0.5">
+                                <span class="text-slate-500">├──</span>
+                                <span class="text-blue-300">App.tsx</span>
+                                <span class="badge badge-purple ml-2">root</span>
+                                <span class="text-slate-500 text-xs ml-2">Router + QueryClient + Providers</span>
+                            </div>
+
+                            <!-- contexts/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">├──</span>
+                                    <span class="text-yellow-300">📁 contexts/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-green-300">ThemeContext.tsx</span>
+                                        <span class="text-slate-500 text-xs ml-2">Dark/Light toggle, localStorage</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-green-300">AuthContext.tsx</span>
+                                        <span class="badge badge-amber ml-2">demo mode</span>
+                                        <span class="text-slate-500 text-xs ml-2">token + orgId auto-set</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- components/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">├──</span>
+                                    <span class="text-yellow-300">📁 components/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-yellow-300">📁 ui/</span>
+                                        <span class="badge badge-slate ml-2">shadcn/ui</span>
+                                        <span class="text-slate-500 text-xs ml-2">button, card, input, badge, dialog, table…</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-green-300">Layout.tsx</span>
+                                        <span class="text-slate-500 text-xs ml-2">Sidebar + Header wrapper</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-green-300">ProtectedRoute.tsx</span>
+                                        <span class="text-slate-500 text-xs ml-2">Auth check, redirect /login</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- pages/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">├──</span>
+                                    <span class="text-yellow-300">📁 pages/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">Dashboard.tsx</span>
+                                        <span class="badge badge-blue ml-2">/</span>
+                                        <span class="text-slate-500 text-xs ml-2">Stats, timeline chart, recent jobs</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">Jobs.tsx</span>
+                                        <span class="badge badge-blue ml-2">/jobs</span>
+                                        <span class="text-slate-500 text-xs ml-2">List + filters + pagination</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">JobDetail.tsx</span>
+                                        <span class="badge badge-blue ml-2">/jobs/:id</span>
+                                        <span class="text-slate-500 text-xs ml-2">Logs, retry, cancel</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">Queues.tsx</span>
+                                        <span class="badge badge-blue ml-2">/queues</span>
+                                        <span class="text-slate-500 text-xs ml-2">Queue list + create form</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">QueueDetail.tsx</span>
+                                        <span class="badge badge-blue ml-2">/queues/:id</span>
+                                        <span class="text-slate-500 text-xs ml-2">Pause/resume, stats, jobs da fila</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-blue-300">RecurringJobs.tsx</span>
+                                        <span class="badge badge-blue ml-2">/recurring-jobs</span>
+                                        <span class="text-slate-500 text-xs ml-2">CRUD de jobs recorrentes, cron</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-blue-300">Settings.tsx</span>
+                                        <span class="badge badge-blue ml-2">/settings</span>
+                                        <span class="text-slate-500 text-xs ml-2">API keys management</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- hooks/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">├──</span>
+                                    <span class="text-yellow-300">📁 hooks/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-purple-300">useJobs.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">useJobs, useJob, useCreateJob, useCancelJob, useRetryJob</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-purple-300">useQueues.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">useQueues, useQueue, useCreateQueue, usePauseQueue</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-purple-300">useStats.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">useStats, useOverview — polling 30s</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-purple-300">useRecurringJobs.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">useRecurringJobs, useCreateRecurring, useDeleteRecurring</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-purple-300">useApiKeys.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">useApiKeys, useCreateApiKey, useRevokeApiKey</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-purple-300">useDebounce.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">300ms debounce para search inputs</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- lib/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">├──</span>
+                                    <span class="text-yellow-300">📁 lib/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4 space-y-0.5">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-orange-300">api.ts</span>
+                                        <span class="badge badge-amber ml-2">core</span>
+                                        <span class="text-slate-500 text-xs ml-2">axios client, endpoints, tipos TypeScript</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-orange-300">constants.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">STATUS_COLORS, REFETCH_INTERVALS</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">├──</span>
+                                        <span class="text-orange-300">toast.ts</span>
+                                        <span class="text-slate-500 text-xs ml-2">Sonner wrapper (success/error/loading)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-orange-300">sentry.tsx</span>
+                                        <span class="text-slate-500 text-xs ml-2">Sentry init, error tracking</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- styles/ -->
+                            <div class="mt-2">
+                                <div class="flex items-center gap-2 py-0.5">
+                                    <span class="text-slate-500">└──</span>
+                                    <span class="text-yellow-300">📁 styles/</span>
+                                </div>
+                                <div class="ml-5 border-l border-slate-700 pl-4">
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span class="text-slate-500">└──</span>
+                                        <span class="text-pink-300">index.css</span>
+                                        <span class="text-slate-500 text-xs ml-2">@tailwind base/components/utilities</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Routes -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-purple-400">🛣️</span> Rotas da Aplicação
+                    </h3>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+                                    <th class="px-4 py-3 text-left">Rota</th>
+                                    <th class="px-4 py-3 text-left">Componente</th>
+                                    <th class="px-4 py-3 text-left hidden md:table-cell">Hooks utilizados</th>
+                                    <th class="px-4 py-3 text-left hidden lg:table-cell">Funcionalidade</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/</td>
+                                    <td class="px-4 py-3 font-medium">Dashboard.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useStats, useJobs</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Visão geral, gráfico timeline, jobs recentes</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/jobs</td>
+                                    <td class="px-4 py-3 font-medium">Jobs.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useJobs, useDebounce</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Lista com filtros (status, queue), paginação</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/jobs/:id</td>
+                                    <td class="px-4 py-3 font-medium">JobDetail.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useJob, useRetryJob, useCancelJob</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Detalhes, logs, payload, retry, cancel</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/queues</td>
+                                    <td class="px-4 py-3 font-medium">Queues.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useQueues, useCreateQueue</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Lista de filas, formulário de criação</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/queues/:id</td>
+                                    <td class="px-4 py-3 font-medium">QueueDetail.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useQueue, usePauseQueue</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Stats da fila, pause/resume, jobs ativos</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/recurring-jobs</td>
+                                    <td class="px-4 py-3 font-medium">RecurringJobs.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useRecurringJobs, useCreateRecurring</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">CRUD de jobs com cron expression</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="px-4 py-3 font-mono text-blue-300">/settings</td>
+                                    <td class="px-4 py-3 font-medium">Settings.tsx</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden md:table-cell font-mono text-xs">useApiKeys, useCreateApiKey, useRevokeApiKey</td>
+                                    <td class="px-4 py-3 text-slate-400 hidden lg:table-cell">Gerar e revogar API keys</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Pages Mockups -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-amber-400">🖥️</span> Páginas — Descrição Visual
+                    </h3>
+
+                    <!-- Tab Navigation -->
+                    <div class="flex gap-2 flex-wrap mb-4">
+                        <button class="tab-btn active" onclick="showTab('dash')">Dashboard</button>
+                        <button class="tab-btn" onclick="showTab('jobs')">Jobs</button>
+                        <button class="tab-btn" onclick="showTab('job-detail')">Job Detail</button>
+                        <button class="tab-btn" onclick="showTab('queues')">Queues</button>
+                        <button class="tab-btn" onclick="showTab('recurring')">Recurring</button>
+                        <button class="tab-btn" onclick="showTab('settings')">Settings</button>
+                    </div>
+
+                    <!-- Dashboard Tab -->
+                    <div id="tab-dash" class="tab-panel active">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/</span>
+                            </div>
+                            <div class="flex" style="min-height: 380px;">
+                                <!-- Mock Sidebar -->
+                                <div class="w-44 bg-slate-900 border-r border-slate-800 p-3 flex-shrink-0 hidden sm:block">
+                                    <div class="text-blue-400 font-bold text-sm mb-4 flex items-center gap-1">⚡ JobSync</div>
+                                    <div class="space-y-1 text-xs">
+                                        <div class="bg-blue-600/20 text-blue-400 px-2 py-1.5 rounded border-r-2 border-blue-500">📊 Dashboard</div>
+                                        <div class="text-slate-400 px-2 py-1.5 rounded hover:bg-slate-800">💼 Jobs</div>
+                                        <div class="text-slate-400 px-2 py-1.5 rounded hover:bg-slate-800">📋 Queues</div>
+                                        <div class="text-slate-400 px-2 py-1.5 rounded hover:bg-slate-800">🔁 Recurring</div>
+                                        <div class="text-slate-400 px-2 py-1.5 rounded hover:bg-slate-800">⚙️ Settings</div>
+                                    </div>
+                                </div>
+                                <!-- Mock Content -->
+                                <div class="flex-1 p-4 bg-slate-950">
+                                    <div class="text-slate-200 font-semibold text-sm mb-3">Dashboard</div>
+                                    <!-- Stats Row -->
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                                        <div class="stat-card">
+                                            <div class="text-xs text-slate-400">Total Jobs</div>
+                                            <div class="text-xl font-bold text-slate-100 mt-1">1,248</div>
+                                            <div class="text-xs text-green-400 mt-0.5">+12% hoje</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="text-xs text-slate-400">Processando</div>
+                                            <div class="text-xl font-bold text-blue-400 mt-1">23</div>
+                                            <div class="text-xs text-slate-500 mt-0.5">em andamento</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="text-xs text-slate-400">Falhou</div>
+                                            <div class="text-xl font-bold text-red-400 mt-1">7</div>
+                                            <div class="text-xs text-slate-500 mt-0.5">nas últimas 24h</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="text-xs text-slate-400">Filas Ativas</div>
+                                            <div class="text-xl font-bold text-emerald-400 mt-1">4</div>
+                                            <div class="text-xs text-slate-500 mt-0.5">de 5 total</div>
+                                        </div>
+                                    </div>
+                                    <!-- Chart placeholder -->
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 mb-3">
+                                        <div class="text-xs text-slate-400 mb-2">Jobs por hora (últimas 24h)</div>
+                                        <div class="flex items-end gap-1 h-16">
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:30%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:50%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:80%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:60%"></div>
+                                            <div class="bg-blue-600/60 rounded-t flex-1" style="height:90%"></div>
+                                            <div class="bg-blue-600/60 rounded-t flex-1" style="height:70%"></div>
+                                            <div class="bg-blue-500 rounded-t flex-1" style="height:100%"></div>
+                                            <div class="bg-blue-500 rounded-t flex-1" style="height:85%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:40%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:55%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:75%"></div>
+                                            <div class="bg-blue-600/40 rounded-t flex-1" style="height:65%"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Recent Jobs -->
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="text-xs text-slate-400 mb-2">Jobs Recentes</div>
+                                        <div class="space-y-1.5">
+                                            <div class="flex items-center gap-2 text-xs">
+                                                <span class="badge badge-green">DONE</span>
+                                                <span class="text-slate-300 font-mono truncate">send-email-abc123</span>
+                                                <span class="text-slate-500 ml-auto">2s atrás</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-xs">
+                                                <span class="badge badge-blue">PROC</span>
+                                                <span class="text-slate-300 font-mono truncate">process-payment-def456</span>
+                                                <span class="text-slate-500 ml-auto">5s atrás</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-xs">
+                                                <span class="badge badge-red">FAIL</span>
+                                                <span class="text-slate-300 font-mono truncate">webhook-notify-ghi789</span>
+                                                <span class="text-slate-500 ml-auto">12s atrás</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Dashboard</strong> — Exibe 4 cards de stats (total, processando, falhou, filas ativas), gráfico de barras com Recharts mostrando volume por hora, e tabela com jobs recentes com link direto para JobDetail.
+                        </div>
+                    </div>
+
+                    <!-- Jobs Tab -->
+                    <div id="tab-jobs" class="tab-panel">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/jobs</span>
+                            </div>
+                            <div class="p-4 bg-slate-950" style="min-height: 320px;">
+                                <div class="text-slate-200 font-semibold text-sm mb-3">Jobs</div>
+                                <!-- Filters -->
+                                <div class="flex flex-wrap gap-2 mb-3">
+                                    <div class="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 flex items-center gap-1">
+                                        🔍 <span class="text-slate-500">Buscar job...</span>
+                                    </div>
+                                    <select class="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300">
+                                        <option>Status: Todos</option>
+                                    </select>
+                                    <select class="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300">
+                                        <option>Fila: Todas</option>
+                                    </select>
+                                </div>
+                                <!-- Table -->
+                                <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+                                    <table class="w-full text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-800/60 text-slate-500">
+                                                <th class="px-3 py-2 text-left">ID</th>
+                                                <th class="px-3 py-2 text-left">Status</th>
+                                                <th class="px-3 py-2 text-left hidden sm:table-cell">Fila</th>
+                                                <th class="px-3 py-2 text-left hidden md:table-cell">Criado</th>
+                                                <th class="px-3 py-2 text-left"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-800">
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="px-3 py-2 font-mono text-blue-300">jb_abc123</td>
+                                                <td class="px-3 py-2"><span class="badge badge-green">completed</span></td>
+                                                <td class="px-3 py-2 text-slate-400 hidden sm:table-cell">email-queue</td>
+                                                <td class="px-3 py-2 text-slate-500 hidden md:table-cell">há 2 min</td>
+                                                <td class="px-3 py-2 text-blue-400">→</td>
+                                            </tr>
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="px-3 py-2 font-mono text-blue-300">jb_def456</td>
+                                                <td class="px-3 py-2"><span class="badge badge-blue">processing</span></td>
+                                                <td class="px-3 py-2 text-slate-400 hidden sm:table-cell">payments</td>
+                                                <td class="px-3 py-2 text-slate-500 hidden md:table-cell">há 5 min</td>
+                                                <td class="px-3 py-2 text-blue-400">→</td>
+                                            </tr>
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="px-3 py-2 font-mono text-blue-300">jb_ghi789</td>
+                                                <td class="px-3 py-2"><span class="badge badge-red">failed</span></td>
+                                                <td class="px-3 py-2 text-slate-400 hidden sm:table-cell">webhooks</td>
+                                                <td class="px-3 py-2 text-slate-500 hidden md:table-cell">há 8 min</td>
+                                                <td class="px-3 py-2 text-blue-400">→</td>
+                                            </tr>
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="px-3 py-2 font-mono text-blue-300">jb_jkl012</td>
+                                                <td class="px-3 py-2"><span class="badge badge-amber">pending</span></td>
+                                                <td class="px-3 py-2 text-slate-400 hidden sm:table-cell">reports</td>
+                                                <td class="px-3 py-2 text-slate-500 hidden md:table-cell">há 10 min</td>
+                                                <td class="px-3 py-2 text-blue-400">→</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- Pagination -->
+                                <div class="flex items-center justify-between mt-3 text-xs text-slate-500">
+                                    <span>Mostrando 1–20 de 1248</span>
+                                    <div class="flex gap-1">
+                                        <span class="bg-slate-800 px-2 py-1 rounded">←</span>
+                                        <span class="bg-blue-600/30 text-blue-400 px-2 py-1 rounded">1</span>
+                                        <span class="bg-slate-800 px-2 py-1 rounded">2</span>
+                                        <span class="bg-slate-800 px-2 py-1 rounded">3</span>
+                                        <span class="bg-slate-800 px-2 py-1 rounded">→</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Jobs</strong> — Lista paginada de todos os jobs da organização. Filtros por status (pending/processing/completed/failed/cancelled) e fila. Campo de busca com debounce de 300ms. Cada linha leva para JobDetail.
+                        </div>
+                    </div>
+
+                    <!-- Job Detail Tab -->
+                    <div id="tab-job-detail" class="tab-panel">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/jobs/jb_ghi789</span>
+                            </div>
+                            <div class="p-4 bg-slate-950" style="min-height: 340px;">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <div class="text-xs text-slate-500">← Jobs</div>
+                                        <div class="text-sm font-semibold text-slate-200">jb_ghi789 <span class="badge badge-red ml-1">failed</span></div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="bg-amber-600/20 text-amber-400 border border-amber-600/30 text-xs px-3 py-1.5 rounded">🔄 Retry</button>
+                                        <button class="bg-red-600/10 text-red-400 border border-red-600/20 text-xs px-3 py-1.5 rounded">✕ Cancel</button>
+                                    </div>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-3 mb-3">
+                                    <div class="stat-card">
+                                        <div class="text-xs text-slate-500 mb-2">Informações</div>
+                                        <div class="space-y-1.5 text-xs">
+                                            <div class="flex justify-between"><span class="text-slate-400">Fila</span><span class="text-slate-200">webhooks</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-400">Tentativas</span><span class="text-slate-200">3 / 3</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-400">Criado</span><span class="text-slate-200">há 8 min</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-400">Duração</span><span class="text-slate-200">142ms</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="text-xs text-slate-500 mb-2">Payload</div>
+                                        <div class="bg-slate-950 rounded p-2 font-mono text-xs text-green-300">
+                                            {<br>
+                                            &nbsp;&nbsp;"url": "https://...",<br>
+                                            &nbsp;&nbsp;"method": "POST",<br>
+                                            &nbsp;&nbsp;"body": {...}<br>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="text-xs text-slate-500 mb-2">Logs de Execução</div>
+                                    <div class="bg-slate-950 rounded p-2 font-mono text-xs space-y-1">
+                                        <div class="text-slate-400">[10:23:01] Job iniciado</div>
+                                        <div class="text-blue-300">[10:23:01] POST https://api.client.com/webhook</div>
+                                        <div class="text-red-400">[10:23:04] Error: Connection timeout after 3000ms</div>
+                                        <div class="text-amber-300">[10:23:04] Retry 1/3 em 5s...</div>
+                                        <div class="text-red-400">[10:23:09] Error: Connection refused</div>
+                                        <div class="text-red-500">[10:23:09] Job falhou após 3 tentativas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Job Detail</strong> — Exibe informações completas do job: status, fila, tentativas, payload JSON, logs de execução em tempo real. Botões de Retry (re-enfileira) e Cancel (se pending/processing).
+                        </div>
+                    </div>
+
+                    <!-- Queues Tab -->
+                    <div id="tab-queues" class="tab-panel">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/queues</span>
+                            </div>
+                            <div class="p-4 bg-slate-950" style="min-height: 300px;">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-sm font-semibold text-slate-200">Queues</div>
+                                    <button class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded">+ Nova Fila</button>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-3">
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-slate-200">email-queue</span>
+                                            <span class="badge badge-green">ativa</span>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                                            <div><div class="text-slate-400">Pending</div><div class="font-bold text-slate-200">12</div></div>
+                                            <div><div class="text-slate-400">Active</div><div class="font-bold text-blue-400">3</div></div>
+                                            <div><div class="text-slate-400">Failed</div><div class="font-bold text-red-400">1</div></div>
+                                        </div>
+                                        <div class="flex gap-1 mt-2">
+                                            <button class="flex-1 bg-amber-600/20 text-amber-400 text-xs py-1 rounded border border-amber-600/30">⏸ Pausar</button>
+                                            <button class="flex-1 bg-slate-800 text-slate-300 text-xs py-1 rounded border border-slate-700">→ Detalhes</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-slate-200">payments</span>
+                                            <span class="badge badge-amber">pausada</span>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                                            <div><div class="text-slate-400">Pending</div><div class="font-bold text-slate-200">47</div></div>
+                                            <div><div class="text-slate-400">Active</div><div class="font-bold text-blue-400">0</div></div>
+                                            <div><div class="text-slate-400">Failed</div><div class="font-bold text-red-400">5</div></div>
+                                        </div>
+                                        <div class="flex gap-1 mt-2">
+                                            <button class="flex-1 bg-green-600/20 text-green-400 text-xs py-1 rounded border border-green-600/30">▶ Retomar</button>
+                                            <button class="flex-1 bg-slate-800 text-slate-300 text-xs py-1 rounded border border-slate-700">→ Detalhes</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Queues</strong> — Cards para cada fila com contadores (pending/active/failed), status (ativa/pausada) e ações de pause/resume. Botão para criar nova fila abre dialog com formulário (React Hook Form + Zod).
+                        </div>
+                    </div>
+
+                    <!-- Recurring Tab -->
+                    <div id="tab-recurring" class="tab-panel">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/recurring-jobs</span>
+                            </div>
+                            <div class="p-4 bg-slate-950" style="min-height: 280px;">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-sm font-semibold text-slate-200">Jobs Recorrentes</div>
+                                    <button class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded">+ Novo</button>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-200">daily-report</div>
+                                                <div class="text-xs text-slate-400 mt-0.5">Fila: reports &nbsp;•&nbsp; Cron: <span class="font-mono text-blue-300">0 8 * * *</span> &nbsp;•&nbsp; Próxima: 08:00</div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="badge badge-green">ativo</span>
+                                                <button class="text-red-400 text-xs bg-red-900/20 px-2 py-1 rounded border border-red-800/30">🗑</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-slate-200">cleanup-temp</div>
+                                                <div class="text-xs text-slate-400 mt-0.5">Fila: maintenance &nbsp;•&nbsp; Cron: <span class="font-mono text-blue-300">0 */6 * * *</span> &nbsp;•&nbsp; Próxima: 18:00</div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="badge badge-green">ativo</span>
+                                                <button class="text-red-400 text-xs bg-red-900/20 px-2 py-1 rounded border border-red-800/30">🗑</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Recurring Jobs</strong> — Lista de jobs com cron expression, fila destino, próxima execução e status. Formulário de criação com validação de cron expression via Zod. Ação de delete com confirmação.
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div id="tab-settings" class="tab-panel">
+                        <div class="page-mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot bg-red-500"></div>
+                                <div class="mockup-dot bg-yellow-500"></div>
+                                <div class="mockup-dot bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">job-assync.ddw1sl.easypanel.host/settings</span>
+                            </div>
+                            <div class="p-4 bg-slate-950" style="min-height: 280px;">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-sm font-semibold text-slate-200">Configurações — API Keys</div>
+                                    <button class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded">+ Gerar Key</button>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm text-slate-200">Produção</div>
+                                                <div class="font-mono text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                                                    <span>jsk_prod_••••••••••••••••••••••••••••3f4a</span>
+                                                    <span class="text-blue-400 cursor-pointer">📋</span>
+                                                </div>
+                                                <div class="text-xs text-slate-500 mt-0.5">Criada 10/03/2026 &nbsp;•&nbsp; Último uso: há 2 min</div>
+                                            </div>
+                                            <button class="text-red-400 text-xs bg-red-900/20 px-2 py-1.5 rounded border border-red-800/30">Revogar</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm text-slate-200">Staging</div>
+                                                <div class="font-mono text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                                                    <span>jsk_stg_••••••••••••••••••••••••••••9b2c</span>
+                                                    <span class="text-blue-400 cursor-pointer">📋</span>
+                                                </div>
+                                                <div class="text-xs text-slate-500 mt-0.5">Criada 15/02/2026 &nbsp;•&nbsp; Último uso: há 1h</div>
+                                            </div>
+                                            <button class="text-red-400 text-xs bg-red-900/20 px-2 py-1.5 rounded border border-red-800/30">Revogar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-slate-400">
+                            <strong class="text-slate-300">Settings</strong> — Gerenciamento de API keys. Mostra as chaves mascaradas com botão de cópia (clipboard). Ação de revogar com confirmação. Gerar nova key abre dialog com campo de nome.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Flow -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-blue-400">🔄</span> Fluxo de Dados — UI → API → Cache
+                    </h3>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+                        <h4 class="font-semibold text-sm mb-4 text-slate-300">Ciclo completo de uma query (leitura)</h4>
+                        <div class="flex flex-col md:flex-row items-center gap-2 flex-wrap">
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-blue-300 font-semibold">Componente</div>
+                                <div class="text-slate-400 text-xs mt-1">chama <span class="text-purple-300">useJobs()</span></div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-purple-300 font-semibold">React Query</div>
+                                <div class="text-slate-400 text-xs mt-1">verifica cache <br>staleTime / gcTime</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-orange-300 font-semibold">lib/api.ts</div>
+                                <div class="text-slate-400 text-xs mt-1">axios + token <br>Authorization header</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-green-300 font-semibold">API REST</div>
+                                <div class="text-slate-400 text-xs mt-1">GET /jobs<br>?page=1&status=…</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-blue-300 font-semibold">Cache Update</div>
+                                <div class="text-slate-400 text-xs mt-1">queryClient <br>dados → UI</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+                        <h4 class="font-semibold text-sm mb-4 text-slate-300">Ciclo de uma mutation (escrita)</h4>
+                        <div class="flex flex-col md:flex-row items-center gap-2 flex-wrap">
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-blue-300 font-semibold">User Action</div>
+                                <div class="text-slate-400 text-xs mt-1">clique em "Retry"</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-purple-300 font-semibold">useMutation</div>
+                                <div class="text-slate-400 text-xs mt-1">useRetryJob()<br>estado: loading</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-orange-300 font-semibold">POST /jobs/:id/retry</div>
+                                <div class="text-slate-400 text-xs mt-1">lib/api.ts<br>jobsApi.retry(id)</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-green-300 font-semibold">onSuccess</div>
+                                <div class="text-slate-400 text-xs mt-1">invalidateQueries<br>['jobs', id]</div>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-amber-300 font-semibold">Toast</div>
+                                <div class="text-slate-400 text-xs mt-1">Sonner success<br>"Job reenfileirado"</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Intervalos de refetch (constants.ts)</h4>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="bg-slate-800/60 text-slate-500"><th class="px-3 py-2 text-left">Hook</th><th class="px-3 py-2 text-left">refetchInterval</th></tr></thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useStats</td><td class="px-3 py-2 text-amber-300">30s</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useJobs</td><td class="px-3 py-2 text-amber-300">15s</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useJob (detail)</td><td class="px-3 py-2 text-amber-300">5s (se processing)</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useQueues</td><td class="px-3 py-2 text-amber-300">30s</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useRecurringJobs</td><td class="px-3 py-2 text-slate-400">manual</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-purple-300">useApiKeys</td><td class="px-3 py-2 text-slate-400">manual</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Query Keys pattern</h4>
+                            <div class="code-block">
+<span class="cm">// useJobs.ts — query key structure</span>
+<span class="kw">const</span> KEYS = {
+  all: [<span class="str">'jobs'</span>],
+  list: (filters) => [<span class="str">'jobs'</span>, filters],
+  detail: (id) => [<span class="str">'jobs'</span>, id],
+}
+
+<span class="cm">// useJob (detail) — refetch dinâmico</span>
+<span class="fn">useQuery</span>({
+  queryKey: KEYS.<span class="fn">detail</span>(id),
+  queryFn: () => jobsApi.<span class="fn">getById</span>(id),
+  refetchInterval: (data) =>
+    data?.status === <span class="str">'processing'</span> ? <span class="tp">5000</span> : <span class="kw">false</span>,
+})
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Auth System -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-red-400">🔐</span> Sistema de Autenticação
+                    </h3>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Demo Mode — AuthContext.tsx</h4>
+                            <div class="highlight mb-4">
+                                No modo demo, o <strong class="text-blue-300">AuthContext</strong> força automaticamente um token JWT e um organizationId no <code class="bg-slate-800 px-1 rounded">localStorage</code> ao inicializar a aplicação. Isso permite explorar o painel sem necessidade de cadastro.
+                            </div>
+                            <div class="code-block">
+<span class="cm">// AuthContext.tsx — demo mode init</span>
+<span class="kw">useEffect</span>(() => {
+  <span class="kw">const</span> existing = localStorage.<span class="fn">getItem</span>(
+    <span class="str">'nommand_access_token'</span>
+  )
+  <span class="kw">if</span> (!existing) {
+    localStorage.<span class="fn">setItem</span>(
+      <span class="str">'nommand_access_token'</span>,
+      DEMO_JWT_TOKEN
+    )
+    localStorage.<span class="fn">setItem</span>(
+      <span class="str">'organizationId'</span>,
+      <span class="str">'org_demo_001'</span>
+    )
+  }
+}, [])
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Token Flow — lib/api.ts</h4>
+                            <div class="code-block mb-4">
+<span class="cm">// lib/api.ts — interceptor de auth</span>
+<span class="kw">const</span> client = <span class="fn">axios.create</span>({
+  baseURL: import.meta.env.<span class="tp">VITE_API_URL</span>,
+})
+
+client.interceptors.request.<span class="fn">use</span>((config) => {
+  <span class="kw">const</span> token = localStorage.<span class="fn">getItem</span>(
+    <span class="str">'nommand_access_token'</span>
+  )
+  <span class="kw">if</span> (token) {
+    config.headers.Authorization = <span class="str">`Bearer ${token}`</span>
+  }
+  <span class="kw">return</span> config
+})
+                            </div>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs space-y-2">
+                                <div class="flex items-start gap-2">
+                                    <span class="badge badge-amber mt-0.5">chave</span>
+                                    <span class="text-slate-400"><code class="text-blue-300">nommand_access_token</code> — JWT salvo no localStorage</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="badge badge-purple mt-0.5">org</span>
+                                    <span class="text-slate-400"><code class="text-blue-300">organizationId</code> — ID da organização para multi-tenancy</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="badge badge-green mt-0.5">guard</span>
+                                    <span class="text-slate-400"><code class="text-blue-300">ProtectedRoute</code> — redireciona /login se sem token</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h4 class="font-semibold text-sm mb-3 text-slate-300">Fluxo de autenticação completo</h4>
+                        <div class="flex flex-col md:flex-row items-center gap-2 flex-wrap">
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-blue-300 font-semibold text-xs">App.tsx monta</div>
+                                <div class="text-slate-400 text-xs mt-1">AuthProvider init</div>
+                            </div>
+                            <div class="flow-arrow text-sm">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-amber-300 font-semibold text-xs">Demo Mode Check</div>
+                                <div class="text-slate-400 text-xs mt-1">set jsk_... + org_demo</div>
+                            </div>
+                            <div class="flow-arrow text-sm">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-green-300 font-semibold text-xs">ProtectedRoute</div>
+                                <div class="text-slate-400 text-xs mt-1">token existe? ✓</div>
+                            </div>
+                            <div class="flow-arrow text-sm">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-purple-300 font-semibold text-xs">Página renderiza</div>
+                                <div class="text-slate-400 text-xs mt-1">hooks fazem requests</div>
+                            </div>
+                            <div class="flow-arrow text-sm">→</div>
+                            <div class="flow-box flex-1 min-w-0">
+                                <div class="text-orange-300 font-semibold text-xs">api.ts interceptor</div>
+                                <div class="text-slate-400 text-xs mt-1">Bearer token injetado</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- UI Components -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-pink-400">🧩</span> Componentes UI — shadcn/ui
+                    </h3>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+                        <p class="text-sm text-slate-400 mb-4">
+                            A pasta <code class="bg-slate-800 text-blue-300 px-1.5 rounded">src/components/ui/</code> contém os componentes shadcn/ui —
+                            primitivos Radix UI estilizados com Tailwind. São copiados diretamente no projeto (não é uma dependência de runtime).
+                        </p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+
+                            <!-- Button -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Button</div>
+                                <div class="flex flex-wrap gap-1">
+                                    <button class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded hover:bg-blue-500">Default</button>
+                                    <button class="bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded hover:bg-slate-600">Ghost</button>
+                                    <button class="border border-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded hover:bg-slate-800">Outline</button>
+                                </div>
+                            </div>
+
+                            <!-- Badge -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Badge</div>
+                                <div class="flex flex-wrap gap-1">
+                                    <span class="badge badge-green">success</span>
+                                    <span class="badge badge-red">error</span>
+                                    <span class="badge badge-amber">pending</span>
+                                    <span class="badge badge-blue">info</span>
+                                </div>
+                            </div>
+
+                            <!-- Input -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Input</div>
+                                <input class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-300 placeholder-slate-600" placeholder="Digite algo..." />
+                            </div>
+
+                            <!-- Select -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Select</div>
+                                <select class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-300">
+                                    <option>Opção 1</option>
+                                    <option>Opção 2</option>
+                                </select>
+                            </div>
+
+                            <!-- Card -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Card</div>
+                                <div class="bg-slate-900 border border-slate-700 rounded p-2 text-xs text-slate-300">
+                                    <div class="font-medium mb-1">Título</div>
+                                    <div class="text-slate-500">Descrição do card</div>
+                                </div>
+                            </div>
+
+                            <!-- Dialog -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Dialog</div>
+                                <div class="bg-slate-900 border border-slate-700 rounded p-2 text-xs">
+                                    <div class="bg-slate-950 border border-slate-700 rounded p-1.5 text-slate-400 text-center">Modal overlay</div>
+                                </div>
+                            </div>
+
+                            <!-- Table -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Table</div>
+                                <div class="bg-slate-900 border border-slate-700 rounded overflow-hidden">
+                                    <div class="bg-slate-800 px-2 py-1 text-xs text-slate-500">thead</div>
+                                    <div class="px-2 py-1 text-xs text-slate-300 border-t border-slate-800">row 1</div>
+                                    <div class="px-2 py-1 text-xs text-slate-300 border-t border-slate-800">row 2</div>
+                                </div>
+                            </div>
+
+                            <!-- Toast -->
+                            <div class="bg-slate-800 rounded-lg p-3">
+                                <div class="text-xs text-slate-500 mb-2 font-mono">Sonner Toast</div>
+                                <div class="space-y-1">
+                                    <div class="bg-green-900/40 border border-green-700/40 rounded px-2 py-1 text-xs text-green-300">✓ Sucesso</div>
+                                    <div class="bg-red-900/40 border border-red-700/40 rounded px-2 py-1 text-xs text-red-300">✕ Erro</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Componentes disponíveis em ui/</h4>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="badge badge-slate">button</span>
+                                    <span class="badge badge-slate">card</span>
+                                    <span class="badge badge-slate">input</span>
+                                    <span class="badge badge-slate">badge</span>
+                                    <span class="badge badge-slate">dialog</span>
+                                    <span class="badge badge-slate">table</span>
+                                    <span class="badge badge-slate">select</span>
+                                    <span class="badge badge-slate">label</span>
+                                    <span class="badge badge-slate">textarea</span>
+                                    <span class="badge badge-slate">tooltip</span>
+                                    <span class="badge badge-slate">dropdown-menu</span>
+                                    <span class="badge badge-slate">separator</span>
+                                    <span class="badge badge-slate">skeleton</span>
+                                    <span class="badge badge-slate">avatar</span>
+                                    <span class="badge badge-slate">switch</span>
+                                    <span class="badge badge-slate">tabs</span>
+                                    <span class="badge badge-slate">form</span>
+                                    <span class="badge badge-slate">popover</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Status Colors — constants.ts</h4>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+                                <div class="space-y-1.5 text-xs">
+                                    <div class="flex items-center gap-3">
+                                        <span class="badge badge-amber w-20 justify-center">pending</span>
+                                        <code class="text-slate-400">text-amber-400 / bg-amber-900/20</code>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="badge badge-blue w-20 justify-center">processing</span>
+                                        <code class="text-slate-400">text-blue-400 / bg-blue-900/20</code>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="badge badge-green w-20 justify-center">completed</span>
+                                        <code class="text-slate-400">text-emerald-400 / bg-emerald-900/20</code>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="badge badge-red w-20 justify-center">failed</span>
+                                        <code class="text-slate-400">text-red-400 / bg-red-900/20</code>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="badge badge-slate w-20 justify-center">cancelled</span>
+                                        <code class="text-slate-400">text-slate-400 / bg-slate-800</code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- API Client -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-orange-400">🔌</span> lib/api.ts — Cliente HTTP
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Endpoints disponíveis</h4>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="bg-slate-800/60 text-slate-500"><th class="px-3 py-2 text-left">Namespace</th><th class="px-3 py-2 text-left">Métodos</th></tr></thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        <tr><td class="px-3 py-2 font-mono text-orange-300">jobsApi</td><td class="px-3 py-2 text-slate-400 text-xs">list, getById, create, cancel, retry, bulkCancel</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-orange-300">queuesApi</td><td class="px-3 py-2 text-slate-400 text-xs">list, getById, create, pause, resume, delete</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-orange-300">statsApi</td><td class="px-3 py-2 text-slate-400 text-xs">getOverview, getTimeline</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-orange-300">recurringJobsApi</td><td class="px-3 py-2 text-slate-400 text-xs">list, create, update, delete, triggerNow</td></tr>
+                                        <tr><td class="px-3 py-2 font-mono text-orange-300">apiKeysApi</td><td class="px-3 py-2 text-slate-400 text-xs">list, create, revoke</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Tipos TypeScript principais</h4>
+                            <div class="code-block text-xs">
+<span class="kw">interface</span> <span class="tp">Job</span> {
+  id: <span class="tp">string</span>
+  status: <span class="str">'pending'</span> | <span class="str">'processing'</span> |
+          <span class="str">'completed'</span> | <span class="str">'failed'</span> | <span class="str">'cancelled'</span>
+  queueId: <span class="tp">string</span>
+  payload: <span class="tp">Record</span>&lt;<span class="tp">string</span>, <span class="tp">unknown</span>&gt;
+  attempts: <span class="tp">number</span>
+  maxAttempts: <span class="tp">number</span>
+  scheduledAt?: <span class="tp">string</span>
+  completedAt?: <span class="tp">string</span>
+  error?: <span class="tp">string</span>
+  logs: <span class="tp">JobLog</span>[]
+}
+
+<span class="kw">interface</span> <span class="tp">Queue</span> {
+  id: <span class="tp">string</span>
+  name: <span class="tp">string</span>
+  isPaused: <span class="tp">boolean</span>
+  stats: { pending: <span class="tp">number</span>; active: <span class="tp">number</span>; failed: <span class="tp">number</span> }
+}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Theme -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-yellow-400">🎨</span> Tema — Dark Mode
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="highlight mb-4">
+                                O tema dark é padrão. O <strong class="text-blue-300">ThemeContext</strong> adiciona/remove a classe <code class="bg-slate-800 px-1 rounded">dark</code> no elemento <code class="bg-slate-800 px-1 rounded">html</code>, ativando as variantes <code class="bg-slate-800 px-1 rounded">dark:</code> do Tailwind. A preferência é salva em <code class="bg-slate-800 px-1 rounded">localStorage</code>.
+                            </div>
+                            <div class="code-block text-xs">
+<span class="cm">// ThemeContext.tsx</span>
+<span class="kw">const</span> [theme, setTheme] = useState&lt;<span class="str">'dark'</span>|<span class="str">'light'</span>&gt;(
+  () => localStorage.<span class="fn">getItem</span>(<span class="str">'theme'</span>) ?? <span class="str">'dark'</span>
+)
+
+<span class="fn">useEffect</span>(() => {
+  document.documentElement.classList.<span class="fn">toggle</span>(
+    <span class="str">'dark'</span>, theme === <span class="str">'dark'</span>
+  )
+  localStorage.<span class="fn">setItem</span>(<span class="str">'theme'</span>, theme)
+}, [theme])
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Configuração Tailwind</h4>
+                            <div class="code-block text-xs">
+<span class="cm">// tailwind.config.ts</span>
+<span class="kw">export default</span> {
+  darkMode: <span class="str">'class'</span>,  <span class="cm">// ← classe no &lt;html&gt;</span>
+  content: [<span class="str">'./src/**/*.{ts,tsx}'</span>],
+  theme: {
+    extend: {
+      <span class="cm">// Sem custom colors — usa</span>
+      <span class="cm">// as paletas padrão do Tailwind</span>
+    }
+  }
+}
+
+<span class="cm">// Uso nos componentes:</span>
+<span class="cm">// bg-white dark:bg-slate-900</span>
+<span class="cm">// text-slate-800 dark:text-slate-200</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Build & Deploy -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span class="text-green-400">🚀</span> Build e Deploy
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Variáveis de Ambiente</h4>
+                            <div class="code-block text-xs">
+<span class="cm"># .env.production</span>
+<span class="tp">VITE_API_URL</span>=https://job-assync-api
+  .ddw1sl.easypanel.host
+<span class="tp">VITE_SENTRY_DSN</span>=https://...
+<span class="tp">VITE_ENV</span>=production
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Comandos</h4>
+                            <div class="code-block text-xs">
+<span class="cm"># Desenvolvimento</span>
+<span class="fn">npm run dev</span>     <span class="cm"># porta 5173</span>
+
+<span class="cm"># Build produção</span>
+<span class="fn">npm run build</span>   <span class="cm"># → dist/</span>
+
+<span class="cm"># Preview do build</span>
+<span class="fn">npm run preview</span>
+
+<span class="cm"># Type check</span>
+<span class="fn">npm run tsc</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                            <h4 class="font-semibold text-sm mb-3 text-slate-300">Produção (EasyPanel)</h4>
+                            <div class="space-y-2 text-xs text-slate-400">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-blue-400 font-mono">dist/</span>
+                                    <span>build estático servido por nginx</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-green-400">🌐</span>
+                                    <span>job-assync.ddw1sl.easypanel.host</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400">🔄</span>
+                                    <span>Deploy automático via git push</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-purple-400">📋</span>
+                                    <span>nginx SPA: try_files → index.html</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <div class="border-t border-slate-800 pt-6 mt-8 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+                    <div>
+                        <span class="text-slate-400 font-medium">JobSync Docs</span> — Frontend — React + Vite + Tailwind
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <a href="backend.html" class="hover:text-slate-300 transition-colors">← Backend</a>
+                        <a href="operacao.html" class="hover:text-slate-300 transition-colors">Operação →</a>
+                        <a href="index.html" class="hover:text-slate-300 transition-colors">Visão Geral</a>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobile menu
+        function openMobileMenu() {
+            document.getElementById('mobileOverlay').classList.add('open');
+            document.getElementById('mobilePanel').classList.add('open');
+        }
+        function closeMobileMenu() {
+            document.getElementById('mobileOverlay').classList.remove('open');
+            document.getElementById('mobilePanel').classList.remove('open');
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                document.body.classList.remove('bg-slate-950');
+                document.body.classList.add('bg-slate-50', 'text-slate-900');
+            } else {
+                html.classList.add('dark');
+                document.body.classList.remove('bg-slate-50', 'text-slate-900');
+                document.body.classList.add('bg-slate-950');
+            }
+        }
+
+        // Tabs
+        function showTab(tabId) {
+            // Hide all panels
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            // Show selected
+            const panel = document.getElementById('tab-' + tabId);
+            if (panel) panel.classList.add('active');
+
+            // Find and activate button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.getAttribute('onclick') === `showTab('${tabId}')`) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

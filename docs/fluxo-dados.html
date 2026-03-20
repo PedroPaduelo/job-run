@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxo de Dados — JobSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .step-number { width: 32px; height: 32px; }
+        .flow-connector { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+        .timeline-step { position: relative; padding-left: 2rem; }
+        .timeline-step::before {
+            content: ''; position: absolute; left: 0; top: 8px;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #3b82f6; border: 3px solid #1e293b;
+        }
+        .timeline-line {
+            position: absolute; left: 5px; top: 20px; bottom: -20px;
+            width: 2px; background: #475569;
+        }
+        .timeline-step:last-child .timeline-line { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+        <nav class="w-64 bg-slate-900 text-white flex-shrink-0 overflow-y-auto hidden md:block">
+            <div class="p-4 border-b border-slate-700">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <span class="text-primary">⚡</span> JobSync
+                </h1>
+            </div>
+            <div class="p-2">
+                <a href="index.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏠 Visão Geral</a>
+                <a href="arquitetura.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏗️ Arquitetura</a>
+                <a href="fluxo-dados.html" class="sidebar-link active block px-4 py-2 rounded mb-1">🔄 Fluxo de Dados</a>
+                <a href="database.html" class="sidebar-link block px-4 py-2 rounded mb-1">🗄️ Banco de Dados</a>
+                <a href="integracoes.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔗 Integrações</a>
+                <a href="riscos.html" class="sidebar-link block px-4 py-2 rounded mb-1">⚠️ Riscos</a>
+                <a href="backend.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔧 Backend</a>
+                <a href="frontend.html" class="sidebar-link block px-4 py-2 rounded mb-1">💻 Frontend</a>
+                <a href="operacao.html" class="sidebar-link block px-4 py-2 rounded mb-1">🚀 Operação</a>
+                <a href="seguranca.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔒 Segurança</a>
+            </div>
+        </nav>
+
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">Fluxo de Dados e Informação</h2>
+                    <button id="themeToggle" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+                </div>
+            </header>
+
+            <div class="p-4 md:p-8">
+                <!-- Introdução -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🔄 Como o dado flui no sistema</h3>
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded mb-6">
+                        <p class="text-sm">
+                            O JobSync processa jobs assíncronos de ponta a ponta. O ciclo completo inclui:
+                            <strong>criação → fila → processamento → callback → logging</strong>.
+                            Cada etapa é registrada no banco e pode ser monitorada em tempo real.
+                        </p>
+                    </div>
+
+                    <!-- Fluxo Principal -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 mb-8">
+                        <h4 class="font-semibold text-lg mb-4 text-blue-600">1. Fluxo Completo de um Job</h4>
+                        <div class="space-y-6">
+                            <!-- Step 1 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-blue-600 text-white rounded-full font-bold text-sm flex-shrink-0">1</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">📥 Cliente envia job</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        Usuário ou sistema externo envia uma requisição <code>POST /api/jobs</code> com:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li><code>queue</code>: nome da fila destino</li>
+                                        <li><code>webhookUrl</code>: onde o worker vai chamar</li>
+                                        <li><code>payload</code>: dados (max 1MB, validado)</li>
+                                        <li><code>callbackUrl</code> (opcional): onde notificar conclusão</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 2 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-indigo-600 text-white rounded-full font-bold text-sm flex-shrink-0">2</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">🔐 Middleware valida</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        O <code>onRequest</code> hook do Fastify valida:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li>JWT token (ou API Key no header Authorization)</li>
+                                        <li>Organization ID (do JWT ou header X-Organization-Id)</li>
+                                        <li>Rate limit (por organization ou API Key)</li>
+                                        <li>IP allowlist (se configurado)</li>
+                                        <li>Schema do payload com Zod</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 3 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-emerald-600 text-white rounded-full font-bold text-sm flex-shrink-0">3</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">🗄️ Job e fila são criados</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        <code>jobService.create()</code>:
+                                    </p>
+                                    <ol class="text-sm space-y-1 ml-4 list-decimal">
+                                        <li>Upsert da fila (cria se não existe)</li>
+                                        <li>Cria registro <code>Job</code> no PostgreSQL (status PENDING ou SCHEDULED)</li>
+                                        <li>Adiciona job no BullMQ queue (Redis)</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 4 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-amber-600 text-white rounded-full font-bold text-sm flex-shrink-0">4</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">📡 Worker consome da fila</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        Worker BullMQ (por organização) pega job da fila Redis:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li>Concorrência configurável por fila</li>
+                                        <li>Retry com backoff exponencial</li>
+                                        <li>Timeout configurável (default 5min)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 5 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-orange-600 text-white rounded-full font-bold text-sm flex-shrink-0">5</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">🌐 Worker chama webhook</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        <code>worker.ts</code> faz HTTP request para <code>webhookUrl</code>:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li>Method configurável (GET, POST, PUT, PATCH, DELETE)</li>
+                                        <li>Body em JSON para métodos com payload</li>
+                                        <li>GET: payload vira query params</li>
+                                        <li>Resposta salva em <code>Job.result</code></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 6 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-green-600 text-white rounded-full font-bold text-sm flex-shrink-0">6</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">✅ Job é atualizado</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        PostgreSQL update com:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li><code>status: COMPLETED</code> ou <code>FAILED</code></li>
+                                        <li><code>result</code> ou <code>error</code></li>
+                                        <li><code>completedAt</code></li>
+                                        <li>Log em <code>JobLog</code></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <!-- Step 7 -->
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-purple-600 text-white rounded-full font-bold text-sm flex-shrink-0">7</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">📤 Callback (opcional)</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                        Se <code>callbackUrl</code> fornecido, worker faz POST com:
+                                    </p>
+                                    <ul class="text-sm space-y-1 ml-4 list-disc">
+                                        <li><code>jobId</code>, <code>status</code></li>
+                                        <li><code>result</code> ou <code>error</code></li>
+                                        <li><code>duration</code>, <code>attempts</code></li>
+                                        <li>Timeout de 5s (não crítico)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recurring Jobs -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">⏰ Fluxo de Recurring Jobs</h3>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-semibold text-lg mb-4 text-indigo-600">Scheduler Automático</h4>
+                        <div class="space-y-5">
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-slate-700 text-white rounded-full font-bold text-sm flex-shrink-0">A</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">Scheduler roda a cada 30s</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        <code>RecurringJobScheduler</code> usa lock distribuído no Redis (60s TTL)
+                                        para garantir apenas 1 instância executando em ambiente multi-worker.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-slate-700 text-white rounded-full font-bold text-sm flex-shrink-0">B</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">Busca jobs due</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        SELECT * FROM recurring_jobs WHERE is_active = true AND next_run_at ≤ agora.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-slate-700 text-white rounded-full font-bold text-sm flex-shrink-0">C</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">Aplica regras</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        Verifica: <code>maxRuns</code> atingido?, <code>recurrenceEndDate</code> passou?,
+                                        <code>continueOnFailure = false</code> e último job falhou? Se sim, desativa.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-slate-700 text-white rounded-full font-bold text-sm flex-shrink-0">D</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">Cria job + atualiza nextRunAt</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        Atomica: UPDATE recurring_jobs SET next_run_at = ? WHERE id = ?,
+                                        então INSERT INTO jobs com <code>recurrence_id</code>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flow-connector ml-8 mb-4"></div>
+
+                            <div class="flex gap-4">
+                                <div class="step-number flex items-center justify-center bg-slate-700 text-white rounded-full font-bold text-sm flex-shrink-0">E</div>
+                                <div class="flex-1">
+                                    <h5 class="font-semibold mb-1">Job entra na fila normalmente</h5>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        O job criado segue o mesmo caminho dos jobs manuais (passos 3–7).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Persistence -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">💾 Onde cada dado é persistido</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <thead class="bg-slate-100 dark:bg-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold">Entidade</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold">Armazenamento</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold">Tempo de vida</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold">Propósito</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>Job</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>jobs</code>)</td>
+                                    <td class="px-4 py-3">Permanente (até cleanup admin)</td>
+                                    <td class="px-4 py-300">Registro histórico, auditoria, consulta</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>JobLog</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>job_logs</code>)</td>
+                                    <td class="px-4 py-3">Permanente</td>
+                                    <td class="px-4 py-300">Log de cada tentativa, debugging</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>Queue</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>queues</code>) + Redis (BullMQ)</td>
+                                    <td class="px-4 py-3">Config persistente, fila volátil</td>
+                                    <td class="px-4 py-300">Configuração + fila em memória</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>BullMQ Job</code></td>
+                                    <td class="px-4 py-3">Redis (<code>bull:jobs-${org}-${queue}</code>)</td>
+                                    <td class="px-4 py-300">Até ser processado (ou fail com limpeza)</td>
+                                    <td class="px-4 py-300">Fila de mensagens, estado em memória</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>AuditLog</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>audit_logs</code>)</td>
+                                    <td class="px-4 py-300">Permanente</td>
+                                    <td class="px-4 py-300">Compliance, rastreamento de ações</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>API Key</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>api_keys</code>) + cache Redis</td>
+                                    <td class="px-4 py-3">Permanente (até revoke)</td>
+                                    <td class="px-4 py-300">Autenticação M2M, rate limit por chave</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>RecurringJob</code></td>
+                                    <td class="px-4 py-3">PostgreSQL (<code>recurring_jobs</code>)</td>
+                                    <td class="px-4 py-300">Permanente</td>
+                                    <td class="px-4 py-300">Configuração de jobs periódicos</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium"><code>Scheduler Lock</code></td>
+                                    <td class="px-4 py-3">Redis (<code>scheduler:lock</code>)</td>
+                                    <td class="px-4 py-300">60s TTL</td>
+                                    <td class="px-4 py-300">Evita múltiplos workers executando scheduler</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Data Validation -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">✅ Validação de dados</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold text-lg mb-3 text-green-600">Validação no Recebimento</h4>
+                            <ul class="text-sm space-y-2">
+                                <li>• <strong>URL safety:</strong> Bloqueia localhost, IPs privados, requer HTTPS em prod</li>
+                                <li>• <strong>Payload size:</strong> Máximo 1MB (JSON.stringify length)</li>
+                                <li>• <strong>Headers:</strong> Authorization, Content-Type, X-Organization-Id</li>
+                                <li>• <strong>Rate limit:</strong> Token bucket por org/API key</li>
+                                <li>• <strong>IP allowlist:</strong> Pode bloquear IPs não autorizados</li>
+                                <li>• <strong>Queue ativa:</strong> Fila deve estar isActive</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold text-lg mb-3 text-amber-600">Validação no Processamento</h4>
+                            <ul class="text-sm space-y-2">
+                                <li>• <strong>Timeout:</strong> Worker aborta após timeout configurado</li>
+                                <li>• <strong>Retry backoff:</strong> Exponential com delay configurável</li>
+                                <li>• <strong>Max attempts:</strong> Padrão 3, configurável por fila</li>
+                                <li>• <strong>Callback timeout:</strong> 5s, falha não crítica</li>
+                                <li>• <strong>Response check:</strong> !response.ok → throw</li>
+                                <li>• <strong>Content-Type:</strong> JSON aceito, texto salvo como { text }</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sequence Diagram -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">📊 Diagrama de Sequência</h3>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 overflow-x-auto">
+                        <pre class="text-xs"><code>Cliente         Fastify API          PostgreSQL        Redis (BullMQ)     Worker          Webhook
+  |                 |                      |                  |                 |               |
+  |--POST /jobs --->|                      |                  |                 |               |
+  |                 |-- validate JWT ----->|                  |                 |               |
+  |                 |-- check rate limit ->|                  |                 |               |
+  |                 |                      |-- INSERT job --->|                 |               |
+  |                 |                      |                  |-- RPUSH job -->|               |
+  |                 |<----201 Created -----|                  |                 |               |
+  |<----------------|                      |                  |                 |               |
+  |                 |                      |                  |                 |               |
+  |                 |                      |                  |<-- BLPOP job --|               |
+  |                 |                      |                  |                 |-- HTTP req -->|
+  |                 |                      |                  |                 |<-- resp ------|
+  |                 |                      |                  |                 |               |
+  |                 |                      |-- UPDATE status ->|                 |               |
+  |                 |                      |-- INSERT log ---->|                 |               |
+  |                 |                      |                  |                 |               |
+  |                 |                      |                  |                 |-- POST cb -->|
+  |                 |                      |                  |                 |<-- 200/err ---|
+  |                 |                      |                  |                 |               |
+  |-- callback ----|                      |                  |                 |               |
+</code></pre>
+                    </div>
+                </section>
+
+                <!-- Error Handling -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🛡️ Tratamento de Erros</h3>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+                            <h4 class="font-semibold mb-2">🇵 Fluss de erro durante processamento</h4>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-red-500">❌</span>
+                                    <div>
+                                        <strong>Webhook falha (5xx, timeout):</strong> Worker loga, atualiza status para PROCESSING (se vai retry) ou FAILED/DEAD (última tentativa).
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-blue-500">🔄</span>
+                                    <div>
+                                        <strong>Retry automático:</strong> BullMQ gerencia retry com backoff exponencial (delay configurável). JobLog registra cada tentativa.
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-500">📞</span>
+                                    <div>
+                                        <strong>Callback falha:</strong> Timeout 5s, erro ignorado (não crítico).
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-green-500">✅</span>
+                                    <div>
+                                        <strong>Sucesso:</strong> Job atualizado para COMPLETED, resultado salvo, callback enviado (se houver).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+                            <h4 class="font-semibold mb-2">📈 Estados do Job</h4>
+                            <div class="flex flex-wrap gap-2 text-sm">
+                                <span class="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded">PENDING — aguardando na fila</span>
+                                <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">SCHEDULED — agendado para futuro</span>
+                                <span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 rounded">PROCESSING — worker pegou</span>
+                                <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded">COMPLETED — sucesso</span>
+                                <span class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded">FAILED — falhou (pode retry)</span>
+                                <span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded">CANCELLED — cancelado pelo usuário</span>
+                                <span class="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-200 rounded">DEAD — falhou todas tentativas</span>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <h4 class="font-semibold mb-2">🔐 Auditoria</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">
+                                Toda ação relevante (auth, criação, cancelamento, erro) gera um <code>AuditLog</code>
+                                no PostgreSQL, com userId, organizationId, action, entityType, entityId, IP, user-agent e status.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Flow Summary -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🧩 Resumo Visual</h3>
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg">
+                        <div class="grid md:grid-cols-3 gap-6 text-center">
+                            <div>
+                                <div class="text-4xl mb-2">📥</div>
+                                <h4 class="font-semibold mb-1">Entrada</h4>
+                                <p class="text-xs text-slate-300">API REST (JWT/API Keys) + Webhooks externos</p>
+                            </div>
+                            <div>
+                                <div class="text-4xl mb-2">⚙️</div>
+                                <h4 class="font-semibold mb-1">Processamento</h4>
+                                <p class="text-xs text-slate-300">BullMQ (Redis) + Workers + Scheduler</p>
+                            </div>
+                            <div>
+                                <div class="text-4xl mb-2">📤</div>
+                                <h4 class="font-semibold mb-1">Saída</h4>
+                                <p class="text-xs text-slate-300">HTTP webhooks + Callbacks + Banco histórico</p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-6 border-t border-slate-700 text-xs text-slate-400">
+                            <p>Tudo armazenado no PostgreSQL para consulta histórica. Redis usado apenas como broker volátil.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+        document.documentElement.className = savedTheme;
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+    </script>
+</body>
+</html>

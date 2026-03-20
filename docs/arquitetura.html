@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobSync — Arquitetura do Sistema</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-link.active {
+            background: rgba(59,130,246,0.15);
+            color: #3b82f6;
+            border-right: 3px solid #3b82f6;
+        }
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25);
+        }
+
+        /* Diagram arrows */
+        .arrow-right::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: currentColor;
+            position: relative;
+        }
+        .arrow-down-line {
+            width: 2px;
+            background: #475569;
+            margin: 0 auto;
+        }
+        .arrow-label {
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* Flow animation */
+        @keyframes flowPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .flow-pulse {
+            animation: flowPulse 2s ease-in-out infinite;
+        }
+
+        /* Connector lines */
+        .connector {
+            position: relative;
+        }
+        .connector::after {
+            content: '▼';
+            display: block;
+            text-align: center;
+            color: #475569;
+            font-size: 0.75rem;
+            line-height: 1;
+        }
+
+        /* Queue pill */
+        .queue-pill {
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            border: 1px solid rgba(99,102,241,0.5);
+            background: rgba(99,102,241,0.1);
+            color: #818cf8;
+            display: inline-block;
+        }
+
+        /* Box styles */
+        .arch-box {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        /* Process border */
+        .process-border {
+            border: 2px dashed;
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+
+        /* SVG arrows between columns */
+        .rel-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 overflow-y-auto hidden md:flex flex-col">
+        <div class="p-4 border-b border-slate-700">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span class="text-blue-400">&#9889;</span> JobSync
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Documentação Visual do Sistema</p>
+        </div>
+        <div class="p-2 flex-1">
+            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">Navegação</h2>
+            <a href="index.html"      class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#127968; Visão Geral</a>
+            <a href="arquitetura.html" class="sidebar-link active block px-4 py-2 rounded mb-1 transition-colors">&#127959; Arquitetura</a>
+            <a href="fluxo-dados.html" class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128260; Fluxo de Dados</a>
+            <a href="database.html"   class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128454; Banco de Dados</a>
+            <a href="integracoes.html" class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128279; Integrações</a>
+            <a href="riscos.html"     class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#9888; Riscos</a>
+            <a href="backend.html"    class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128295; Backend</a>
+            <a href="frontend.html"   class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128187; Frontend</a>
+            <a href="operacao.html"   class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128640; Operação</a>
+            <a href="seguranca.html"  class="sidebar-link block px-4 py-2 rounded mb-1 transition-colors">&#128274; Segurança</a>
+        </div>
+        <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
+            <p>Versão: 2.0.0</p>
+            <p>Atualizado: 20/03/2026</p>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto">
+
+        <!-- Top Bar -->
+        <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 p-4 sticky top-0 z-10">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 md:hidden">
+                    <button id="menuBtn" onclick="document.getElementById('sidebar').classList.toggle('hidden'); document.getElementById('sidebar').classList.toggle('flex');"
+                        class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700">&#9776;</button>
+                    <span class="font-bold">JobSync Docs</span>
+                </div>
+                <div class="hidden md:block">
+                    <h2 class="text-lg font-semibold">&#127959; Arquitetura do Sistema</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="themeToggle" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-lg">&#127763;</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-4 md:p-8 space-y-12">
+
+            <!-- Hero -->
+            <section>
+                <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl p-8 text-white shadow-lg">
+                    <h1 class="text-3xl font-bold mb-2">Arquitetura do JobSync</h1>
+                    <p class="text-blue-100 max-w-3xl">
+                        Visão técnica completa dos componentes, processos, camadas e padrões de comunicação do sistema de
+                        processamento assíncrono de jobs. Dois processos Node.js independentes, Redis como broker e PostgreSQL
+                        como banco relacional multi-tenant.
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+                        <span class="bg-white/15 px-3 py-1 rounded-full">Fastify 5</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">BullMQ</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">Prisma ORM</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">Redis</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">PostgreSQL</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">React + Vite</span>
+                        <span class="bg-white/15 px-3 py-1 rounded-full">TypeScript</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 1: DIAGRAMA DE COMPONENTES PRINCIPAL
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-blue-400">&#9726;</span> Diagrama de Componentes
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    Visão de alto nível do fluxo entre cliente, API, worker, infraestrutura e serviços externos.
+                </p>
+
+                <!-- Main component diagram -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 overflow-x-auto">
+                    <div class="min-w-[700px]">
+
+                        <!-- Row 1: Clients -->
+                        <div class="flex justify-center gap-6 mb-2">
+                            <div class="arch-box border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 w-44">
+                                &#128187; Frontend<br><span class="text-xs font-normal text-indigo-500">React + Vite :5173</span>
+                            </div>
+                            <div class="arch-box border-slate-400 bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 w-44">
+                                &#128272; M2M Client<br><span class="text-xs font-normal text-slate-500">API Key Bearer</span>
+                            </div>
+                            <div class="arch-box border-slate-400 bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 w-44">
+                                &#128100; Auth Service<br><span class="text-xs font-normal text-slate-500">JWT Externo</span>
+                            </div>
+                        </div>
+
+                        <!-- Arrow down -->
+                        <div class="flex justify-center mb-2">
+                            <div class="flex flex-col items-center text-slate-400">
+                                <div class="w-0.5 h-6 bg-slate-400"></div>
+                                <span class="text-xs text-slate-400 flow-pulse">HTTP / REST</span>
+                                <div class="w-0.5 h-6 bg-slate-400"></div>
+                                <span class="text-slate-400">&#8595;</span>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: API Server -->
+                        <div class="flex justify-center mb-2">
+                            <div class="arch-box border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 w-[440px] py-4">
+                                &#9889; API Server — Fastify 5
+                                <div class="mt-2 flex justify-center flex-wrap gap-2">
+                                    <span class="text-xs font-normal bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">:3003</span>
+                                    <span class="text-xs font-normal bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">routes/</span>
+                                    <span class="text-xs font-normal bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">services/</span>
+                                    <span class="text-xs font-normal bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">plugins/</span>
+                                    <span class="text-xs font-normal bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">Swagger /docs</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow branches down -->
+                        <div class="flex justify-center gap-16 mb-2">
+                            <div class="flex flex-col items-center text-slate-400">
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400 text-xs">Enqueue</span>
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400">&#8595;</span>
+                            </div>
+                            <div class="flex flex-col items-center text-slate-400">
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400 text-xs">ORM</span>
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400">&#8595;</span>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Redis + PostgreSQL -->
+                        <div class="flex justify-center gap-8 mb-2">
+                            <div class="arch-box border-red-400 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 w-52">
+                                &#128202; Redis
+                                <div class="mt-1 text-xs font-normal text-red-500">
+                                    BullMQ Queues<br>
+                                    Cache / Rate-Limit<br>
+                                    Scheduler Lock
+                                </div>
+                            </div>
+                            <div class="arch-box border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 w-52">
+                                &#128454; PostgreSQL
+                                <div class="mt-1 text-xs font-normal text-emerald-600">
+                                    Prisma ORM<br>
+                                    Multi-tenant data<br>
+                                    Jobs / Queues / Orgs
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow down from Redis -->
+                        <div class="flex justify-start pl-[152px] mb-2">
+                            <div class="flex flex-col items-center text-slate-400">
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400 text-xs">Dequeue</span>
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400">&#8595;</span>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Worker -->
+                        <div class="flex justify-start pl-8 mb-2">
+                            <div class="arch-box border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 w-56 py-4">
+                                &#9881; Worker Process
+                                <div class="mt-2 flex flex-wrap justify-center gap-1">
+                                    <span class="text-xs font-normal bg-amber-100 dark:bg-amber-800/50 px-2 py-0.5 rounded">BullMQ Worker</span>
+                                    <span class="text-xs font-normal bg-amber-100 dark:bg-amber-800/50 px-2 py-0.5 rounded">Scheduler</span>
+                                    <span class="text-xs font-normal bg-amber-100 dark:bg-amber-800/50 px-2 py-0.5 rounded">Retry</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow from Worker to external -->
+                        <div class="flex justify-start pl-[196px] mb-2">
+                            <div class="flex flex-col items-center text-slate-400">
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400 text-xs">HTTP POST</span>
+                                <div class="w-0.5 h-4 bg-slate-400"></div>
+                                <span class="text-slate-400">&#8595;</span>
+                            </div>
+                        </div>
+
+                        <!-- Row 5: External Webhook -->
+                        <div class="flex justify-start pl-4 mb-2">
+                            <div class="arch-box border-purple-400 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 w-64 py-3">
+                                &#127757; Webhook Externo (Cliente)
+                                <div class="mt-1 text-xs font-normal text-purple-500">
+                                    callbackUrl definida pelo cliente<br>
+                                    Resposta 2xx = sucesso
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-4 text-xs text-slate-500">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-400 inline-block"></span> Frontend / Clientes</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> API Server (processo 1)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> Worker (processo 2)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-400 inline-block"></span> Redis (broker)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> PostgreSQL (persistência)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-purple-400 inline-block"></span> Serviços externos</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 2: OS DOIS PROCESSOS
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-amber-400">&#9726;</span> Os Dois Processos Node.js
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    O sistema é composto por dois processos independentes que se comunicam exclusivamente via Redis (BullMQ).
+                    Eles podem ser escalados, reiniciados e monitorados de forma separada.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <!-- Processo 1: API Server -->
+                    <div class="process-border border-blue-500/50 bg-blue-50/30 dark:bg-blue-900/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">1</div>
+                            <div>
+                                <h4 class="font-bold text-blue-600 dark:text-blue-400">Processo: API Server</h4>
+                                <p class="text-xs text-slate-500">src/index.ts &rarr; app.ts</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Inicia servidor Fastify na porta <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">3003</code></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Registra plugins: <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">cors</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">jwt</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">swagger</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">rateLimit</code></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Autentica via JWT externo (Auth Service) e API Keys M2M</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Enfileira jobs no Redis via BullMQ <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">Queue.add()</code></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Persiste metadados de jobs no PostgreSQL via Prisma</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Expõe endpoints REST: <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/jobs</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/queues</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/recurring-jobs</code>, <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/api-keys</code></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-400 mt-0.5">&#9654;</span>
+                                <span>Usa <strong>2 conexões Redis</strong>: uma para cache/rate-limit, outra exclusiva para BullMQ</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+                            <strong>Entrypoint:</strong> <code>npm run start:api</code><br>
+                            <strong>Arquivo:</strong> <code>src/index.ts</code>
+                        </div>
+                    </div>
+
+                    <!-- Processo 2: Worker -->
+                    <div class="process-border border-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">2</div>
+                            <div>
+                                <h4 class="font-bold text-amber-600 dark:text-amber-400">Processo: Worker</h4>
+                                <p class="text-xs text-slate-500">src/worker.ts</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>Escuta filas BullMQ no Redis (<code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">Worker.process()</code>)</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>Para cada job: envia <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">HTTP POST</code> para a <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">callbackUrl</code> do cliente</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>Atualiza status do job no PostgreSQL: <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">pending → processing → completed/failed</code></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>Suporta retry automático com backoff configurável</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>Executa o <strong>RecurringJobScheduler</strong> a cada 30s com lock distribuído Redis</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-400 mt-0.5">&#9654;</span>
+                                <span>O scheduler usa <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">SET NX EX</code> no Redis para garantir execução única (sem duplicatas em múltiplas instâncias)</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                            <strong>Entrypoint:</strong> <code>npm run start:worker</code><br>
+                            <strong>Arquivo:</strong> <code>src/worker.ts</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Communication bridge -->
+                <div class="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow p-5 border border-red-200 dark:border-red-900/50">
+                    <h4 class="font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
+                        <span>&#128202;</span> Redis — Ponte de Comunicação entre Processos
+                    </h4>
+                    <div class="flex flex-wrap items-center justify-center gap-4 text-sm">
+                        <div class="arch-box border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 w-36">
+                            API Server<br><span class="text-xs font-normal">Queue.add()</span>
+                        </div>
+                        <div class="flex flex-col items-center text-red-400">
+                            <span class="text-xl">&rarr;</span>
+                            <span class="text-xs text-slate-400">publica</span>
+                        </div>
+                        <div class="arch-box border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 w-40">
+                            Redis<br><span class="text-xs font-normal">BullMQ Queue Store</span>
+                        </div>
+                        <div class="flex flex-col items-center text-red-400">
+                            <span class="text-xl">&rarr;</span>
+                            <span class="text-xs text-slate-400">consome</span>
+                        </div>
+                        <div class="arch-box border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 w-36">
+                            Worker<br><span class="text-xs font-normal">Worker.process()</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-4 text-center">
+                        Os dois processos não se comunicam diretamente. Redis é o único canal de coordenação.
+                    </p>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 3: CAMADAS DA APLICAÇÃO
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-green-400">&#9726;</span> Camadas da Aplicação (Backend)
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    O backend segue uma arquitetura em camadas bem definida. Cada camada tem responsabilidade única
+                    e dependência unidirecional.
+                </p>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 overflow-x-auto">
+                    <div class="min-w-[560px] max-w-2xl mx-auto space-y-1">
+
+                        <!-- Layer: Routes -->
+                        <div class="arch-box border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 py-4">
+                            <div class="text-base font-bold mb-1">&#128195; Routes (src/routes/)</div>
+                            <div class="text-xs font-normal text-blue-600 dark:text-blue-400">
+                                Parsing HTTP, validação de schema (Zod/JSON Schema), autenticação, resposta.<br>
+                                <span class="italic">Não contém lógica de negócio.</span>
+                            </div>
+                            <div class="mt-2 flex flex-wrap justify-center gap-2 text-xs">
+                                <span class="bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">jobs.ts</span>
+                                <span class="bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">queues.ts</span>
+                                <span class="bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">recurring-jobs.ts</span>
+                                <span class="bg-blue-100 dark:bg-blue-800/50 px-2 py-0.5 rounded">api-keys.ts</span>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="flex justify-center py-1 text-slate-400 text-xs flex-col items-center">
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span class="flow-pulse">chama</span>
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span>&#8595;</span>
+                        </div>
+
+                        <!-- Layer: Services -->
+                        <div class="arch-box border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 py-4">
+                            <div class="text-base font-bold mb-1">&#9881; Services (src/services/)</div>
+                            <div class="text-xs font-normal text-indigo-600 dark:text-indigo-400">
+                                Lógica de negócio, orquestração de operações, validações de domínio.<br>
+                                <span class="italic">Chama lib/ e prisma. Não conhece HTTP.</span>
+                            </div>
+                            <div class="mt-2 flex flex-wrap justify-center gap-2 text-xs">
+                                <span class="bg-indigo-100 dark:bg-indigo-800/50 px-2 py-0.5 rounded">jobService.ts</span>
+                                <span class="bg-indigo-100 dark:bg-indigo-800/50 px-2 py-0.5 rounded">queueService.ts</span>
+                                <span class="bg-indigo-100 dark:bg-indigo-800/50 px-2 py-0.5 rounded">schedulerService.ts</span>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="flex justify-center py-1 text-slate-400 text-xs flex-col items-center">
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span class="flow-pulse">usa</span>
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span>&#8595;</span>
+                        </div>
+
+                        <!-- Layer: Lib -->
+                        <div class="arch-box border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 py-4">
+                            <div class="text-base font-bold mb-1">&#128081; Lib / Infrastructure (src/lib/)</div>
+                            <div class="text-xs font-normal text-cyan-600 dark:text-cyan-400">
+                                Conexões e wrappers de infraestrutura reutilizáveis. Sem lógica de negócio.
+                            </div>
+                            <div class="mt-2 flex flex-wrap justify-center gap-2 text-xs">
+                                <span class="bg-cyan-100 dark:bg-cyan-800/50 px-2 py-0.5 rounded">redis.ts (2 conns)</span>
+                                <span class="bg-cyan-100 dark:bg-cyan-800/50 px-2 py-0.5 rounded">bullmq.ts</span>
+                                <span class="bg-cyan-100 dark:bg-cyan-800/50 px-2 py-0.5 rounded">prisma.ts</span>
+                                <span class="bg-cyan-100 dark:bg-cyan-800/50 px-2 py-0.5 rounded">sentry.ts</span>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="flex justify-center py-1 text-slate-400 text-xs flex-col items-center">
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span class="flow-pulse">acessa</span>
+                            <div class="w-0.5 h-3 bg-slate-400"></div>
+                            <span>&#8595;</span>
+                        </div>
+
+                        <!-- Layer: Data -->
+                        <div class="arch-box border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 py-4">
+                            <div class="text-base font-bold mb-1">&#128203; Data Layer</div>
+                            <div class="text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                                Armazenamento físico. Toda comunicação passa pelas camadas superiores.
+                            </div>
+                            <div class="mt-2 flex flex-wrap justify-center gap-4 text-xs">
+                                <span class="bg-emerald-100 dark:bg-emerald-800/50 px-3 py-1 rounded">PostgreSQL</span>
+                                <span class="bg-emerald-100 dark:bg-emerald-800/50 px-3 py-1 rounded">Redis</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 4: PADRÃO DE FILAS
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-red-400">&#9726;</span> Padrão de Filas por Organização
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    Cada organização tem seu namespace isolado de filas no Redis. O padrão de nomeação garante
+                    isolamento multi-tenant sem conflito entre organizações diferentes.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <!-- Queue naming convention -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-4 text-slate-700 dark:text-slate-300">Convenção de Nomeação</h4>
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm mb-4">
+                            <div class="text-slate-400 text-xs mb-2"># Padrão de nome de fila</div>
+                            <div class="text-green-400">jobs-<span class="text-yellow-300">{orgId}</span>-<span class="text-blue-300">{queueName}</span></div>
+                            <div class="mt-3 text-slate-400 text-xs">
+                                # Exemplos reais:<br>
+                                <span class="text-slate-300">jobs-</span><span class="text-yellow-300">org_abc123</span><span class="text-slate-300">-</span><span class="text-blue-300">email-notifications</span><br>
+                                <span class="text-slate-300">jobs-</span><span class="text-yellow-300">org_abc123</span><span class="text-slate-300">-</span><span class="text-blue-300">pdf-generation</span><br>
+                                <span class="text-slate-300">jobs-</span><span class="text-yellow-300">org_xyz789</span><span class="text-slate-300">-</span><span class="text-blue-300">email-notifications</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-400 mt-0.5">&#10003;</span>
+                                <span>Namespacing por organização garante isolamento total</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-400 mt-0.5">&#10003;</span>
+                                <span>Uma org não pode acessar filas de outra org</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-400 mt-0.5">&#10003;</span>
+                                <span>O <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">queueName</code> é escolhido pelo cliente no momento de criar a fila</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-400 mt-0.5">&#10003;</span>
+                                <span>O Worker escaneia dinamicamente as filas existentes no Redis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-tenant visualization -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-4 text-slate-700 dark:text-slate-300">Visualização Multi-Tenant</h4>
+                        <div class="space-y-4">
+
+                            <!-- Org A -->
+                            <div class="border border-blue-300 dark:border-blue-700 rounded-lg p-3">
+                                <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1">
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full inline-block"></span>
+                                    Organização A (org_abc123)
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="queue-pill">jobs-org_abc123-emails</span>
+                                    <span class="queue-pill">jobs-org_abc123-reports</span>
+                                    <span class="queue-pill">jobs-org_abc123-sync</span>
+                                </div>
+                            </div>
+
+                            <!-- Org B -->
+                            <div class="border border-emerald-300 dark:border-emerald-700 rounded-lg p-3">
+                                <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                                    <span class="w-2 h-2 bg-emerald-500 rounded-full inline-block"></span>
+                                    Organização B (org_xyz789)
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="queue-pill" style="border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.1);color:#6ee7b7;">jobs-org_xyz789-emails</span>
+                                    <span class="queue-pill" style="border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.1);color:#6ee7b7;">jobs-org_xyz789-billing</span>
+                                </div>
+                            </div>
+
+                            <!-- Org C -->
+                            <div class="border border-purple-300 dark:border-purple-700 rounded-lg p-3">
+                                <div class="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-1">
+                                    <span class="w-2 h-2 bg-purple-500 rounded-full inline-block"></span>
+                                    Organização C (org_def456)
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="queue-pill" style="border-color:rgba(168,85,247,0.5);background:rgba(168,85,247,0.1);color:#c4b5fd;">jobs-org_def456-webhooks</span>
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
+                                Mesma fila "emails" existe em orgs diferentes sem conflito
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 5: CONNECTION POOL REDIS
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-red-400">&#9726;</span> Connection Pool: 2 Conexões Redis
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    O sistema mantém duas conexões Redis separadas por design. BullMQ exige uma conexão dedicada
+                    que não pode ser compartilhada com operações gerais.
+                </p>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 overflow-x-auto">
+                    <div class="min-w-[560px]">
+                        <div class="grid grid-cols-2 gap-8">
+
+                            <!-- Connection 1 -->
+                            <div>
+                                <div class="arch-box border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 mb-3 py-4">
+                                    <div class="font-bold">Conexão Redis #1</div>
+                                    <div class="text-xs font-normal text-red-500 mt-1">redisClient (geral)</div>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/10 rounded border border-red-200 dark:border-red-900/30">
+                                        <span class="text-red-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">Cache de dados</div>
+                                            <div class="text-xs text-slate-500">Respostas temporárias, sessões</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/10 rounded border border-red-200 dark:border-red-900/30">
+                                        <span class="text-red-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">Rate Limiting</div>
+                                            <div class="text-xs text-slate-500">Contadores por API Key / IP</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/10 rounded border border-red-200 dark:border-red-900/30">
+                                        <span class="text-red-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">Scheduler Lock</div>
+                                            <div class="text-xs text-slate-500"><code class="text-xs">SET NX EX</code> para lock distribuído</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Connection 2 -->
+                            <div>
+                                <div class="arch-box border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 mb-3 py-4">
+                                    <div class="font-bold">Conexão Redis #2</div>
+                                    <div class="text-xs font-normal text-orange-500 mt-1">bullmqRedis (dedicada)</div>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-900/10 rounded border border-orange-200 dark:border-orange-900/30">
+                                        <span class="text-orange-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">BullMQ Queue (API)</div>
+                                            <div class="text-xs text-slate-500">Publicar jobs nas filas</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-900/10 rounded border border-orange-200 dark:border-orange-900/30">
+                                        <span class="text-orange-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">BullMQ Worker (Worker)</div>
+                                            <div class="text-xs text-slate-500">Consumir e processar jobs</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-900/10 rounded border border-orange-200 dark:border-orange-900/30">
+                                        <span class="text-orange-400 mt-0.5">&#9642;</span>
+                                        <div>
+                                            <div class="font-medium text-xs">Estado das Filas</div>
+                                            <div class="text-xs text-slate-500">Waiting, Active, Completed, Failed</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-500 text-lg">&#9888;</span>
+                                <div>
+                                    <strong class="text-amber-700 dark:text-amber-300">Por que duas conexões?</strong>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                        BullMQ usa comandos Redis bloqueantes (<code>BLPOP</code>, scripts Lua, transações <code>MULTI/EXEC</code>)
+                                        que não podem coexistir com operações gerais na mesma conexão. Misturar as conexões causaria
+                                        deadlocks e comportamento imprevisível. A separação é obrigatória pela documentação do BullMQ.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 6: AUTH FLOW
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-purple-400">&#9726;</span> Fluxo de Autenticação
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    Dois mecanismos de autenticação coexistem: JWT emitido por serviço externo (para usuários humanos via
+                    Frontend) e API Keys M2M (para integrações machine-to-machine).
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <!-- JWT Flow -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-4 text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                            <span>&#128274;</span> JWT — Usuários Humanos (Frontend)
+                        </h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">1</div>
+                                <span>Usuário autentica no <strong>Auth Service</strong> externo</span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</div>
+                                <span>Auth Service retorna <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">JWT Bearer Token</code></span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">3</div>
+                                <span>Frontend inclui token no header: <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">Authorization: Bearer &lt;jwt&gt;</code></span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">4</div>
+                                <span>API valida JWT, extrai <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">userId</code> e <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">orgId</code></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Key Flow -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-4 text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                            <span>&#128273;</span> API Keys — M2M (Integrações)
+                        </h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">1</div>
+                                <span>Cliente gera API Key via Dashboard ou <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">POST /api-keys</code></span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</div>
+                                <span>API Key é armazenada como hash bcrypt no PostgreSQL</span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">3</div>
+                                <span>Sistema envia header: <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">X-API-Key: &lt;key&gt;</code></span>
+                            </div>
+                            <div class="flex justify-start pl-3">
+                                <div class="w-0.5 h-4 bg-slate-300 dark:bg-slate-600"></div>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">4</div>
+                                <span>API compara hash, extrai <code class="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">orgId</code> e permissões</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 7: SCHEDULER
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-cyan-400">&#9726;</span> RecurringJobScheduler
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                    O scheduler de jobs recorrentes roda dentro do processo Worker. Ele usa lock distribuído Redis para
+                    garantir execução única mesmo com múltiplas instâncias do Worker em execução.
+                </p>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                    <div class="grid md:grid-cols-3 gap-6">
+
+                        <!-- Timer -->
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">&#9201;</div>
+                            <h5 class="font-semibold text-cyan-600 dark:text-cyan-400 mb-2">Intervalo de Tick</h5>
+                            <div class="text-3xl font-bold text-cyan-500 mb-1">30s</div>
+                            <p class="text-xs text-slate-500">A cada 30 segundos o scheduler avalia quais recurring jobs precisam ser enfileirados</p>
+                        </div>
+
+                        <!-- Lock -->
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">&#128274;</div>
+                            <h5 class="font-semibold text-red-600 dark:text-red-400 mb-2">Lock Distribuído</h5>
+                            <div class="font-mono text-xs bg-slate-900 text-green-400 rounded p-2 mb-1 text-left">
+                                SET scheduler:lock<br>
+                                &nbsp;&nbsp;NX EX 25
+                            </div>
+                            <p class="text-xs text-slate-500">Apenas 1 instância adquire o lock por ciclo. As demais pulam silenciosamente.</p>
+                        </div>
+
+                        <!-- Process -->
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">&#128196;</div>
+                            <h5 class="font-semibold text-amber-600 dark:text-amber-400 mb-2">Lógica de Execução</h5>
+                            <div class="text-left space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                                <div class="flex items-start gap-1"><span>1.</span><span>Busca recurring jobs ativos no DB</span></div>
+                                <div class="flex items-start gap-1"><span>2.</span><span>Verifica <code class="bg-slate-200 dark:bg-slate-700 px-0.5 rounded">nextRunAt</code> de cada job</span></div>
+                                <div class="flex items-start gap-1"><span>3.</span><span>Enfileira jobs prontos para execução</span></div>
+                                <div class="flex items-start gap-1"><span>4.</span><span>Calcula e persiste novo <code class="bg-slate-200 dark:bg-slate-700 px-0.5 rounded">nextRunAt</code></span></div>
+                                <div class="flex items-start gap-1"><span>5.</span><span>Respeita <code class="bg-slate-200 dark:bg-slate-700 px-0.5 rounded">maxRuns</code> e <code class="bg-slate-200 dark:bg-slate-700 px-0.5 rounded">endDate</code></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 8: ESTRUTURA DE ARQUIVOS
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-slate-400">&#9726;</span> Estrutura de Diretórios
+                </h3>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <!-- Backend -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-3 text-blue-600 dark:text-blue-400">&#128295; Backend (src/)</h4>
+                        <div class="font-mono text-xs bg-slate-900 rounded-lg p-4 text-slate-300 space-y-0.5 leading-relaxed">
+                            <div class="text-blue-400">src/</div>
+                            <div class="pl-4 text-slate-300">&#9500; index.ts <span class="text-slate-500"># entrypoint API</span></div>
+                            <div class="pl-4 text-slate-300">&#9500; worker.ts <span class="text-slate-500"># entrypoint Worker</span></div>
+                            <div class="pl-4 text-slate-300">&#9500; app.ts <span class="text-slate-500"># setup Fastify</span></div>
+                            <div class="pl-4 text-indigo-400">&#9500; routes/ <span class="text-slate-500"># HTTP handlers</span></div>
+                            <div class="pl-8">&#9500; jobs.ts</div>
+                            <div class="pl-8">&#9500; queues.ts</div>
+                            <div class="pl-8">&#9492; recurring-jobs.ts</div>
+                            <div class="pl-4 text-cyan-400">&#9500; services/ <span class="text-slate-500"># business logic</span></div>
+                            <div class="pl-8">&#9500; jobService.ts</div>
+                            <div class="pl-8">&#9492; schedulerService.ts</div>
+                            <div class="pl-4 text-green-400">&#9500; lib/ <span class="text-slate-500"># infra wrappers</span></div>
+                            <div class="pl-8">&#9500; redis.ts <span class="text-slate-500"># 2 conns</span></div>
+                            <div class="pl-8">&#9500; prisma.ts</div>
+                            <div class="pl-8">&#9492; bullmq.ts</div>
+                            <div class="pl-4 text-yellow-400">&#9500; plugins/ <span class="text-slate-500"># Fastify plugins</span></div>
+                            <div class="pl-4 text-purple-400">&#9492; scheduler/ <span class="text-slate-500"># recurring jobs</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Frontend -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h4 class="font-bold mb-3 text-indigo-600 dark:text-indigo-400">&#128187; Frontend (frontend/src/)</h4>
+                        <div class="font-mono text-xs bg-slate-900 rounded-lg p-4 text-slate-300 space-y-0.5 leading-relaxed">
+                            <div class="text-indigo-400">frontend/src/</div>
+                            <div class="pl-4 text-slate-300">&#9500; main.tsx <span class="text-slate-500"># entrypoint</span></div>
+                            <div class="pl-4 text-slate-300">&#9500; App.tsx <span class="text-slate-500"># router root</span></div>
+                            <div class="pl-4 text-blue-400">&#9500; pages/ <span class="text-slate-500"># page components</span></div>
+                            <div class="pl-8">&#9500; Dashboard.tsx</div>
+                            <div class="pl-8">&#9500; Jobs.tsx</div>
+                            <div class="pl-8">&#9500; Queues.tsx</div>
+                            <div class="pl-8">&#9492; Settings.tsx</div>
+                            <div class="pl-4 text-cyan-400">&#9500; components/ <span class="text-slate-500"># UI atoms</span></div>
+                            <div class="pl-4 text-green-400">&#9500; hooks/ <span class="text-slate-500"># React Query</span></div>
+                            <div class="pl-8">&#9500; useJobs.ts</div>
+                            <div class="pl-8">&#9492; useQueues.ts</div>
+                            <div class="pl-4 text-yellow-400">&#9500; lib/ <span class="text-slate-500"># axios client</span></div>
+                            <div class="pl-4 text-purple-400">&#9492; types/ <span class="text-slate-500"># TypeScript types</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SEÇÃO 9: DECISÕES ARQUITETURAIS
+                 ===================================================== -->
+            <section>
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <span class="text-amber-400">&#9726;</span> Decisões Arquiteturais
+                </h3>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-blue-500 card-hover transition-all">
+                        <h5 class="font-semibold text-blue-600 dark:text-blue-400 mb-2">Por que Fastify e não Express?</h5>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Fastify oferece validação de schema nativa via JSON Schema, serialização JSON 2x mais rápida,
+                            plugin system com contexto encapsulado e suporte nativo a TypeScript. É o padrão moderno para
+                            APIs Node.js de alta performance.
+                        </p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-amber-500 card-hover transition-all">
+                        <h5 class="font-semibold text-amber-600 dark:text-amber-400 mb-2">Por que BullMQ e não processamento direto?</h5>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            BullMQ garante: durabilidade (jobs não se perdem no reinício), retry automático com backoff,
+                            rate limiting, jobs agendados, prioridades, visibilidade do estado e escalabilidade horizontal
+                            sem código adicional.
+                        </p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-emerald-500 card-hover transition-all">
+                        <h5 class="font-semibold text-emerald-600 dark:text-emerald-400 mb-2">Por que 2 processos separados?</h5>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Separação de responsabilidades e escalabilidade independente. Se o Worker está sobrecarregado,
+                            escala-se só ele. Se a API tem alta demanda, escala-se só ela. Reinicialização de um não afeta o outro.
+                        </p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-purple-500 card-hover transition-all">
+                        <h5 class="font-semibold text-purple-600 dark:text-purple-400 mb-2">Por que Auth Service externo?</h5>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Centralização de autenticação. O JobSync não gerencia senhas, MFA ou sessões de usuário.
+                            Delega ao Auth Service (que pode ser Keycloak, Auth0, ou serviço interno) e apenas consome o JWT resultante.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <div class="border-t border-slate-200 dark:border-slate-700 pt-6 pb-12 text-center text-xs text-slate-400">
+                JobSync Documentação — Arquitetura v2.0.0 — Atualizado em 20/03/2026
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    function setTheme(dark) {
+        if (dark) {
+            html.classList.add('dark');
+            themeToggle.textContent = '\u{1F31E}'; // sun
+        } else {
+            html.classList.remove('dark');
+            themeToggle.textContent = '\u{1F319}'; // moon
+        }
+    }
+
+    // Initialize from localStorage or default dark
+    const stored = localStorage.getItem('jobsync-theme');
+    setTheme(stored !== 'light');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = html.classList.contains('dark');
+        setTheme(!isDark);
+        localStorage.setItem('jobsync-theme', isDark ? 'light' : 'dark');
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riscos — JobSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', secondary: '#6366f1', success: '#10b981', warning: '#f59e0b', danger: '#ef4444' } } } }
+    </script>
+    <style>
+        .sidebar-link.active { background: rgba(59,130,246,0.1); color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .risk-critical { background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%); }
+        .risk-high { background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%); }
+        .risk-medium { background: linear-gradient(135deg, #a16207 0%, #ca8a04 100%); }
+        .risk-low { background: linear-gradient(135deg, #166534 0%, #15803d 100%); }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+        <nav class="w-64 bg-slate-900 text-white flex-shrink-0 overflow-y-auto hidden md:block">
+            <div class="p-4 border-b border-slate-700"><h1 class="text-xl font-bold flex items-center gap-2"><span class="text-primary">⚡</span> JobSync</h1></div>
+            <div class="p-2">
+                <a href="index.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏠 Visão Geral</a>
+                <a href="arquitetura.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏗️ Arquitetura</a>
+                <a href="fluxo-dados.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔄 Fluxo de Dados</a>
+                <a href="database.html" class="sidebar-link block px-4 py-2 rounded mb-1">🗄️ Banco de Dados</a>
+                <a href="integracoes.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔗 Integrações</a>
+                <a href="riscos.html" class="sidebar-link active block px-4 py-2 rounded mb-1">⚠️ Riscos</a>
+                <a href="backend.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔧 Backend</a>
+                <a href="frontend.html" class="sidebar-link block px-4 py-2 rounded mb-1">💻 Frontend</a>
+                <a href="operacao.html" class="sidebar-link block px-4 py-2 rounded mb-1">🚀 Operação</a>
+                <a href="seguranca.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔒 Segurança</a>
+            </div>
+        </nav>
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">Análise de Riscos</h2>
+                    <button id="themeToggle" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+                </div>
+            </header>
+            <div class="p-4 md:p-8">
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">⚠️ Matriz de Riscos</h3>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 mb-6">
+                        <div class="overflow-x-auto">
+                            <div class="min-w-[600px]">
+                                <div class="flex">
+                                    <div class="w-16"></div>
+                                    <div class="flex-1 grid grid-cols-5 gap-1 text-center text-xs font-semibold mb-2">
+                                        <div>Impacto 1</div><div>Impacto 2</div><div>Impacto 3</div><div>Impacto 4</div><div>Impacto 5</div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="flex items-center"><div class="w-16 text-xs font-semibold">Prob. 5</div><div class="flex-1 grid grid-cols-5 gap-1"><div class="h-12 bg-yellow-600 rounded"></div><div class="h-12 bg-orange-600 rounded"></div><div class="h-12 bg-red-600 rounded"></div><div class="h-12 bg-red-700 rounded"></div><div class="h-12 bg-red-800 rounded"></div></div></div>
+                                    <div class="flex items-center"><div class="w-16 text-xs font-semibold">Prob. 4</div><div class="flex-1 grid grid-cols-5 gap-1"><div class="h-12 bg-green-600 rounded"></div><div class="h-12 bg-yellow-600 rounded"></div><div class="h-12 bg-orange-600 rounded"></div><div class="h-12 bg-red-600 rounded"></div><div class="h-12 bg-red-700 rounded"></div></div></div>
+                                    <div class="flex items-center"><div class="w-16 text-xs font-semibold">Prob. 3</div><div class="flex-1 grid grid-cols-5 gap-1"><div class="h-12 bg-green-500 rounded"></div><div class="h-12 bg-green-600 rounded"></div><div class="h-12 bg-yellow-600 rounded"></div><div class="h-12 bg-orange-600 rounded"></div><div class="h-12 bg-red-600 rounded"></div></div></div>
+                                    <div class="flex items-center"><div class="w-16 text-xs font-semibold">Prob. 2</div><div class="flex-1 grid grid-cols-5 gap-1"><div class="h-12 bg-green-400 rounded"></div><div class="h-12 bg-green-500 rounded"></div><div class="h-12 bg-green-600 rounded"></div><div class="h-12 bg-yellow-600 rounded"></div><div class="h-12 bg-orange-600 rounded"></div></div></div>
+                                    <div class="flex items-center"><div class="w-16 text-xs font-semibold">Prob. 1</div><div class="flex-1 grid grid-cols-5 gap-1"><div class="h-12 bg-green-300 rounded"></div><div class="h-12 bg-green-400 rounded"></div><div class="h-12 bg-green-500 rounded"></div><div class="h-12 bg-green-600 rounded"></div><div class="h-12 bg-yellow-600 rounded"></div></div></div>
+                                </div>
+                                <div class="flex mt-2"><div class="w-16"></div><div class="flex-1 flex justify-around text-xs text-slate-500"><span>1-Muito Baixo</span><span>2-Baixo</span><span>3-Médio</span><span>4-Alto</span><span>5-Crítico</span></div></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 mt-4 justify-center">
+                            <span class="px-3 py-1 bg-green-500 text-white rounded text-xs">Baixo (1-6)</span>
+                            <span class="px-3 py-1 bg-yellow-500 text-white rounded text-xs">Médio (8-12)</span>
+                            <span class="px-3 py-1 bg-orange-500 text-white rounded text-xs">Alto (15-18)</span>
+                            <span class="px-3 py-1 bg-red-600 text-white rounded text-xs">Crítico (20-25)</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🔥 Riscos Identificados</h3>
+                    <div class="space-y-4">
+                        <!-- Risco 1: Auth Service SPoF -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-critical p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Auth Service — SPoF</h4>
+                                        <p class="text-sm opacity-90">Serviço externo de autenticação é ponto único de falha</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">CRÍTICO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>5</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>20</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Parcial</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <p class="mb-3">Se o Auth Service (nommand.com) ficar indisponível, novos usuários não conseguem fazer login. Usuários existentes com JWT válido ainda podem usar (JWT cacheado).</p>
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-500">
+                                    <strong>Mitigação atual:</strong> JWT cacheado localmente (5min no Redis), syncUserFromAuth tem fallback para criar usuário básico.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Implementar login offline com refresh token ou ter fallback de emergência para demo mode.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 2: Redis SPoF -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-critical p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Redis — SPoF Total</h4>
+                                        <p class="text-sm opacity-90">Redis é crítico para filas, rate limiting e scheduler</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">CRÍTICO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>5</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>15</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Parcial</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <p class="mb-3">Se Redis cair: workers param, jobs não são processados, rate limiting falha-open, scheduler não funciona.</p>
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-500">
+                                    <strong>Mitigação atual:</strong> Rate limiting falha-open (allow all) para não indisponibilizar. Mas filas param.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Implementar Redis Sentinel ou Cluster. Monitoramento proativo. Queue dead-letter no DB como fallback.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 3: SSRF -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-high p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">SSRF via Webhook</h4>
+                                        <p class="text-sm opacity-90">Usuário malicioso pode configurar webhook para IP interno</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">ALTO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>2</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>5</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>10</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Mitigado</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <p class="mb-3">Bloqueio existe mas pode haver bypass.</p>
+                                <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded border-l-4 border-green-500">
+                                    <strong>Mitigação:</strong> BLOCKED_HOSTS em types/index.ts bloqueia 127.x, 10.x, 172.16-31.x, 192.168.x, etc. HTTPS obrigatório em produção.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 4: Bulk Jobs Overload -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-high p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Bulk Jobs — DoS</h4>
+                                        <p class="text-sm opacity-90">Cliente pode enviar 1000 jobs de uma vez, sobrecarregando sistema</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">ALTO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>12</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Parcial</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-500">
+                                    <strong>Mitigação atual:</strong> Rate limiting por org (1000/min), batches de 1000 no bulk.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Limitar bulk a 100/jobs, adicionar delay entre batches, fila de processamento prioritária.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 5: Callback Unreliable -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-medium p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Callbacks Falham Silenciosamente</h4>
+                                        <p class="text-sm opacity-90">Callback timeout 5s, falha ignorada — cliente não sabe</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">MÉDIO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>12</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Não Mitigado</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border-l-4 border-red-500">
+                                    <strong>Problema:</strong> callbackError é logado mas não notifica cliente. Callback failures não são visíveis na UI.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Criar tabela de callback_attempts, retry assíncrono, UI mostra status de callback.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 6: API Key Storage -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-medium p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">API Keys em Texto</h4>
+                                        <p class="text-sm opacity-90">API Keys armazenadas sem hash — vazamento do DB expõe todas as chaves</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">MÉDIO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>2</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>8</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Não Mitigado</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border-l-4 border-red-500">
+                                    <strong>Problema:</strong> Table api_keys guarda key em texto. Se DB vazar, todas as chaves são expostas.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Hash da API Key (tipo bcrypt ou SHA256 truncado). Cliente armazena hash, não a chave original.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 7: Data Retention -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-medium p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Dados Crescem Indefidamente</h4>
+                                        <p class="text-sm opacity-90">Jobs, Logs e AuditLogs nunca são deletados — disco pode encher</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">MÉDIO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>12</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Não Mitigado</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border-l-4 border-red-500">
+                                    <strong>Problema:</strong> Sem política de retenção. Jobs e logs ficam para sempre. A cada 1M jobs = ~GB de dados.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Implementar TTL automático: jobs completadas > 90 dias → archive + delete. audit_logs > 1 ano → aggregate + delete.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 8: Worker Recovery -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-medium p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Jobs Perdidos no Crash</h4>
+                                        <p class="text-sm opacity-90">Se worker morre durante processamento, job pode ficar órfão</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">MÉDIO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>2</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>4</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>8</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Parcial</strong></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-500">
+                                    <strong>Situação:</strong> BullMQ tem stalled interval mas não está configurado explicitamente.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Configurar stalledInterval no BullMQ, implementar job recovery que reenfileira jobs em PROCESSING há mais de X minutos.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risco 9: Demo Mode Security -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <div class="risk-low p-4 text-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-lg">Demo Mode no Frontend</h4>
+                                        <p class="text-sm opacity-90">Token JWT hardcoded em código — inseguro em produção</p>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/20 rounded text-sm font-bold">BAIXO</span>
+                                </div>
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div><span class="opacity-75">Probabilidade:</span> <strong>1</strong></div>
+                                    <div><span class="opacity-75">Impacto:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Score:</span> <strong>3</strong></div>
+                                    <div><span class="opacity-75">Status:</span> <strong>Parcial</span></div>
+                                </div>
+                            </div>
+                            <div class="p-4 text-sm">
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-500">
+                                    <strong>Situação:</strong> App.tsx força token demo no localStorage em inicialização.
+                                </div>
+                                <div class="mt-2 text-green-600">
+                                    <strong>Recomendação:</strong> Remover demo mode em produção. Implementar OAuth flow real.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">📊 Resumo</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow text-center">
+                            <p class="text-3xl font-bold text-red-600">2</p>
+                            <p class="text-sm text-slate-500">Críticos</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow text-center">
+                            <p class="text-3xl font-bold text-orange-500">2</p>
+                            <p class="text-sm text-slate-500">Altos</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow text-center">
+                            <p class="text-3xl font-bold text-yellow-500">4</p>
+                            <p class="text-sm text-slate-500">Médios</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow text-center">
+                            <p class="text-3xl font-bold text-green-500">1</p>
+                            <p class="text-sm text-slate-500">Baixo</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script>
+        if (localStorage.getItem('theme') === 'light') document.documentElement.classList.remove('dark');
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+    </script>
+</body>
+</html>

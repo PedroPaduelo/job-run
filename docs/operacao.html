@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operação — JobSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', secondary: '#6366f1', success: '#10b981', warning: '#f59e0b', danger: '#ef4444' } } } }
+    </script>
+    <style>
+        .sidebar-link.active { background: rgba(59,130,246,0.1); color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .card-hover:hover { transform: translateY(-2px); }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+        <nav class="w-64 bg-slate-900 text-white flex-shrink-0 overflow-y-auto hidden md:block">
+            <div class="p-4 border-b border-slate-700"><h1 class="text-xl font-bold flex items-center gap-2"><span class="text-primary">⚡</span> JobSync</h1></div>
+            <div class="p-2">
+                <a href="index.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏠 Visão Geral</a>
+                <a href="arquitetura.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏗️ Arquitetura</a>
+                <a href="fluxo-dados.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔄 Fluxo de Dados</a>
+                <a href="database.html" class="sidebar-link block px-4 py-2 rounded mb-1">🗄️ Banco de Dados</a>
+                <a href="integracoes.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔗 Integrações</a>
+                <a href="riscos.html" class="sidebar-link block px-4 py-2 rounded mb-1">⚠️ Riscos</a>
+                <a href="backend.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔧 Backend</a>
+                <a href="frontend.html" class="sidebar-link block px-4 py-2 rounded mb-1">💻 Frontend</a>
+                <a href="operacao.html" class="sidebar-link active block px-4 py-2 rounded mb-1">🚀 Operação</a>
+                <a href="seguranca.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔒 Segurança</a>
+            </div>
+        </nav>
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">Operação e Deploy</h2>
+                    <button id="themeToggle" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+                </div>
+            </header>
+            <div class="p-4 md:p-8">
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🚀 Como rodar o sistema</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold text-lg mb-3 text-blue-600">Backend (API + Worker)</h4>
+                            <div class="space-y-3 text-sm">
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Instalar dependências</span><br>
+                                    cd backend-job-assync<br>
+                                    npm install
+                                </div>
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Rodar migrations</span><br>
+                                    npx prisma migrate deploy
+                                </div>
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># API Server (pm2)</span><br>
+                                    pm2 start npm --name "job-async-api" -- run start
+                                </div>
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Worker (pm2)</span><br>
+                                    pm2 start npm --name "job-async-worker" -- run worker
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold text-lg mb-3 text-indigo-600">Frontend</h4>
+                            <div class="space-y-3 text-sm">
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Instalar + Build</span><br>
+                                    cd frontend-job-async<br>
+                                    npm install<br>
+                                    npm run build
+                                </div>
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Servir (pm2)</span><br>
+                                    pm2 start npx --name "job-async-frontend" -- serve dist/ -l 5173 --no-clipboard
+                                </div>
+                                <div class="bg-slate-900 text-slate-200 p-3 rounded font-mono text-xs overflow-x-auto">
+                                    <span class="text-green-400"># Dev mode</span><br>
+                                    npm run dev -- --host 0.0.0.0
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">📋 Variáveis de Ambiente</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                            <thead class="bg-slate-100 dark:bg-slate-700">
+                                <tr><th class="px-4 py-3 text-left text-sm font-semibold">Variável</th><th class="px-4 py-3 text-left text-sm font-semibold">Descrição</th><th class="px-4 py-3 text-left text-sm font-semibold">Exemplo</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>DATABASE_URL</code></td><td class="px-4 py-3">PostgreSQL connection string</td><td class="px-4 py-3 font-mono text-xs">postgresql://...</td></tr>
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>REDIS_URL</code></td><td class="px-4 py-3">Redis connection</td><td class="px-4 py-3 font-mono text-xs">redis://localhost:6379</td></tr>
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>AUTH_SERVER_URL</code></td><td class="px-4 py-3">Auth Service URL</td><td class="px-4 py-3 font-mono text-xs">https://auth...</td></tr>
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>API_PORT</code></td><td class="px-4 py-3">Porta API (default 3003)</td><td class="px-4 py-3 font-mono text-xs">3003</td></tr>
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>WORKER_CONCURRENCY</code></td><td class="px-4 py-3">Concurrency por worker</td><td class="px-4 py-3 font-mono text-xs">10</td></tr>
+                                <tr><td class="px-4 py-3 font-mono text-xs"><code>SENTRY_DSN</code></td><td class="px-4 py-3">Sentry monitoring</td><td class="px-4 py-3 font-mono text-xs">https://...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🔄 Health Checks</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold mb-3">GET /health</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Retorna status básico do serviço.</p>
+                            <pre class="bg-slate-900 text-green-400 p-3 rounded text-xs overflow-x-auto">{ "status": "ok", "uptime": 1234.56 }</pre>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                            <h4 class="font-semibold mb-3">GET /ready</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Retorna readiness com Redis e DB.</p>
+                            <pre class="bg-slate-900 text-green-400 p-3 rounded text-xs overflow-x-auto">{ "status": "ready", "redis": true, "database": true, "uptime": 1234.56 }</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">⚙️ Comandos pm2</h3>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <div class="space-y-3 text-sm font-mono">
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 list</code><span class="text-slate-500">Ver processos rodando</span></div>
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 logs job-async-api</code><span class="text-slate-500">Ver logs da API</span></div>
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 logs job-async-worker</code><span class="text-slate-500">Ver logs do Worker</span></div>
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 restart job-async-api</code><span class="text-slate-500">Restart API</span></div>
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 restart all</code><span class="text-slate-500">Restart tudo</span></div>
+                            <div class="flex gap-4"><code class="text-blue-400">pm2 monit</code><span class="text-slate-500">Monitor em tempo real</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">📊 Monitoramento</h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 text-center">
+                            <span class="text-3xl">📈</span>
+                            <h4 class="font-semibold mt-2">Dashboard</h4>
+                            <p class="text-xs text-slate-500 mt-1">Stats em tempo real via API</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 text-center">
+                            <span class="text-3xl">🔍</span>
+                            <h4 class="font-semibold mt-2">Sentry</h4>
+                            <p class="text-xs text-slate-500 mt-1">Erros 5xx capturados</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 text-center">
+                            <span class="text-3xl">📝</span>
+                            <h4 class="font-semibold mt-2">Logs</h4>
+                            <p class="text-xs text-slate-500 mt-1">Pino com rotação</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">🆘 Troubleshooting</h3>
+                    <div class="space-y-4">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5">
+                            <h4 class="font-semibold text-red-500 mb-2">❌ "Queue is not active" ao criar job</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">A fila está pausada ou desativada. Acesse /queues no frontend e ative a fila.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5">
+                            <h4 class="font-semibold text-red-500 mb-2">❌ "Organization not found"</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">Token JWT inválido ou organização não existe. Verifique se o organizationId está no token ou header X-Organization-Id.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5">
+                            <h4 class="font-semibold text-red-500 mb-2">❌ Jobs ficam em PENDING para sempre</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">Worker pode estar offline. Verifique pm2 list e logs do worker. Também verifique se Redis está acessível.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5">
+                            <h4 class="font-semibold text-red-500 mb-2">❌ Rate limit exceeded</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">Organização excedeu limite (default 1000/min). Aguarde ou ajuste JWT_RATE_LIMIT_PER_MIN no .env.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5">
+                            <h4 class="font-semibold text-red-500 mb-2">❌ Webhook falha sempre</h4>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">Verifique: URL acessível? HTTPS em produção? Timeout suficiente? Logs do job no frontend mostram o erro.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script>
+        if (localStorage.getItem('theme') === 'light') document.documentElement.classList.remove('dark');
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+    </script>
+</body>
+</html>

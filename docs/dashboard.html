@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integração — JobSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', secondary: '#6366f1', success: '#10b981', warning: '#f59e0b', danger: '#ef4444' } } } }
+    </script>
+    <style>
+        .sidebar-link.active { background: rgba(59,130,246,0.1); color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; font-weight: 600; }
+        .status-PENDING { background: #fef3c7; color: #92400e; }
+        .status-PROCESSING { background: #ddd6fe; color: #3730a3; }
+        .status-COMPLETED { background: #d1fae5; color: #065f46; }
+        .status-FAILED { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+        <nav class="w-64 bg-slate-900 text-white flex-shrink-0 overflow-y-auto hidden md:block">
+            <div class="p-4 border-b border-slate-700"><h1 class="text-xl font-bold flex items-center gap-2"><span class="text-primary">⚡</span> JobSync</h1></div>
+            <div class="p-2">
+                <a href="index.html" class="sidebar-link active block px-4 py-2 rounded mb-1">🏠 Dashboard</a>
+                <a href="arquitetura.html" class="sidebar-link block px-4 py-2 rounded mb-1">🏗️ Arquitetura</a>
+                <a href="fluxo-dados.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔄 Fluxo</a>
+                <a href="database.html" class="sidebar-link block px-4 py-2 rounded mb-1">🗄️ Banco</a>
+                <a href="integracoes.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔗 Integrações</a>
+                <a href="riscos.html" class="sidebar-link block px-4 py-2 rounded mb-1">⚠️ Riscos</a>
+                <a href="backend.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔧 Backend</a>
+                <a href="frontend.html" class="sidebar-link block px-4 py-2 rounded mb-1">💻 Frontend</a>
+                <a href="operacao.html" class="sidebar-link block px-4 py-2 rounded mb-1">🚀 Operação</a>
+                <a href="seguranca.html" class="sidebar-link block px-4 py-2 rounded mb-1">🔒 Segurança</a>
+            </div>
+        </nav>
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">Dashboard — Visão Geral do Sistema</h2>
+                    <button id="themeToggle" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+                </div>
+            </header>
+            <div class="p-4 md:p-8">
+                <!-- Hero Cards -->
+                <section class="mb-8">
+                    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-xl p-6 text-white shadow-lg mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h1 class="text-3xl font-bold mb-2">JobSync System</h1>
+                                <p class="text-blue-100">Plataforma de Processamento Assíncrono com Fila e Webhooks</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm opacity-75">Status</div>
+                                <div class="text-xl font-semibold text-green-300">🟢 Online</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow border-l-4 border-blue-500 card-hover transition-all">
+                            <p class="text-xs text-slate-500 mb-1">Total de Jobs</p>
+                            <p class="text-2xl font-bold">0</p>
+                            <p class="text-xs text-slate-500">criados até agora</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow border-l-4 border-amber-500 card-hover transition-all">
+                            <p class="text-xs text-slate-500 mb-1">Processando</p>
+                            <p class="text-2xl font-bold text-amber-600">0</p>
+                            <p class="text-xs text-slate-500">ativos agora</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow border-l-4 border-green-500 card-hover transition-all">
+                            <p class="text-xs text-slate-500 mb-1">Concluídos</p>
+                            <p class="text-2xl font-bold text-green-600">0</p>
+                            <p class="text-xs text-slate-500">sucesso hoje</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow border-l-4 border-red-500 card-hover transition-all">
+                            <p class="text-xs text-slate-500 mb-1">Falhas</p>
+                            <p class="text-2xl font-bold text-red-600">0</p>
+                            <p class="text-xs text-slate-500">hoje</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Gráfico e Atividade -->
+                <section class="grid md:grid-cols-2 gap-6 mb-10">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h3 class="font-semibold mb-4">📈 Atividade (últimas 24h)</h3>
+                        <div class="h-64 flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded">
+                            <p class="text-slate-500">[Gráfico Recharts aparecerá aqui quando houver dados]</p>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+                        <h3 class="font-semibold mb-4">⚡ Status das Filas</h3>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-3 gap-2 text-xs font-semibold text-slate-500">
+                                <div>Fila</div><div>Esperando</div><div>Ativos</div>
+                            </div>
+                            <div class="text-center text-slate-400 py-8">Nenhuma fila configurada</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Jobs Recentes -->
+                <section class="mb-10">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                            <h3 class="font-semibold">🕐 Jobs Recentes</h3>
+                            <a href="backend.html" class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 px-3 py-1 rounded">Ver Todos</a>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-100 dark:bg-slate-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">ID</th>
+                                        <th class="px-4 py-3 text-left">Fila</th>
+                                        <th class="px-4 py-3 text-left">Status</th>
+                                        <th class="px-4 py-3 text-left">Criado</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                        <td class="px-4 py-3 font-mono text-xs">—</td>
+                                        <td class="px-4 py-3 text-slate-500">—</td>
+                                        <td class="px-4 py-3"><span class="status-badge status-PENDING">Pendente</span></td>
+                                        <td class="px-4 py-3 text-slate-500">Nenhum job ainda</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Navegação Rápida -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4">🚀 Ações Rápidas</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <a href="backend.html#endpoints" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-lg shadow text-center">
+                            <span class="text-2xl mb-2 block">📤</span>
+                            <span class="font-medium">Criar Job</span>
+                        </a>
+                        <a href="backend.html#recurring" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg shadow text-center">
+                            <span class="text-2xl mb-2 block">⏰</span>
+                            <span class="font-medium">Job Recorrente</span>
+                        </a>
+                        <a href="frontend.html#screens" class="bg-slate-700 hover:bg-slate-800 text-white p-4 rounded-lg shadow text-center">
+                            <span class="text-2xl mb-2 block">📊</span>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                        <a href="seguranca.html" class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg shadow text-center">
+                            <span class="text-2xl mb-2 block">🔐</span>
+                            <span class="font-medium">Segurança</span>
+                        </a>
+                    </div>
+                </section>
+
+                <!-- Links Contextuais -->
+                <section class="mb-10">
+                    <h3 class="text-xl font-bold mb-4">🔗 Links Úteis</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow">
+                            <h4 class="font-semibold mb-2 text-blue-600">API Swagger</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 mb-2">Documentação interativa dos endpoints.</p>
+                            <a href="backend.html#endpoints" class="text-xs text-blue-600 hover:underline">Abrir →</a>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow">
+                            <h4 class="font-semibold mb-2 text-green-600">Integrações</h4>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 mb-2">Serviços externos e pontos de integração.</p>
+                            <a href="integracoes.html" class="text-xs text-green-600 hover:underline">Abrir →</a>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script>
+        if (localStorage.getItem('theme') === 'light') document.documentElement.classList.remove('dark');
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+    </script>
+</body>
+</html>
