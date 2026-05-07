@@ -1,0 +1,21 @@
+{
+  "$schema": "project-config-v1",
+  "projectId": "cmovlt5ja0001lx75pqse1f9u",
+  "services": [
+    {
+      "name": "bff",
+      "port": 3000,
+      "framework": "Vite",
+      "startCommand": "npm run dev",
+      "isPrimary": true,
+      "domain": "job-run2-bff-cmovltg2.cloud.serendiped.com",
+      "path": "/",
+      "protocol": "http"
+    }
+  ],
+  "rules": [
+    "NÃO ALTERE as portas listadas. Domínios externos dependem delas.",
+    "Configure cada framework para escutar EXATAMENTE a porta declarada.",
+    "Para validar, leia este arquivo a qualquer momento."
+  ]
+}
