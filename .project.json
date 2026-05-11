@@ -1,14 +1,24 @@
 {
   "$schema": "project-config-v1",
-  "projectId": "cmovlt5ja0001lx75pqse1f9u",
+  "projectId": "cmp1mbwgy00bymx072zii13b4",
   "services": [
     {
-      "name": "bff",
-      "port": 3000,
+      "name": "front",
+      "port": 5173,
       "framework": "Vite",
       "startCommand": "npm run dev",
       "isPrimary": true,
-      "domain": "job-run2-bff-cmovltg2.cloud.serendiped.com",
+      "domain": "job-run-front-cmp1msnn.cloud.serendiped.com",
+      "path": "/",
+      "protocol": "http"
+    },
+    {
+      "name": "backend",
+      "port": 4000,
+      "framework": null,
+      "startCommand": null,
+      "isPrimary": false,
+      "domain": "job-run-backend-cmp1msnn.cloud.serendiped.com",
       "path": "/",
       "protocol": "http"
     }
