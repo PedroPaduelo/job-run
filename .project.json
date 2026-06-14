@@ -1,24 +1,24 @@
 {
   "$schema": "project-config-v1",
-  "projectId": "cmp1mbwgy00bymx072zii13b4",
+  "projectId": "cmqaa17cy003wlxmcq6y0ijpb",
   "services": [
     {
-      "name": "front",
+      "name": "fe",
       "port": 5173,
       "framework": "Vite",
       "startCommand": "npm run dev",
       "isPrimary": true,
-      "domain": "job-run-front-cmp1msnn.cloud.serendiped.com",
+      "domain": "job-run-fe-cmqcoy4c.cloud.serendiped.com",
       "path": "/",
       "protocol": "http"
     },
     {
-      "name": "backend",
+      "name": "be",
       "port": 4000,
-      "framework": null,
-      "startCommand": null,
+      "framework": "Fastify",
+      "startCommand": "npm run dev",
       "isPrimary": false,
-      "domain": "job-run-backend-cmp1msnn.cloud.serendiped.com",
+      "domain": "job-run-be-cmqcoy4c.cloud.serendiped.com",
       "path": "/",
       "protocol": "http"
     }
