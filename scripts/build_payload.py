@@ -2,6 +2,66 @@
 import os, re, json
 from collections import defaultdict, Counter
 
+# Canonical 18 pillar labels (must match transcripts/_analysis/*.md).
+# Order by descending length so that substring matching does not let
+# shorter names (e.g. "1. Fundamentos...") win against longer ones that
+# happen to start with the same number ("10.", "11.", ...).
+PILLARS = [
+  "10. DevOps, Containers, Linux & Virtualização",
+  "13. Carreira, Aprendizado & Desenvolvimento Pessoal",
+  "14. Gestão, Metodologias & Organizações",
+  "6. Linguagens, Compiladores & Fundamentos de Programação",
+  "9. Web, Escalabilidade & Arquitetura de Aplicações",
+  "1. Fundamentos de Computação & Arquitetura de Hardware",
+  "8. Backend, Concorrência & Memória",
+  "3. Criptografia & Segurança",
+  "5. Sistemas de Arquivos & Armazenamento",
+  "7. Estruturas de Dados & Algoritmos",
+  "12. IA / LLMs",
+  "15. Startups, Mercado & Economia",
+  "16. Blockchain & Criptomoedas",
+  "17. Hardware Pessoal, Setup & Mídia",
+  "18. Biografia, Bastidores & Cultura",
+  "11. Git & Ferramentas de Desenvolvimento",
+  "2. Redes",
+  "4. Bancos de Dados",
+]
+
+def parse_pilares_secundarios(sec_raw):
+    """Extract the list of secondary pillars from the raw line.
+
+    The line looks like:
+        - pilaresSecundarios: [10. DevOps, Containers, Linux & Virtualização, 4. Bancos de Dados]
+    A naive split(',') would fragment names that legitimately contain
+    commas, so we match each value as a substring against the canonical
+    PILLARS list (tried longest-first to avoid partial-number collisions).
+    """
+    mm = re.search(r'\[(.*?)\]', sec_raw)
+    if not mm or not mm.group(1).strip():
+        return []
+    body = mm.group(1)
+    found = []
+    pos = 0
+    while pos < len(body):
+        # skip whitespace and inter-pillar separators ("," and spaces)
+        while pos < len(body) and body[pos] in ' \t,':
+            pos += 1
+        if pos >= len(body):
+            break
+        # try each canonical pillar (longest first) as a substring at pos
+        matched = None
+        for name in PILLARS:
+            if body.startswith(name, pos):
+                matched = name
+                break
+        if matched is None:
+            # Degenerate: cannot reconstruct. Bail out and return empty
+            # list rather than invent / return fragments.
+            return []
+        found.append(matched)
+        pos += len(matched)
+    return found
+
 manifest = json.load(open('transcripts/_manifest.json'))
 order = [v['videoId'] for v in manifest['videos']]
 
@@ -14,10 +74,7 @@ for vid in order:
         return m.group(1).strip() if m else ''
     title = t.splitlines()[0].lstrip('# ').strip()
     sec_raw = grab('pilaresSecundarios')
-    sec = []
-    mm = re.search(r'\[(.*?)\]', sec_raw)
-    if mm and mm.group(1).strip():
-        sec = [s.strip() for s in mm.group(1).split(',') if s.strip()]
+    sec = parse_pilares_secundarios(sec_raw)
     videos.append({
         'videoId': grab('videoId'),
         'title': title,
