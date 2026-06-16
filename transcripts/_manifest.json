@@ -1,0 +1,878 @@
+{
+  "channel": "Fabio Akita (@Akitando)",
+  "channelVideosUrl": "https://www.youtube.com/@Akitando/videos",
+  "extractedAt": "2026-06-16T03:13:32.904Z",
+  "totalVideos": 145,
+  "videos": [
+    {
+      "videoId": "-yGHG3pnHLg",
+      "title": "Configurando Docker Compose, Postgres, com Testes de Carga - Parte Final da Rinha de Backend",
+      "url": "https://www.youtube.com/watch?v=-yGHG3pnHLg",
+      "duration": "1:35:44"
+    },
+    {
+      "videoId": "CZSGIeRmYn8",
+      "title": "O que IAs podem fazer? | Exemplos de Ferramentas",
+      "url": "https://www.youtube.com/watch?v=CZSGIeRmYn8",
+      "duration": "14:56"
+    },
+    {
+      "videoId": "iAA8NrfQtHo",
+      "title": "Criptografia na Prática - Certificados, BitTorrent, Git, Bitcoin",
+      "url": "https://www.youtube.com/watch?v=iAA8NrfQtHo",
+      "duration": "1:14:10"
+    },
+    {
+      "videoId": "yfEhz9poqW8",
+      "title": "Protegendo e Recuperando Dados Perdidos - Git, Backup, BTRFS",
+      "url": "https://www.youtube.com/watch?v=yfEhz9poqW8",
+      "duration": "1:10:53"
+    },
+    {
+      "videoId": "EifK2a_5K_U",
+      "title": "16 Linguagens em 16 Dias: Minha Saga da Rinha de Backend",
+      "url": "https://www.youtube.com/watch?v=EifK2a_5K_U",
+      "duration": "1:39:10"
+    },
+    {
+      "videoId": "SmYQcaP1Jgw",
+      "title": "Modelagem de Software é Difícil? | \"Ver\" vs \"Enxergar\"",
+      "url": "https://www.youtube.com/watch?v=SmYQcaP1Jgw",
+      "duration": "50:36"
+    },
+    {
+      "videoId": "Bfm3Ms2cTg0",
+      "title": "Discutindo sobre Banco de Dados - Dos primórdios a Big Data",
+      "url": "https://www.youtube.com/watch?v=Bfm3Ms2cTg0",
+      "duration": "1:29:04"
+    },
+    {
+      "videoId": "O68y0yRZL1Y",
+      "title": "Entendendo Como ChatGPT Funciona - Rodando sua Própria IA",
+      "url": "https://www.youtube.com/watch?v=O68y0yRZL1Y",
+      "duration": "1:30:08"
+    },
+    {
+      "videoId": "yjhn2fjByNU",
+      "title": "Conversando sobre TDAH, Autismo, Ansiedade e Depressão | Tirando a Camisa de Força",
+      "url": "https://www.youtube.com/watch?v=yjhn2fjByNU",
+      "duration": "1:00:53"
+    },
+    {
+      "videoId": "uIflMYQnp8A",
+      "title": "Desbloqueando o \"Algoritmo\" do Twitter - Introdução a Grafos",
+      "url": "https://www.youtube.com/watch?v=uIflMYQnp8A",
+      "duration": "1:28:44"
+    },
+    {
+      "videoId": "85k8se4Zo70",
+      "title": "Entendendo Funcionamento de Containers",
+      "url": "https://www.youtube.com/watch?v=85k8se4Zo70",
+      "duration": "51:54"
+    },
+    {
+      "videoId": "4_59jz7BOMA",
+      "title": "Meu Começo de Carreira Durante a Bolha - 1997 a 2002, Bug do Milênio, Crash",
+      "url": "https://www.youtube.com/watch?v=4_59jz7BOMA",
+      "duration": "59:29"
+    },
+    {
+      "videoId": "IDnabc3DjYY",
+      "title": "Games em Máquina Virtual com GPU Passthrough | Entendendo QEMU, KVM, Libvirt",
+      "url": "https://www.youtube.com/watch?v=IDnabc3DjYY",
+      "duration": "1:08:18"
+    },
+    {
+      "videoId": "MI9cdxETA4c",
+      "title": "Python? Java? Rust? Qual a Diferença? | Discutindo Linguagens",
+      "url": "https://www.youtube.com/watch?v=MI9cdxETA4c",
+      "duration": "49:14"
+    },
+    {
+      "videoId": "Yl-hlwhj2B0",
+      "title": "ChatGPT Consegue te Substituir? | Entendendo Jobs Assíncronos",
+      "url": "https://www.youtube.com/watch?v=Yl-hlwhj2B0",
+      "duration": "39:20"
+    },
+    {
+      "videoId": "unpJgmjTLEg",
+      "title": "Top 3 Distros Linux | Qual Recomendo?",
+      "url": "https://www.youtube.com/watch?v=unpJgmjTLEg",
+      "duration": "18:22"
+    },
+    {
+      "videoId": "KyqFXVVgvIs",
+      "title": "Tornando sua App Web Mais Rápida! | 4 Técnicas de Otimização",
+      "url": "https://www.youtube.com/watch?v=KyqFXVVgvIs",
+      "duration": "49:02"
+    },
+    {
+      "videoId": "xxoVJQvEyEU",
+      "title": "Rant: A Bolha de Startups Estourou?",
+      "url": "https://www.youtube.com/watch?v=xxoVJQvEyEU",
+      "duration": "44:23"
+    },
+    {
+      "videoId": "s7ldn31OEFc",
+      "title": "Sua Segurança é uma DROGA | Gerenciadores de Senhas, 2FA, Encriptação",
+      "url": "https://www.youtube.com/watch?v=s7ldn31OEFc",
+      "duration": "41:14"
+    },
+    {
+      "videoId": "H_-7o_pLn1s",
+      "title": "Rant: Projetos, TESTES e Estimativa??? | Rated-R",
+      "url": "https://www.youtube.com/watch?v=H_-7o_pLn1s",
+      "duration": "53:08"
+    },
+    {
+      "videoId": "cSyTjCUFx2A",
+      "title": "Apanhando do Gentoo | Melhor Linux???",
+      "url": "https://www.youtube.com/watch?v=cSyTjCUFx2A",
+      "duration": "46:36"
+    },
+    {
+      "videoId": "iQkBbRPkASo",
+      "title": "Entendendo Pacotes com Slackware | Deb, Apt, Tarbals",
+      "url": "https://www.youtube.com/watch?v=iQkBbRPkASo",
+      "duration": "43:32"
+    },
+    {
+      "videoId": "5F6BbhgvFOE",
+      "title": "Como Funciona o Boot de um Linux? | O que tem num LiveCD?",
+      "url": "https://www.youtube.com/watch?v=5F6BbhgvFOE",
+      "duration": "46:00"
+    },
+    {
+      "videoId": "EOmzo5d0F9Y",
+      "title": "Criando uma Rede Segura | Introdução a Redes Parte 6 - VPN e NAS",
+      "url": "https://www.youtube.com/watch?v=EOmzo5d0F9Y",
+      "duration": "46:58"
+    },
+    {
+      "videoId": "T-jHuFnxZ2k",
+      "title": "Burlando Proxies e Firewalls | Introdução a Redes Parte 5 - SSH",
+      "url": "https://www.youtube.com/watch?v=T-jHuFnxZ2k",
+      "duration": "34:58"
+    },
+    {
+      "videoId": "lc6U93P4Sxw",
+      "title": "Como Funciona Sockets, Cliente, Servidor e a Web? | Introdução a Redes Parte 4",
+      "url": "https://www.youtube.com/watch?v=lc6U93P4Sxw",
+      "duration": "45:49"
+    },
+    {
+      "videoId": "gcv5hXyTcIo",
+      "title": "Como sua Internet Funciona | Introdução a Redes Parte 3",
+      "url": "https://www.youtube.com/watch?v=gcv5hXyTcIo",
+      "duration": "41:22"
+    },
+    {
+      "videoId": "3W-8TQJwuWY",
+      "title": "Detecção e Correção de Erros | Introdução a Redes Parte 2",
+      "url": "https://www.youtube.com/watch?v=3W-8TQJwuWY",
+      "duration": "29:59"
+    },
+    {
+      "videoId": "0TndL-Nh6Ok",
+      "title": "Introdução a Redes: Como Dados viram Ondas? | Parte 1",
+      "url": "https://www.youtube.com/watch?v=0TndL-Nh6Ok",
+      "duration": "37:59"
+    },
+    {
+      "videoId": "2tpshOTtleM",
+      "title": "Discutindo Gestão",
+      "url": "https://www.youtube.com/watch?v=2tpshOTtleM",
+      "duration": "54:38"
+    },
+    {
+      "videoId": "am-FQ86mKV0",
+      "title": "Rant: Aprendizado na Beira do Caos | Rated R",
+      "url": "https://www.youtube.com/watch?v=am-FQ86mKV0",
+      "duration": "1:02:12"
+    },
+    {
+      "videoId": "_7nISfpofec",
+      "title": "Fiz um servidor de \"SQL\"?? | Entendendo Banco de Dados",
+      "url": "https://www.youtube.com/watch?v=_7nISfpofec",
+      "duration": "1:14:42"
+    },
+    {
+      "videoId": "SNyh-cubxaU",
+      "title": "Linguagem Compilada vs Interpretada | Qual é melhor?",
+      "url": "https://www.youtube.com/watch?v=SNyh-cubxaU",
+      "duration": "1:11:45"
+    },
+    {
+      "videoId": "j4a1SgUWh1c",
+      "title": "De 5 Tera a 25 Giga | Compressão de Dados",
+      "url": "https://www.youtube.com/watch?v=j4a1SgUWh1c",
+      "duration": "1:07:37"
+    },
+    {
+      "videoId": "78aw1muYWQM",
+      "title": "Caminho pro Melhor Teclado do Mundo!",
+      "url": "https://www.youtube.com/watch?v=78aw1muYWQM",
+      "duration": "1:02:45"
+    },
+    {
+      "videoId": "sjrW74Hx5Po",
+      "title": "O Melhor Setup Dev com Arch e WSL2",
+      "url": "https://www.youtube.com/watch?v=sjrW74Hx5Po",
+      "duration": "1:13:44"
+    },
+    {
+      "videoId": "gpJgtED36U4",
+      "title": "A Forma Ideal de Projetos Web | Os 12 Fatores",
+      "url": "https://www.youtube.com/watch?v=gpJgtED36U4",
+      "duration": "35:16"
+    },
+    {
+      "videoId": "TLRW_xTnQwY",
+      "title": "Subindo Aplicações Web em Produção | Aprendendo HEROKU",
+      "url": "https://www.youtube.com/watch?v=TLRW_xTnQwY",
+      "duration": "41:32"
+    },
+    {
+      "videoId": "WwdNJM_3Cdo",
+      "title": "RANT: Média Salarial NÃO Existe | Entendendo Power Laws",
+      "url": "https://www.youtube.com/watch?v=WwdNJM_3Cdo",
+      "duration": "37:29"
+    },
+    {
+      "videoId": "0TMr8rsmU-k",
+      "title": "Como fazer o Ingresso.com escalar? | Conceitos Intermediários de Web",
+      "url": "https://www.youtube.com/watch?v=0TMr8rsmU-k",
+      "duration": "48:34"
+    },
+    {
+      "videoId": "IBWdTuc6vDg",
+      "title": "Examinando o Vazamento do Twitch",
+      "url": "https://www.youtube.com/watch?v=IBWdTuc6vDg",
+      "duration": "34:54"
+    },
+    {
+      "videoId": "uDqgcsK8Kbc",
+      "title": "Recomendação de Livros - Introdução a Design Emergente",
+      "url": "https://www.youtube.com/watch?v=uDqgcsK8Kbc",
+      "duration": "38:26"
+    },
+    {
+      "videoId": "ApaPk9ToRJM",
+      "title": "Mostrando meu Setup de Gravação | Aprendendo sobre CODECs",
+      "url": "https://www.youtube.com/watch?v=ApaPk9ToRJM",
+      "duration": "36:43"
+    },
+    {
+      "videoId": "NuIOO5VWmXc",
+      "title": "RANT: Empreendendo com Software do JEITO ERRADO!",
+      "url": "https://www.youtube.com/watch?v=NuIOO5VWmXc",
+      "duration": "26:32"
+    },
+    {
+      "videoId": "71o6Tyh2MUk",
+      "title": "Todos os Sistemas de Arquivos: de FAT a ZFS",
+      "url": "https://www.youtube.com/watch?v=71o6Tyh2MUk",
+      "duration": "38:46"
+    },
+    {
+      "videoId": "6YQve3KUqJs",
+      "title": "Entendendo Sistemas de Arquivos: FAT",
+      "url": "https://www.youtube.com/watch?v=6YQve3KUqJs",
+      "duration": "30:50"
+    },
+    {
+      "videoId": "c3hOS8BGbZo",
+      "title": "Tudo que Você Queria Saber Sobre Dispositivos de Armazenamento",
+      "url": "https://www.youtube.com/watch?v=c3hOS8BGbZo",
+      "duration": "41:13"
+    },
+    {
+      "videoId": "b-jnMi5Ff0I",
+      "title": "Mercado Financeiro Pós-Pandemia: A Tempestade Perfeita?",
+      "url": "https://www.youtube.com/watch?v=b-jnMi5Ff0I",
+      "duration": "45:13"
+    },
+    {
+      "videoId": "lxjBgxmDZAI",
+      "title": "Quebrei 3 HDs: Entendendo Armazenamento",
+      "url": "https://www.youtube.com/watch?v=lxjBgxmDZAI",
+      "duration": "27:26"
+    },
+    {
+      "videoId": "JEp7ozWqIps",
+      "title": "A Longa História de CPUs e GPUs | Jogos de Windows em Linux??",
+      "url": "https://www.youtube.com/watch?v=JEp7ozWqIps",
+      "duration": "1:15:25"
+    },
+    {
+      "videoId": "cTVXKfYOYxo",
+      "title": "Só Precisamos de 640 kB de Memória? | 16-bits até 64-bits!",
+      "url": "https://www.youtube.com/watch?v=cTVXKfYOYxo",
+      "duration": "49:12"
+    },
+    {
+      "videoId": "TLuVTO1vuv0",
+      "title": "Estrada do Futuro em 1996 | Meus 19 Anos",
+      "url": "https://www.youtube.com/watch?v=TLuVTO1vuv0",
+      "duration": "35:11"
+    },
+    {
+      "videoId": "9GdesxWtOgs",
+      "title": "Árvores: O Começo de TUDO | Estruturas de Dados e Algoritmos",
+      "url": "https://www.youtube.com/watch?v=9GdesxWtOgs",
+      "duration": "57:41"
+    },
+    {
+      "videoId": "YyWMN_0g3BQ",
+      "title": "O que vem DEPOIS do Hello World | Consertando meu C",
+      "url": "https://www.youtube.com/watch?v=YyWMN_0g3BQ",
+      "duration": "59:05"
+    },
+    {
+      "videoId": "Gp2m8ZuXoPg",
+      "title": "Hello World Como Você Nunca Viu! | Entendendo C",
+      "url": "https://www.youtube.com/watch?v=Gp2m8ZuXoPg",
+      "duration": "1:09:22"
+    },
+    {
+      "videoId": "FIp1uZq-RSE",
+      "title": "RANT de 200K! | Upgrade do meu PC",
+      "url": "https://www.youtube.com/watch?v=FIp1uZq-RSE",
+      "duration": "32:11"
+    },
+    {
+      "videoId": "oSCVb4Ts-G4",
+      "title": "Qual a REAL diferença entre Arquivos Binário e Texto?? 🤔",
+      "url": "https://www.youtube.com/watch?v=oSCVb4Ts-G4",
+      "duration": "30:57"
+    },
+    {
+      "videoId": "L0hTOY5n9G8",
+      "title": "O que os Cursos NÃO te Ensinam sobre Mercados",
+      "url": "https://www.youtube.com/watch?v=L0hTOY5n9G8",
+      "duration": "23:38"
+    },
+    {
+      "videoId": "vUqLLpUJ47s",
+      "title": "Introdução a Videogames e Emuladores",
+      "url": "https://www.youtube.com/watch?v=vUqLLpUJ47s",
+      "duration": "37:07"
+    },
+    {
+      "videoId": "wz1Ioqb89Jo",
+      "title": "RANT: Selo de Segurança é Marketing | Entendendo o Fator Humano",
+      "url": "https://www.youtube.com/watch?v=wz1Ioqb89Jo",
+      "duration": "42:10"
+    },
+    {
+      "videoId": "kz3649U2sJY",
+      "title": "Turing Complete, Emuladores e o Chip ARM M1",
+      "url": "https://www.youtube.com/watch?v=kz3649U2sJY",
+      "duration": "23:42"
+    },
+    {
+      "videoId": "G4MvFT8TGII",
+      "title": "O Computador de Turing e Von Neumann | Por que calculadoras não são computadores?",
+      "url": "https://www.youtube.com/watch?v=G4MvFT8TGII",
+      "duration": "45:43"
+    },
+    {
+      "videoId": "dOe9X6Q_-nU",
+      "title": "Monetizar? Bloquear ADs? O que Fazer?",
+      "url": "https://www.youtube.com/watch?v=dOe9X6Q_-nU",
+      "duration": "13:20"
+    },
+    {
+      "videoId": "1RARFXh_aa0",
+      "title": "\"Akita, quais Cursos você recomenda? E o Low-Code? E o GPT-3?\"",
+      "url": "https://www.youtube.com/watch?v=1RARFXh_aa0",
+      "duration": "41:30"
+    },
+    {
+      "videoId": "PvnaWAarrrE",
+      "title": "\"Os Rumores da Minha Morte foram Exagerados\" 🤣",
+      "url": "https://www.youtube.com/watch?v=PvnaWAarrrE",
+      "duration": "7:42"
+    },
+    {
+      "videoId": "hYJ3dvHjeOE",
+      "title": "Aprendendo sobre Computadores com Super Mario (do jeito Hardcore++)",
+      "url": "https://www.youtube.com/watch?v=hYJ3dvHjeOE",
+      "duration": "1:27:21"
+    },
+    {
+      "videoId": "8G80nuEyDN4",
+      "title": "O Guia +Hardcore de Introdução à COMPUTAÇÃO",
+      "url": "https://www.youtube.com/watch?v=8G80nuEyDN4",
+      "duration": "1:18:28"
+    },
+    {
+      "videoId": "57axLgXkS_M",
+      "title": "Teclados Mecânicos Exóticos | Minha coleção - Parte 2",
+      "url": "https://www.youtube.com/watch?v=57axLgXkS_M",
+      "duration": "48:13"
+    },
+    {
+      "videoId": "JVJHaefHPZ0",
+      "title": "Bate-Papo com Fernando Ulrich | Entendendo Economia",
+      "url": "https://www.youtube.com/watch?v=JVJHaefHPZ0",
+      "duration": "1:32:32"
+    },
+    {
+      "videoId": "tEXX1jdpZN8",
+      "title": "Entendendo Teclados Mecânicos | Minha coleção - Parte 1",
+      "url": "https://www.youtube.com/watch?v=tEXX1jdpZN8",
+      "duration": "48:15"
+    },
+    {
+      "videoId": "Y8SaMX30X1g",
+      "title": "A COVID-19 matou minha Startup? | Entendendo Criptomoedas",
+      "url": "https://www.youtube.com/watch?v=Y8SaMX30X1g",
+      "duration": "47:08"
+    },
+    {
+      "videoId": "oUPaJxk6TZ0",
+      "title": "Guia DEFINITIVO de Aprendendo a Aprender | A maior BRONCA da sua vida [RATED R]",
+      "url": "https://www.youtube.com/watch?v=oUPaJxk6TZ0",
+      "duration": "1:04:38"
+    },
+    {
+      "videoId": "Hrg0MnyE2jM",
+      "title": "O que vem DEPOIS da COVID-19?",
+      "url": "https://www.youtube.com/watch?v=Hrg0MnyE2jM",
+      "duration": "40:17"
+    },
+    {
+      "videoId": "2q4WN-sIN6s",
+      "title": "Emacs vs Java | Oracle vs Google",
+      "url": "https://www.youtube.com/watch?v=2q4WN-sIN6s",
+      "duration": "30:58"
+    },
+    {
+      "videoId": "FVy1fZhNSDA",
+      "title": "RANT: A Realidade do \"Software Livre\"",
+      "url": "https://www.youtube.com/watch?v=FVy1fZhNSDA",
+      "duration": "37:50"
+    },
+    {
+      "videoId": "V7oUDL7E1g4",
+      "title": "RANT: Programação NÃO É Fácil",
+      "url": "https://www.youtube.com/watch?v=V7oUDL7E1g4",
+      "duration": "32:23"
+    },
+    {
+      "videoId": "6OokP-NE49k",
+      "title": "Usando Git Direito | Limpando seus Commits!",
+      "url": "https://www.youtube.com/watch?v=6OokP-NE49k",
+      "duration": "47:20"
+    },
+    {
+      "videoId": "6Czd1Yetaac",
+      "title": "Entendendo GIT | (não é um tutorial!)",
+      "url": "https://www.youtube.com/watch?v=6Czd1Yetaac",
+      "duration": "1:03:35"
+    },
+    {
+      "videoId": "-URfFFxQ3Rk",
+      "title": "Respondendo suas Perguntas sobre Carreira | via Instagram",
+      "url": "https://www.youtube.com/watch?v=-URfFFxQ3Rk",
+      "duration": "41:20"
+    },
+    {
+      "videoId": "HCHqtpipwu4",
+      "title": "Entendendo Conceitos Básicos de CRIPTOGRAFIA | Parte 2/2",
+      "url": "https://www.youtube.com/watch?v=HCHqtpipwu4",
+      "duration": "47:48"
+    },
+    {
+      "videoId": "CcU5Kc_FN_4",
+      "title": "Entendendo Conceitos Básicos de CRIPTOGRAFIA | Parte 1/2",
+      "url": "https://www.youtube.com/watch?v=CcU5Kc_FN_4",
+      "duration": "41:11"
+    },
+    {
+      "videoId": "uaKWBl49mUI",
+      "title": "Entendendo Supremacia Quântica",
+      "url": "https://www.youtube.com/watch?v=uaKWBl49mUI",
+      "duration": "1:05:27"
+    },
+    {
+      "videoId": "HEaIsKm-pao",
+      "title": "A Dor de Aprender | Que Cursos/Livros?",
+      "url": "https://www.youtube.com/watch?v=HEaIsKm-pao",
+      "duration": "43:55"
+    },
+    {
+      "videoId": "H84WD_xyj10",
+      "title": "Começando na Carreira de TI | Faculdade? Níveis de Experiência?",
+      "url": "https://www.youtube.com/watch?v=H84WD_xyj10",
+      "duration": "42:02"
+    },
+    {
+      "videoId": "D3L8IOncLkg",
+      "title": "Não Terceirize suas Decisões! | A Lição MAIS Importante da sua Vida",
+      "url": "https://www.youtube.com/watch?v=D3L8IOncLkg",
+      "duration": "28:17"
+    },
+    {
+      "videoId": "9ihvpRqXLeI",
+      "title": "Aprendendo \"Fotografês\" | Brinquedos de Miami",
+      "url": "https://www.youtube.com/watch?v=9ihvpRqXLeI",
+      "duration": "34:04"
+    },
+    {
+      "videoId": "ksZjJQiaK2Y",
+      "title": "Meus Primeiros 5 Anos | 1990-1995",
+      "url": "https://www.youtube.com/watch?v=ksZjJQiaK2Y",
+      "duration": "37:27"
+    },
+    {
+      "videoId": "28jHuWBi72w",
+      "title": "Entendendo WSL 2 | E uma curta história sobre Windows NT",
+      "url": "https://www.youtube.com/watch?v=28jHuWBi72w",
+      "duration": "1:13:59"
+    },
+    {
+      "videoId": "oEorhw5r2Do",
+      "title": "A História de Ruby on Rails | Por que deu certo?",
+      "url": "https://www.youtube.com/watch?v=oEorhw5r2Do",
+      "duration": "1:20:50"
+    },
+    {
+      "videoId": "KdaRLJg5YJg",
+      "title": "Aniversário de UM ANO!! | Bastidores do Canal",
+      "url": "https://www.youtube.com/watch?v=KdaRLJg5YJg",
+      "duration": "25:18"
+    },
+    {
+      "videoId": "6S94h3xSbnI",
+      "title": "O Guia DEFINITIVO de Organizações | Desconstruindo o Modelo Spotify [RATED R]",
+      "url": "https://www.youtube.com/watch?v=6S94h3xSbnI",
+      "duration": "1:05:38"
+    },
+    {
+      "videoId": "brIQSA8FtDo",
+      "title": "Falando um pouco de MAC, LINUX e WINDOWS | Qual eu devo escolher?",
+      "url": "https://www.youtube.com/watch?v=brIQSA8FtDo",
+      "duration": "53:44"
+    },
+    {
+      "videoId": "3W6xc4Yh2P0",
+      "title": "Refletindo sobre RESOLUÇÃO de Problemas | O bug do Premiere",
+      "url": "https://www.youtube.com/watch?v=3W6xc4Yh2P0",
+      "duration": "28:03"
+    },
+    {
+      "videoId": "epiyExCyb2s",
+      "title": "O Guia DEFINITIVO de UBUNTU para Devs Iniciantes",
+      "url": "https://www.youtube.com/watch?v=epiyExCyb2s",
+      "duration": "1:20:18"
+    },
+    {
+      "videoId": "C0v8e-yej6s",
+      "title": "10 Mitos sobre Tech Startups | Parte 2 [Rated R]",
+      "url": "https://www.youtube.com/watch?v=C0v8e-yej6s",
+      "duration": "35:53"
+    },
+    {
+      "videoId": "jkHnPxsiyGk",
+      "title": "10 Mitos sobre Tech Startups | Parte 1",
+      "url": "https://www.youtube.com/watch?v=jkHnPxsiyGk",
+      "duration": "27:02"
+    },
+    {
+      "videoId": "xjjX3R2WuoM",
+      "title": "Esqueça Metodologias \"Ágeis\" | [Rated R]",
+      "url": "https://www.youtube.com/watch?v=xjjX3R2WuoM",
+      "duration": "42:09"
+    },
+    {
+      "videoId": "wpPv1dJWjDs",
+      "title": "A Bolha de Startups vai Estourar? | Winter is Coming",
+      "url": "https://www.youtube.com/watch?v=wpPv1dJWjDs",
+      "duration": "32:32"
+    },
+    {
+      "videoId": "EdOkYEE1J_Y",
+      "title": "Devo usar NOSQL? | \"ENDGAME\" para Iniciantes em Programação | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=EdOkYEE1J_Y",
+      "duration": "36:01"
+    },
+    {
+      "videoId": "mcwnQVAn0pw",
+      "title": "Entendendo \"Devops\" para Iniciantes em Programação (Parte 2) | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=mcwnQVAn0pw",
+      "duration": "41:28"
+    },
+    {
+      "videoId": "bwO8EZf0gLI",
+      "title": "Entendendo \"Devops\" para Iniciantes em Programação (Parte 1) | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=bwO8EZf0gLI",
+      "duration": "47:40"
+    },
+    {
+      "videoId": "DGU1awKrNiA",
+      "title": "Gerenciamento de Memória (Parte 2) | Entendendo Back-end para Iniciantes (Parte 6)",
+      "url": "https://www.youtube.com/watch?v=DGU1awKrNiA",
+      "duration": "35:35"
+    },
+    {
+      "videoId": "9AK_1gqEfkQ",
+      "title": "Gerenciamento de Memória (Parte 1) | Entendendo Back-end para Iniciantes  (Parte 5)",
+      "url": "https://www.youtube.com/watch?v=9AK_1gqEfkQ",
+      "duration": "34:00"
+    },
+    {
+      "videoId": "gYJSWs-gp1g",
+      "title": "Concorrência e Paralelismo (Parte 2) | Entendendo Back-end para Iniciantes (Parte 4)",
+      "url": "https://www.youtube.com/watch?v=gYJSWs-gp1g",
+      "duration": "1:01:05"
+    },
+    {
+      "videoId": "cx1ULv4wYxM",
+      "title": "Concorrência e Paralelismo (Parte 1) | Entendendo Back-End para Iniciantes (Parte 3)",
+      "url": "https://www.youtube.com/watch?v=cx1ULv4wYxM",
+      "duration": "42:34"
+    },
+    {
+      "videoId": "suSvMnNwV-8",
+      "title": "Entendendo Apple, GPL e Compiladores",
+      "url": "https://www.youtube.com/watch?v=suSvMnNwV-8",
+      "duration": "43:47"
+    },
+    {
+      "videoId": "N6vgZr1k03g",
+      "title": "Entendendo Back-End para Iniciantes em Programação (Parte 2) | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=N6vgZr1k03g",
+      "duration": "55:59"
+    },
+    {
+      "videoId": "Qjk-cSW-jk4",
+      "title": "Entendendo Back-End para Iniciantes em Programação (Parte 1) | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=Qjk-cSW-jk4",
+      "duration": "47:16"
+    },
+    {
+      "videoId": "VKmPGmFY7H4",
+      "title": "A História do Front-End para Iniciantes em Programação | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=VKmPGmFY7H4",
+      "duration": "48:28"
+    },
+    {
+      "videoId": "sx4hAHhO9CY",
+      "title": "Conhecimentos Básicos para Iniciantes em Programação | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=sx4hAHhO9CY",
+      "duration": "21:08"
+    },
+    {
+      "videoId": "Qb5b8ZE9tIY",
+      "title": "A Dimensão do TEMPO para Iniciantes em Programação | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=Qb5b8ZE9tIY",
+      "duration": "18:14"
+    },
+    {
+      "videoId": "O76ZfAIEukE",
+      "title": "O Mercado de TI para Iniciantes em Programação | Série \"Começando aos 40\"",
+      "url": "https://www.youtube.com/watch?v=O76ZfAIEukE",
+      "duration": "21:27"
+    },
+    {
+      "videoId": "_2nfZZiTbyA",
+      "title": "Pequena retrospectiva 2018 e previsões 2019",
+      "url": "https://www.youtube.com/watch?v=_2nfZZiTbyA",
+      "duration": "17:49"
+    },
+    {
+      "videoId": "FXhcfJnlD2k",
+      "title": "Você não sabe nada de Enterprise. Conhecendo a SAP!",
+      "url": "https://www.youtube.com/watch?v=FXhcfJnlD2k",
+      "duration": "36:22"
+    },
+    {
+      "videoId": "iQzSfdv2FWg",
+      "title": "Problemas de Confiança para Pessoas Inseguras",
+      "url": "https://www.youtube.com/watch?v=iQzSfdv2FWg",
+      "duration": "17:42"
+    },
+    {
+      "videoId": "OkboNGQ9LU0",
+      "title": "Como eu aprendi Inglês? E entendendo \"padrões\"!",
+      "url": "https://www.youtube.com/watch?v=OkboNGQ9LU0",
+      "duration": "25:17"
+    },
+    {
+      "videoId": "nX0wPjNzn3o",
+      "title": "Manifesto Anti-Parasita: Seja um Criador",
+      "url": "https://www.youtube.com/watch?v=nX0wPjNzn3o",
+      "duration": "19:23"
+    },
+    {
+      "videoId": "0KNGiOp7eoE",
+      "title": "Minha Máquina do Tempo | Meus Sites de Anime",
+      "url": "https://www.youtube.com/watch?v=0KNGiOp7eoE",
+      "duration": "16:42"
+    },
+    {
+      "videoId": "Ll1uAZ-WRa0",
+      "title": "O que eu devo estudar? Vou conseguir emprego?",
+      "url": "https://www.youtube.com/watch?v=Ll1uAZ-WRa0",
+      "duration": "19:49"
+    },
+    {
+      "videoId": "ootebOORRBc",
+      "title": "Talento: Matando Semi-Deuses (Parte 2)",
+      "url": "https://www.youtube.com/watch?v=ootebOORRBc",
+      "duration": "25:56"
+    },
+    {
+      "videoId": "Mw4LSVoQYtA",
+      "title": "Talento: Matando Semi-Deuses (Parte 1)",
+      "url": "https://www.youtube.com/watch?v=Mw4LSVoQYtA",
+      "duration": "16:08"
+    },
+    {
+      "videoId": "O4CWVQLbi48",
+      "title": "Sua Linguagem É Especial? Parte 2 em 2001",
+      "url": "https://www.youtube.com/watch?v=O4CWVQLbi48",
+      "duration": "12:04"
+    },
+    {
+      "videoId": "NwAvovzHRDU",
+      "title": "Sua Linguagem É Especial? Parte 1 em 2001",
+      "url": "https://www.youtube.com/watch?v=NwAvovzHRDU",
+      "duration": "14:32"
+    },
+    {
+      "videoId": "wcGGklDfHM4",
+      "title": "The MM-M: O Melhor Livro de Software?",
+      "url": "https://www.youtube.com/watch?v=wcGGklDfHM4",
+      "duration": "20:53"
+    },
+    {
+      "videoId": "KXG-upUkSZE",
+      "title": "Blockchains servem pra Eleições?",
+      "url": "https://www.youtube.com/watch?v=KXG-upUkSZE",
+      "duration": "15:04"
+    },
+    {
+      "videoId": "M0PgfU4qUMM",
+      "title": "Entendendo Blockchain em São Francisco",
+      "url": "https://www.youtube.com/watch?v=M0PgfU4qUMM",
+      "duration": "24:43"
+    },
+    {
+      "videoId": "otIWfeRs22s",
+      "title": "Malta: A Ilha do Blockchain",
+      "url": "https://www.youtube.com/watch?v=otIWfeRs22s",
+      "duration": "16:34"
+    },
+    {
+      "videoId": "iRjEa7N8wEo",
+      "title": "Devo fazer Faculdade? (Eu, 22 anos depois)",
+      "url": "https://www.youtube.com/watch?v=iRjEa7N8wEo",
+      "duration": "16:08"
+    },
+    {
+      "videoId": "ii5Q2fCl8C0",
+      "title": "Motivação: O Diário de Henry Jones",
+      "url": "https://www.youtube.com/watch?v=ii5Q2fCl8C0",
+      "duration": "11:50"
+    },
+    {
+      "videoId": "SdBsiY3DHVs",
+      "title": "O Mundo Hoje É PIOR?",
+      "url": "https://www.youtube.com/watch?v=SdBsiY3DHVs",
+      "duration": "22:03"
+    },
+    {
+      "videoId": "XcTTajFENHI",
+      "title": "Sua Linguagem NÃO É Especial! (Parte 2)",
+      "url": "https://www.youtube.com/watch?v=XcTTajFENHI",
+      "duration": "13:36"
+    },
+    {
+      "videoId": "p9-WuJbVHHc",
+      "title": "Sua Linguagem NÃO É Especial! (Parte 1)",
+      "url": "https://www.youtube.com/watch?v=p9-WuJbVHHc",
+      "duration": "11:41"
+    },
+    {
+      "videoId": "XWVcF7BoCSc",
+      "title": "Dúvida! Devo Fazer Faculdade?",
+      "url": "https://www.youtube.com/watch?v=XWVcF7BoCSc",
+      "duration": "16:36"
+    },
+    {
+      "videoId": "akKRtjIqRjs",
+      "title": "Projetos: Aprendendo a Priorizar",
+      "url": "https://www.youtube.com/watch?v=akKRtjIqRjs",
+      "duration": "12:05"
+    },
+    {
+      "videoId": "0IcNE1nWEt4",
+      "title": "9 Dicas para Palestrantes: Venda sua Caneta!",
+      "url": "https://www.youtube.com/watch?v=0IcNE1nWEt4",
+      "duration": "12:32"
+    },
+    {
+      "videoId": "XEtrU6smVTc",
+      "title": "7 Recomendações de Shows para pessoas de Tech",
+      "url": "https://www.youtube.com/watch?v=XEtrU6smVTc",
+      "duration": "13:46"
+    },
+    {
+      "videoId": "A2-yU3YjB1U",
+      "title": "Procure o que você Ama ... SÓ QUE NÃO!",
+      "url": "https://www.youtube.com/watch?v=A2-yU3YjB1U",
+      "duration": "15:12"
+    },
+    {
+      "videoId": "WObC_2e0kZk",
+      "title": "A Controvérsia da Lerna vs ICE",
+      "url": "https://www.youtube.com/watch?v=WObC_2e0kZk",
+      "duration": "16:39"
+    },
+    {
+      "videoId": "22Erda9z5F4",
+      "title": "33 exemplos de projetos de ICOs e blockchains",
+      "url": "https://www.youtube.com/watch?v=22Erda9z5F4",
+      "duration": "30:26"
+    },
+    {
+      "videoId": "YsQCtwsdaXE",
+      "title": "Liberdade Econômica, Cripto no Brasil, e para onde aponta o futuro?",
+      "url": "https://www.youtube.com/watch?v=YsQCtwsdaXE",
+      "duration": "13:41"
+    },
+    {
+      "videoId": "gLCfk08VixI",
+      "title": "Blockchain Week Seoul: Entendendo ICOs",
+      "url": "https://www.youtube.com/watch?v=gLCfk08VixI",
+      "duration": "14:40"
+    },
+    {
+      "videoId": "BEaVdiTiiH4",
+      "title": "Por que a Coréia do Sul é tão grande em Criptomoedas?",
+      "url": "https://www.youtube.com/watch?v=BEaVdiTiiH4",
+      "duration": "16:28"
+    },
+    {
+      "videoId": "OAz1b9TvlvA",
+      "title": "Akitando em Seoul - Parte 2",
+      "url": "https://www.youtube.com/watch?v=OAz1b9TvlvA",
+      "duration": "10:56"
+    },
+    {
+      "videoId": "mp7fOAmJBr0",
+      "title": "De AkitaOnRails para Akitando",
+      "url": "https://www.youtube.com/watch?v=mp7fOAmJBr0",
+      "duration": "5:57"
+    },
+    {
+      "videoId": "QNLd8TZ_JQc",
+      "title": "Akitando em Seoul - Parte 1",
+      "url": "https://www.youtube.com/watch?v=QNLd8TZ_JQc",
+      "duration": "9:39"
+    }
+  ]
+}
